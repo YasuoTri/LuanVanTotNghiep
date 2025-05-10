@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Cấu hình kết nối MySQL (XAMPP)
-DATABASE_URL = "mysql+pymysql://root:123@localhost:8200/course_recommendation3"
+DATABASE_URL = "mysql+pymysql://root:123@localhost:8200/course_recommendation5"
 try:
     engine = create_engine(DATABASE_URL)
 except Exception as e:

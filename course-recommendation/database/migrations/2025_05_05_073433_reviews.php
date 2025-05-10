@@ -7,37 +7,41 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
         Schema::create('reviews', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('course_id');
             $table->tinyInteger('rating')->comment('1-5 sao');
             $table->text('comment')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
+
             $table->unique(['user_id', 'course_id'], 'reviews_user_course_unique');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
         });
 
-        // Tạo trigger để cập nhật course_rating
-        DB::statement("
-            CREATE TRIGGER update_course_rating AFTER INSERT ON reviews
+        // Tạo trigger
+        DB::unprepared('
+            CREATE TRIGGER update_course_rating
+            AFTER INSERT ON reviews
             FOR EACH ROW
             BEGIN
-                UPDATE courses 
+                UPDATE courses
                 SET course_rating = (
-                    SELECT AVG(rating) 
-                    FROM reviews 
+                    SELECT AVG(rating)
+                    FROM reviews
                     WHERE course_id = NEW.course_id
                 )
                 WHERE id = NEW.course_id;
             END
-        ");
+        ');
     }
 
-    public function down(): void
+    public function down()
     {
-        DB::statement('DROP TRIGGER IF EXISTS update_course_rating');
+        DB::unprepared('DROP TRIGGER IF EXISTS update_course_rating');
         Schema::dropIfExists('reviews');
     }
 };

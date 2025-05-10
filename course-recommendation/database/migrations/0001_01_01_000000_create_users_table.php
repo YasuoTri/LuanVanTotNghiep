@@ -20,15 +20,27 @@ return new class extends Migration
         //     $table->rememberToken();
         //     $table->timestamps();
         // });
+        // Schema::create('users', function (Blueprint $table) {
+        //     $table->bigIncrements('id');
+        //     $table->string('userid_DI', 255)->unique();
+        //     $table->string('email', 255)->unique()->nullable();
+        //     $table->string('password', 255)->nullable();
+        //     $table->string('final_cc_cname_DI', 100)->default('Unknown');
+        //     $table->string('LoE_DI', 50)->default('Unknown');
+        //     $table->integer('YoB')->nullable();
+        //     $table->string('gender', 20)->nullable();
+        //     $table->timestamps();
+        // });
         Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('userid_DI', 255)->unique();
-            $table->string('email', 255)->unique()->nullable();
-            $table->string('password', 255)->nullable();
+            $table->string('userid_DI')->unique();
+            $table->string('email')->unique()->nullable();
+            $table->string('password')->nullable();
             $table->string('final_cc_cname_DI', 100)->default('Unknown');
             $table->string('LoE_DI', 50)->default('Unknown');
             $table->integer('YoB')->nullable();
             $table->string('gender', 20)->nullable();
+            $table->enum('role', ['student', 'instructor', 'admin'])->default('student');
             $table->timestamps();
         });
 

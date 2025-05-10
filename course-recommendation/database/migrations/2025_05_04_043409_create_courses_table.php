@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('course_url')->nullable();
             $table->text('course_description')->nullable();
             $table->text('skills')->nullable();
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending')->after('skills');
             $table->timestamps();
         });
     }

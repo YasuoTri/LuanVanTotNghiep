@@ -14,13 +14,9 @@ class StorePaymentRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|exists:users,id',
-            'course_id' => 'required|exists:courses,id',
-            'amount' => 'required|integer|min:0',
-            'method' => 'required|in:momo,zalopay,bank_transfer',
-            'transaction_code' => 'nullable|string|max:50',
+            'amount' => 'required|numeric|min:0',
+            'method' => 'required|in:momo,zalopay,bank_transfer,paypal,vnpay',
             'coupon_id' => 'nullable|exists:coupons,id',
-            'status' => 'required|in:pending,completed,failed',
             'payment_date' => 'nullable|date',
         ];
     }

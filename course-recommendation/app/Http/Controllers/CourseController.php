@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateCourseRequest;
-use App\Http\Requests\UpdateCourseRequest;
+use App\Http\Requests\Course\CreateCourseRequest;
+use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseReview;
@@ -127,7 +127,9 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
             }
 
-            $course->update($request->validated());
+          $validatedData = $request->validated();
+        $validatedData['status'] = 'pending';
+        $course->update($validatedData);
 
             return response()->json($course, 200);
         } catch (\Exception $e) {

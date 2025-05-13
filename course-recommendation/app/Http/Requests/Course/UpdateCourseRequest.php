@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Course;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateCourseRequest extends FormRequest
+class UpdateCourseRequest extends FormRequest
 {
     public function authorize()
     {
@@ -15,7 +15,7 @@ class CreateCourseRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_name' => 'required|string|max:255',
+            'course_name' => 'sometimes|string|max:255',
             'university' => 'nullable|string|max:255',
             'difficulty_level' => 'nullable|string|max:50',
             'course_rating' => 'nullable|numeric|min:0|max:5',

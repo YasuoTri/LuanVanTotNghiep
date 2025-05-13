@@ -8,7 +8,7 @@ class ForumPost extends Model
 {
     protected $table = 'forum_posts';
     protected $primaryKey = 'id';
-    protected $fillable = ['user_id', 'course_id', 'title', 'content'];
+    protected $fillable = ['user_id', 'course_id', 'title', 'content','flagged', 'created_at', 'updated_at'];
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

@@ -9,9 +9,12 @@ class Course extends Model
     protected $primaryKey = 'id';
     protected $fillable = [
         'course_name', 'university', 'difficulty_level', 'course_rating',
-        'course_url', 'course_description', 'skills','status',
+        'course_url', 'course_description', 'price','skills','status',
     ];
-
+public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'course_category', 'course_id', 'category_id');
+    }
     public function instructors()
     {
         return $this->belongsToMany(Instructors::class, 'course_instructors', 'course_id', 'instructor_id');

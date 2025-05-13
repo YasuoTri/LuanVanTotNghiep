@@ -11,7 +11,12 @@
 <body
     class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
     <div class="w-full max-w-md">
-        <form id="loginForm" class="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <form action="{{url('/api/vnpay_payment')}}" method="POST">
+            @csrf
+            <input name="total" value="100000">
+            <button type="submit" name="redirect" style="width:100%">Thanh toán VNPay</button>
+        </form>
+        {{-- <form id="loginForm" class="bg-white dark:bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
             <h2 class="text-2xl mb-6 text-center dark:text-white">Login</h2>
             <div class="mb-4">
                 <label class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2" for="email">
@@ -37,7 +42,7 @@
                 </button>
             </div>
             <div id="error-message" class="text-red-500 mt-4 hidden"></div>
-        </form>
+        </form> --}}
     </div>
 
     <script>

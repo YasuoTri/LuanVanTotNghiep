@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\CheckAdminRole;
 use App\Http\Middleware\CheckInstructorRole;
+use App\Http\Middleware\InstructorOrAdmin;
+use App\Http\Middleware\StudentOrAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,7 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'student' => CheckStudentRole::class,
             'admin' => CheckAdminRole::class,
             'instructor' => CheckInstructorRole::class,
-            'instructor_or_admin' => \App\Http\Middleware\InstructorOrAdmin::class,
+            'instructor_or_admin' => InstructorOrAdmin::class,
+            'student_or_admin' => StudentOrAdmin::class,
         ]);
 
         // (Tùy chọn) Áp dụng middleware cho các route hoặc group

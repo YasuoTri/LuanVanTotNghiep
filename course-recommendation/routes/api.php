@@ -36,47 +36,48 @@ Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{id}', [CourseController::class, 'show']);
 // Student Routes
 Route::middleware(['auth:api', 'student'])->group(function () {
-    Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);
-    Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);
-    Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);
-    Route::get('/enrollments/{id}/status', [EnrollmentController::class, 'checkEnrollmentStatus']);
-    Route::post('/enrollments/{id}/complete', [EnrollmentController::class, 'completeEnrollment']);
-    Route::get('/enrollments/{id}/progress', [EnrollmentController::class, 'getLearningProgress']);
-    Route::post('/enrollments/{id}/review', [EnrollmentController::class, 'submitReview']);
+    Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
+    Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
+    Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);//xong
+    Route::get('/enrollments/{id}/status', [EnrollmentController::class, 'checkEnrollmentStatus']);//xong
+    Route::post('/enrollments/{id}/complete', [EnrollmentController::class, 'completeEnrollment']);//xong
+    Route::get('/enrollments/{id}/progress', [EnrollmentController::class, 'getLearningProgress']);//xong
+    Route::post('/enrollments/{id}/review', [EnrollmentController::class, 'submitReview']);//xong
     //free course enrollment
-    Route::post('/courses/{course_id}/enroll-free', [EnrollmentController::class, 'enrollFreeCourse'])->name('enrollments.enrollFree');
-    Route::post('/courses/{course_id}/enroll-paid', [EnrollmentController::class, 'storePaid'])
+    Route::post('/courses/{course_id}/enroll-free', [EnrollmentController::class, 'enrollFreeCourse'])->name('enrollments.enrollFree');//xong
+    Route::post('/courses/{course_id}/enroll-paid', [EnrollmentController::class, 'storePaid'])//xong
         ->name('enrollments.enrollPaid');
-    Route::get('/payments', [PaymentController::class, 'index']);
-    Route::get('/payments/{id}', [PaymentController::class, 'show']);
+    Route::get('/payments', [PaymentController::class, 'index']);//xong
+    Route::get('/payments/{id}', [PaymentController::class, 'show']);//xong
     // Check Payment Status
-    Route::get('/payments/{payment_id}/status', [PaymentController::class, 'checkPaymentStatus'])->name('payments.checkStatus');
+    Route::get('/payments/{payment_id}/status', [PaymentController::class, 'checkPaymentStatus'])->name('payments.checkStatus');//xong
 
     // View Lesson Content (Videos, Materials)
-    Route::get('/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForStudent'])->name('lessons.showForStudent');
-    Route::get('/courses/{enroll_id}/lessons', [LessonController::class, 'getCourseLessons'])->name('lessons.getCourseLessons');
+    Route::get('/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForStudent'])->name('lessons.showForStudent');//xong
+    Route::get('/courses/{enroll_id}/lessons', [LessonController::class, 'getCourseLessons'])->name('lessons.getCourseLessons');//xong
     // Quiz Interactions
-    Route::get('/courses/{course_id}/quizzes', [QuizController::class, 'indexForStudent'])->name('quizzes.indexForStudent');
-    Route::get('/quizzes/{quiz_id}', [QuizController::class, 'showForStudent'])->name('quizzes.showForStudent');
-    Route::post('/quizzes/{quiz_id}/retry', [QuizController::class, 'retryQuiz'])->name('quizzes.retry');
-    Route::get('/courses/{course_id}/quiz-progress', [QuizController::class, 'quizProgressForCourse'])->name('quizzes.progressForCourse');
-    Route::post('/quizzes/{quiz_id}/submit', [QuizController::class, 'submitQuiz'])->name('quizzes.submit');
-
+    Route::get('/courses/{course_id}/quizzes', [QuizController::class, 'indexForStudent'])->name('quizzes.indexForStudent');//xong
+    Route::get('/quizzes/{quiz_id}', [QuizController::class, 'showForStudent'])->name('quizzes.showForStudent');//xong
+    Route::post('/quizzes/{quiz_id}/retry', [QuizController::class, 'retryQuiz'])->name('quizzes.retry');//xong
+    Route::get('/courses/{course_id}/quiz-progress', [QuizController::class, 'quizProgressForCourse'])->name('quizzes.progressForCourse');//xong
+    Route::post('/quizzes/{quiz_id}/submit', [QuizController::class, 'submitQuiz'])->name('quizzes.submit');//xong
+    Route::get('/quizzes/{quiz_id}/draft', [QuizController::class, 'getDraft'])->name('quizzes.getDraft');//xong
+    Route::get('/quizzes/{quiz_id}/results/{quiz_result_id}', [QuizController::class, 'getResult'])->name('quizzes.getResult');//xong
+    Route::post('/quizzes/{quiz_id}/start', [QuizController::class, 'startQuiz'])->name('quizzes.start');//xong
     // Track Learning Progress
-    Route::get('/lesson-progress', [LessonProgressController::class, 'indexForStudent'])->name('lessonProgress.indexForStudent');
-    Route::get('/lesson-progress/{id}', [LessonProgressController::class, 'showForStudent'])->name('lessonProgress.showForStudent');
+    Route::get('/lesson-progress', [LessonProgressController::class, 'indexForStudent'])->name('lessonProgress.indexForStudent');//xong
+    Route::get('/lesson-progress/{id}', [LessonProgressController::class, 'showForStudent'])->name('lessonProgress.showForStudent');//xong
 
     // Ask Questions, Discuss (Forum Posts)
-    Route::get('/courses/{course_id}/forum-posts', [ForumPostController::class, 'indexForStudent'])->name('forumPosts.indexForStudent');
-    Route::post('/courses/{course_id}/forum-posts', [ForumPostController::class, 'storeForStudent'])->name('forumPosts.storeForStudent');
+    Route::get('/courses/{course_id}/forum-posts', [ForumPostController::class, 'indexForStudent'])->name('forumPosts.indexForStudent');//xong
+    Route::post('/courses/{course_id}/forum-posts', [ForumPostController::class, 'storeForStudent'])->name('forumPosts.storeForStudent');//xong
 
-    Route::get('/quizzes/{quiz_id}/questions', [QuizController::class, 'getQuestionsForStudent'])->name('quizzes.getQuestionsForStudent');
-    Route::post('/quizzes/{quiz_id}/draft', [QuizController::class, 'saveDraftAnswers'])->name('quizzes.saveDraftAnswers');
-    Route::post('/user-answers', [UserAnswerController::class, 'store'])->name('user-answers.store');
-    Route::get('/user-answers/{answer}', [UserAnswerController::class, 'show'])->name('user-answers.show');
+    Route::get('/quizzes/{quiz_id}/questions', [QuizController::class, 'getQuestionsForStudent'])->name('quizzes.getQuestionsForStudent');//xong
+    Route::post('/quizzes/{quiz_id}/draft', [QuizController::class, 'saveDraftAnswers'])->name('quizzes.saveDraftAnswers');//xong
+    Route::post('/user-answers', [UserAnswerController::class, 'store'])->name('user-answers.store');//xong
+    Route::get('/user-answers/{answer}', [UserAnswerController::class, 'show'])->name('user-answers.show');//xong
 });
-Route::get('/enrollments', [EnrollmentController::class, 'index']);
-Route::get('/enrollments/{id}', [EnrollmentController::class, 'show']);
+
 // Instructor Routes
 Route::middleware(['auth:api', 'instructor'])->group(function () {
   
@@ -203,6 +204,9 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
 
     Route::apiResource('/admin/questions', QuestionController::class);
     Route::apiResource('/admin/question-choices', QuestionChoiceController::class);
+    Route::get('admin/enrollments', [EnrollmentController::class, 'index']);//xong
+    Route::get('admin/enrollments/{id}', [EnrollmentController::class, 'show']);//xong
+    Route::put('/admin/enrollments/{id}', [EnrollmentController::class, 'updateAdmin']);//xong
     });
 
 // Payment Callback (Existing)

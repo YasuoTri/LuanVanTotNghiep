@@ -537,4 +537,47 @@ public function handleVNPayIPN(Request $request): JsonResponse
         'Message' => 'Confirm Success'
     ]);
 }
+/**
+     * Kiểm tra trạng thái thanh toán của một payment
+     *
+     * @param int $payment_id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkPaymentStatus($payment_id)
+    {
+        try {
+            // Tìm payment theo ID và đảm bảo thuộc về student đang đăng nhập
+            $payment = Payment::where('id', $payment_id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            // Kiểm tra xem payment có tồn tại không
+            if (!$payment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Payment not found or you do not have permission to view this payment.'
+                ], 404);
+            }
+
+            // Trả về thông tin trạng thái thanh toán
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'payment_id' => $payment->id,
+                    'course_id' => $payment->course_id,
+                    'amount' => $payment->amount,
+                    'method' => $payment->method,
+                    'status' => $payment->status,
+                    'payment_date' => $payment->payment_date,
+                    'transaction_code' => $payment->transaction_code,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while checking payment status.'
+            ], 500);
+        }
+    }
 }

@@ -23,4 +23,40 @@ class Quiz extends Model
     {
         return $this->hasMany(QuizResult::class, 'quiz_id');
     }
+    public function questions()
+    {
+        return $this->hasMany(Question::class, 'quiz_id');
+    }
+    public function getQuizResultsCountAttribute()
+    {
+        return $this->quizResults()->count();
+    }
+    public function getQuestionsCountAttribute()
+    {
+        return $this->questions()->count();
+    }
+    public function getQuizResults()
+    {
+        return $this->quizResults()->with('user')->get();
+    }
+    public function getQuestions()
+    {
+        return $this->questions()->with('answers')->get();
+    }
+    public function getQuizResultByUserId($userId)
+    {
+        return $this->quizResults()->where('user_id', $userId)->first();
+    }
+    public function getQuizResultById($quizResultId)
+    {
+        return $this->quizResults()->where('id', $quizResultId)->first();
+    }
+    public function getQuizResultByUserIdAndQuizId($userId, $quizId)
+    {
+        return $this->quizResults()->where('user_id', $userId)->where('quiz_id', $quizId)->first();
+    }
+    public function getQuizResultByIdAndQuizId($quizResultId, $quizId)
+    {
+        return $this->quizResults()->where('id', $quizResultId)->where('quiz_id', $quizId)->first();
+    }
 }

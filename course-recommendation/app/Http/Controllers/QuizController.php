@@ -308,186 +308,137 @@ class QuizController extends Controller
     /**
      * View details of a specific quiz, including past attempts (if any).
      */
-    public function showForStudent($quiz_id): JsonResponse
-    {
-        $user = Auth::user();
-        $quiz = Quiz::with('lesson')->find($quiz_id);
+    // public function showForStudent($quiz_id): JsonResponse
+    // {
+    //     $user = Auth::user();
+    //     $quiz = Quiz::with('lesson')->find($quiz_id);
 
-        if (!$quiz) {
-            return response()->json(['message' => 'Quiz not found'], 404);
-        }
+    //     if (!$quiz) {
+    //         return response()->json(['message' => 'Quiz not found'], 404);
+    //     }
 
-        // Check if the user is enrolled in the course
-        $enrollment = Enrollment::where('user_id', $user->id)
-            ->where('course_id', $quiz->lesson->course_id)
-            ->where('status', 'active')
-            ->first();
+    //     // Check if the user is enrolled in the course
+    //     $enrollment = Enrollment::where('user_id', $user->id)
+    //         ->where('course_id', $quiz->lesson->course_id)
+    //         ->where('status', 'active')
+    //         ->first();
 
-        if (!$enrollment) {
-            return response()->json(['message' => 'You are not enrolled in this course'], 403);
-        }
+    //     if (!$enrollment) {
+    //         return response()->json(['message' => 'You are not enrolled in this course'], 403);
+    //     }
 
-        // Get past quiz attempts by the user
-        $attempts = QuizResult::where('user_id', $user->id)
-            ->where('quiz_id', $quiz_id)
-            ->orderBy('completed_at', 'desc')
-            ->get(['id', 'score', 'completed_at']);
+    //     // Get past quiz attempts by the user
+    //     $attempts = QuizResult::where('user_id', $user->id)
+    //         ->where('quiz_id', $quiz_id)
+    //         ->orderBy('completed_at', 'desc')
+    //         ->get(['id', 'score', 'completed_at']);
 
-        return response()->json([
-            'data' => $quiz,
-            'attempts' => $attempts
-        ], 200);
-    }
+    //     return response()->json([
+    //         'data' => $quiz,
+    //         'attempts' => $attempts
+    //     ], 200);
+    // }
 
     /**
      * Retry a quiz (if allowed based on course rules).
      */
-    public function retryQuiz(Request $request, $quiz_id): JsonResponse
-    {
-        // $user = Auth::user();
-        // $quiz = Quiz::find($quiz_id);
+//     public function retryQuiz(Request $request, $quiz_id): JsonResponse
+//     {
+//     $user = Auth::user();
+//     $quiz = Quiz::with('questions.choices')->find($quiz_id);
 
-        // if (!$quiz) {
-        //     return response()->json(['message' => 'Quiz not found'], 404);
-        // }
+//     if (!$quiz) {
+//         return response()->json(['message' => 'Quiz not found'], 404);
+//     }
 
-        // // Check enrollment
-        // $lesson = Lesson::find($quiz->lesson_id);
-        // $enrollment = Enrollment::where('user_id', $user->id)
-        //     ->where('course_id', $lesson->course_id)
-        //     ->where('status', 'active')
-        //     ->first();
+//     // Check enrollment or instructor
+//     $lesson = Lesson::find($quiz->lesson_id);
+//     $enrollment = Enrollment::where('user_id', $user->id)
+//         ->where('course_id', $lesson->course_id)
+//         ->where('status', 'active')
+//         ->first();
 
-        // if (!$enrollment) {
-        //     return response()->json(['message' => 'You are not enrolled in this course'], 403);
-        // }
+//     $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+//         ->whereHas('instructor', function ($query) use ($user) {
+//             $query->where('user_id', $user->id);
+//         })
+//         ->first();
 
-        // // Check if retry is allowed (e.g., max attempts limit)
-        // $attempts = QuizResult::where('user_id', $user->id)
-        //     ->where('quiz_id', $quiz_id)
-        //     ->count();
+//     if (!$enrollment && !$instructor) {
+//         return response()->json(['message' => 'You do not have access to this quiz'], 403);
+//     }
 
-        // // Example: Allow up to 3 attempts (configurable in real application)
-        // $max_attempts = 3;
-        // if ($attempts >= $max_attempts) {
-        //     return response()->json(['message' => 'Maximum retry attempts reached'], 403);
-        // }
+//     // Check max attempts
+//     $attempts = QuizResult::where('user_id', $user->id)
+//         ->where('quiz_id', $quiz_id)
+//         ->count();
 
-        // // Simulate quiz submission (same logic as submitQuiz)
-        // $validated = $request->validate([
-        //     'answers' => 'required|array',
-        // ]);
+//     if ($attempts >= $quiz->max_attempts) {
+//         return response()->json(['message' => 'Maximum attempts reached'], 403);
+//     }
 
-        // $score = count($validated['answers']) * 1.0; // Simplified scoring
-        // $score = min($score, 10.0); // Cap at 10
+//     // Validate answers
+//     $validated = $request->validate([
+//         'answers' => 'required|array',
+//         'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
+//         'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+//         'answers.*.answer_text' => 'nullable|string',
+//     ]);
 
-        // $quizResult = QuizResult::create([
-        //     'user_id' => $user->id,
-        //     'quiz_id' => $quiz_id,
-        //     'score' => $score,
-        //     'completed_at' => now(),
-        // ]);
+//     // Start quiz attempt
+//     $quizResult = QuizResult::create([
+//         'user_id' => $user->id,
+//         'quiz_id' => $quiz_id,
+//         'attempt_number' => $attempts + 1,
+//         'started_at' => now(),
+//         'score' => 0,
+//     ]);
+//     if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
+//     return response()->json(['message' => 'Time limit exceeded'], 403);
+// }
+//     // Process answers
+//     $totalScore = 0;
+//     foreach ($validated['answers'] as $answer) {
+//         $question = $quiz->questions->find($answer['question_id']);
+//         $isCorrect = null;
+//         $pointsEarned = 0;
 
-        // return response()->json([
-        //     'message' => 'Quiz retried successfully',
-        //     'data' => $quizResult
-        // ], 201);
+//         if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+//             $choice = QuestionChoice::find($answer['choice_id']);
+//             if ($choice) {
+//                 $isCorrect = $choice->is_correct;
+//                 $pointsEarned = $isCorrect ? $question->points : 0;
+//             }
+//         } elseif ($question->question_type === 'open_ended') {
+//             // Open-ended answers need manual grading
+//             $isCorrect = null;
+//             $pointsEarned = null;
+//         }
 
-        $user = Auth::user();
-    $quiz = Quiz::with('questions.choices')->find($quiz_id);
+//         $totalScore += $pointsEarned ?? 0;
 
-    if (!$quiz) {
-        return response()->json(['message' => 'Quiz not found'], 404);
-    }
+//         UserAnswer::create([
+//             'user_id' => $user->id,
+//             'quiz_result_id' => $quizResult->id,
+//             'question_id' => $answer['question_id'],
+//             'choice_id' => $answer['choice_id'] ?? null,
+//             'answer_text' => $answer['answer_text'] ?? null,
+//             'is_correct' => $isCorrect,
+//             'points_earned' => $pointsEarned,
+//         ]);
+//     }
 
-    // Check enrollment or instructor
-    $lesson = Lesson::find($quiz->lesson_id);
-    $enrollment = Enrollment::where('user_id', $user->id)
-        ->where('course_id', $lesson->course_id)
-        ->where('status', 'active')
-        ->first();
+//     // Update quiz result
+//     $quizResult->update([
+//         'score' => $totalScore,
+//         'completed_at' => now(),
+//     ]);
 
-    $instructor = Course_Instructors::where('course_id', $lesson->course_id)
-        ->whereHas('instructor', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })
-        ->first();
-
-    if (!$enrollment && !$instructor) {
-        return response()->json(['message' => 'You do not have access to this quiz'], 403);
-    }
-
-    // Check max attempts
-    $attempts = QuizResult::where('user_id', $user->id)
-        ->where('quiz_id', $quiz_id)
-        ->count();
-
-    if ($attempts >= $quiz->max_attempts) {
-        return response()->json(['message' => 'Maximum attempts reached'], 403);
-    }
-
-    // Validate answers
-    $validated = $request->validate([
-        'answers' => 'required|array',
-        'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
-        'answers.*.choice_id' => 'nullable|exists:question_choices,id',
-        'answers.*.answer_text' => 'nullable|string',
-    ]);
-
-    // Start quiz attempt
-    $quizResult = QuizResult::create([
-        'user_id' => $user->id,
-        'quiz_id' => $quiz_id,
-        'attempt_number' => $attempts + 1,
-        'started_at' => now(),
-        'score' => 0,
-    ]);
-    if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
-    return response()->json(['message' => 'Time limit exceeded'], 403);
-}
-    // Process answers
-    $totalScore = 0;
-    foreach ($validated['answers'] as $answer) {
-        $question = $quiz->questions->find($answer['question_id']);
-        $isCorrect = null;
-        $pointsEarned = 0;
-
-        if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
-            $choice = QuestionChoice::find($answer['choice_id']);
-            if ($choice) {
-                $isCorrect = $choice->is_correct;
-                $pointsEarned = $isCorrect ? $question->points : 0;
-            }
-        } elseif ($question->question_type === 'open_ended') {
-            // Open-ended answers need manual grading
-            $isCorrect = null;
-            $pointsEarned = null;
-        }
-
-        $totalScore += $pointsEarned ?? 0;
-
-        UserAnswer::create([
-            'user_id' => $user->id,
-            'quiz_result_id' => $quizResult->id,
-            'question_id' => $answer['question_id'],
-            'choice_id' => $answer['choice_id'] ?? null,
-            'answer_text' => $answer['answer_text'] ?? null,
-            'is_correct' => $isCorrect,
-            'points_earned' => $pointsEarned,
-        ]);
-    }
-
-    // Update quiz result
-    $quizResult->update([
-        'score' => $totalScore,
-        'completed_at' => now(),
-    ]);
-
-    return response()->json([
-        'message' => 'Quiz retried successfully',
-        'data' => $quizResult->load('userAnswers'),
-    ], 201);
-    }
+//     return response()->json([
+//         'message' => 'Quiz retried successfully',
+//         'data' => $quizResult->load('userAnswers'),
+//     ], 201);
+//     }
 
     /**
      * Get progress summary for all quizzes in a course.
@@ -533,126 +484,126 @@ class QuizController extends Controller
             'quizzes' => $quizzes
         ], 200);
     }
-    public function submitQuiz(Request $request, $quiz_id): JsonResponse
-{
-    $user = Auth::user();
-    $quiz = Quiz::with('questions.choices')->find($quiz_id);
+//     public function submitQuiz(Request $request, $quiz_id): JsonResponse
+// {
+//     $user = Auth::user();
+//     $quiz = Quiz::with('questions.choices')->find($quiz_id);
 
-    if (!$quiz) {
-        return response()->json(['message' => 'Quiz not found'], 404);
-    }
+//     if (!$quiz) {
+//         return response()->json(['message' => 'Quiz not found'], 404);
+//     }
 
-    // Check enrollment or instructor
-    $lesson = Lesson::find($quiz->lesson_id);
-    $enrollment = Enrollment::where('user_id', $user->id)
-        ->where('course_id', $lesson->course_id)
-        ->where('status', 'active')
-        ->first();
+//     // Check enrollment or instructor
+//     $lesson = Lesson::find($quiz->lesson_id);
+//     $enrollment = Enrollment::where('user_id', $user->id)
+//         ->where('course_id', $lesson->course_id)
+//         ->where('status', 'active')
+//         ->first();
 
-    $instructor = Course_Instructors::where('course_id', $lesson->course_id)
-        ->whereHas('instructor', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })
-        ->first();
+//     $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+//         ->whereHas('instructor', function ($query) use ($user) {
+//             $query->where('user_id', $user->id);
+//         })
+//         ->first();
 
-    if (!$enrollment && !$instructor) {
-        return response()->json(['message' => 'You do not have access to this quiz'], 403);
-    }
+//     if (!$enrollment && !$instructor) {
+//         return response()->json(['message' => 'You do not have access to this quiz'], 403);
+//     }
 
-    // Check max attempts
-    $attempts = QuizResult::where('user_id', $user->id)
-        ->where('quiz_id', $quiz_id)
-        ->count();
+//     // Check max attempts
+//     $attempts = QuizResult::where('user_id', $user->id)
+//         ->where('quiz_id', $quiz_id)
+//         ->count();
 
-    if ($attempts >= $quiz->max_attempts) {
-        return response()->json(['message' => 'Maximum attempts reached'], 403);
-    }
+//     if ($attempts >= $quiz->max_attempts) {
+//         return response()->json(['message' => 'Maximum attempts reached'], 403);
+//     }
 
-    // Validate answers
-    $validated = $request->validate([
-        'answers' => 'required|array',
-        'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
-        'answers.*.choice_id' => 'nullable|exists:question_choices,id',
-        'answers.*.answer_text' => 'nullable|string',
-    ]);
+//     // Validate answers
+//     $validated = $request->validate([
+//         'answers' => 'required|array',
+//         'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
+//         'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+//         'answers.*.answer_text' => 'nullable|string',
+//     ]);
     
-    // Start quiz attempt
-    $quizResult = QuizResult::create([
-        'user_id' => $user->id,
-        'quiz_id' => $quiz_id,
-        'attempt_number' => $attempts + 1,
-        'started_at' => now(),
-        'score' => 0,
-    ]);
-    if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
-    return response()->json(['message' => 'Time limit exceeded'], 403);
-}
-    // Process answers
-    $totalScore = 0;
-    foreach ($validated['answers'] as $answer) {
-        $question = $quiz->questions->find($answer['question_id']);
-        $isCorrect = null;
-        $pointsEarned = 0;
+//     // Start quiz attempt
+//     $quizResult = QuizResult::create([
+//         'user_id' => $user->id,
+//         'quiz_id' => $quiz_id,
+//         'attempt_number' => $attempts + 1,
+//         'started_at' => now(),
+//         'score' => 0,
+//     ]);
+//     if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
+//     return response()->json(['message' => 'Time limit exceeded'], 403);
+// }
+//     // Process answers
+//     $totalScore = 0;
+//     foreach ($validated['answers'] as $answer) {
+//         $question = $quiz->questions->find($answer['question_id']);
+//         $isCorrect = null;
+//         $pointsEarned = 0;
 
-        if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
-            $choice = QuestionChoice::find($answer['choice_id']);
-            if ($choice) {
-                $isCorrect = $choice->is_correct;
-                $pointsEarned = $isCorrect ? $question->points : 0;
-            }
-        } elseif ($question->question_type === 'open_ended') {
-            // Open-ended answers need manual grading
-            $isCorrect = null;
-            $pointsEarned = null;
-        }
+//         if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+//             $choice = QuestionChoice::find($answer['choice_id']);
+//             if ($choice) {
+//                 $isCorrect = $choice->is_correct;
+//                 $pointsEarned = $isCorrect ? $question->points : 0;
+//             }
+//         } elseif ($question->question_type === 'open_ended') {
+//             // Open-ended answers need manual grading
+//             $isCorrect = null;
+//             $pointsEarned = null;
+//         }
 
-        $totalScore += $pointsEarned ?? 0;
+//         $totalScore += $pointsEarned ?? 0;
 
-        UserAnswer::create([
-            'user_id' => $user->id,
-            'quiz_result_id' => $quizResult->id,
-            'question_id' => $answer['question_id'],
-            'choice_id' => $answer['choice_id'] ?? null,
-            'answer_text' => $answer['answer_text'] ?? null,
-            'is_correct' => $isCorrect,
-            'points_earned' => $pointsEarned,
-        ]);
-    }
+//         UserAnswer::create([
+//             'user_id' => $user->id,
+//             'quiz_result_id' => $quizResult->id,
+//             'question_id' => $answer['question_id'],
+//             'choice_id' => $answer['choice_id'] ?? null,
+//             'answer_text' => $answer['answer_text'] ?? null,
+//             'is_correct' => $isCorrect,
+//             'points_earned' => $pointsEarned,
+//         ]);
+//     }
 
-    // Update quiz result
-    $quizResult->update([
-        'score' => $totalScore,
-        'completed_at' => now(),
-    ]);
+//     // Update quiz result
+//     $quizResult->update([
+//         'score' => $totalScore,
+//         'completed_at' => now(),
+//     ]);
 
-    return response()->json([
-        'message' => 'Quiz submitted successfully',
-        'data' => $quizResult->load('userAnswers'),
-    ], 201);
-}
-public function getQuestionsForStudent($quiz_id): JsonResponse
-{
-    $user = Auth::user();
-    $quiz = Quiz::with(['questions' => function ($query) {
-        $query->where('is_visible', true)->with('choices');
-    }])->find($quiz_id);
+//     return response()->json([
+//         'message' => 'Quiz submitted successfully',
+//         'data' => $quizResult->load('userAnswers'),
+//     ], 201);
+// }
+// public function getQuestionsForStudent($quiz_id): JsonResponse
+// {
+//     $user = Auth::user();
+//     $quiz = Quiz::with(['questions' => function ($query) {
+//         $query->where('is_visible', true)->with('choices');
+//     }])->find($quiz_id);
 
-    if (!$quiz) {
-        return response()->json(['message' => 'Quiz not found'], 404);
-    }
+//     if (!$quiz) {
+//         return response()->json(['message' => 'Quiz not found'], 404);
+//     }
 
-    // Check enrollment
-    $enrollment = Enrollment::where('user_id', $user->id)
-        ->where('course_id', $quiz->lesson->course_id)
-        ->where('status', 'active')
-        ->first();
+//     // Check enrollment
+//     $enrollment = Enrollment::where('user_id', $user->id)
+//         ->where('course_id', $quiz->lesson->course_id)
+//         ->where('status', 'active')
+//         ->first();
 
-    if (!$enrollment) {
-        return response()->json(['message' => 'You are not enrolled in this course'], 403);
-    }
+//     if (!$enrollment) {
+//         return response()->json(['message' => 'You are not enrolled in this course'], 403);
+//     }
 
-    return response()->json(['data' => $quiz->questions], 200);
-}
+//     return response()->json(['data' => $quiz->questions], 200);
+// }
 
 public function gradeOpenEndedAnswer(Request $request, $user_answer_id): JsonResponse
 {
@@ -756,4 +707,441 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         'data' => $quizResult,
     ], 200);
 }
+
+ /**
+     * Lấy bản nháp của quiz để tiếp tục làm bài.
+     */
+    public function getDraft($quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with('lesson')->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký khóa học
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $quiz->lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
+
+        // Tìm bản nháp
+        $draft = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->whereNull('completed_at')
+            ->with(['userAnswers' => function ($query) {
+                $query->with(['question', 'choice']);
+            }])
+            ->first();
+
+        if (!$draft) {
+            return response()->json(['message' => 'Không tìm thấy bản nháp'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Lấy bản nháp thành công',
+            'data' => $draft
+        ], 200);
+    }
+
+    /**
+     * Lấy kết quả chi tiết của một lần làm bài quiz.
+     */
+    public function getResult($quiz_id, $quiz_result_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with('lesson')->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký khóa học
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $quiz->lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
+
+        // Lấy kết quả quiz
+        $quizResult = QuizResult::where('id', $quiz_result_id)
+            ->where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->with(['userAnswers' => function ($query) {
+                $query->with(['question' => function ($q) {
+                    $q->with(['choices' => function ($c) {
+                        $c->where('is_correct', true); // Lấy câu trả lời đúng
+                    }]);
+                }, 'choice']);
+            }])
+            ->first();
+
+        if (!$quizResult) {
+            return response()->json(['message' => 'Kết quả quiz không tìm thấy'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Lấy kết quả chi tiết thành công',
+            'data' => $quizResult
+        ], 200);
+    }
+
+    /**
+     * Bắt đầu một phiên làm bài quiz.
+     */
+    public function startQuiz(Request $request, $quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký khóa học
+        $lesson = Lesson::find($quiz->lesson_id);
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
+
+        // Kiểm tra số lần làm bài
+        $attempts = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->count();
+
+        if ($attempts >= $quiz->max_attempts) {
+            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+        }
+
+        // Kiểm tra quiz có hiển thị không
+        if (!$quiz->is_visible) {
+            return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+        }
+
+        // Tạo QuizResult mới
+        $quizResult = QuizResult::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quiz_id,
+            'attempt_number' => $attempts + 1,
+            'started_at' => now(),
+            'score' => 0,
+        ]);
+
+        return response()->json([
+            'message' => 'Bắt đầu quiz thành công',
+            'data' => [
+                'quiz_result_id' => $quizResult->id,
+                'started_at' => $quizResult->started_at,
+            ]
+        ], 201);
+    }
+
+    /**
+     * Lấy câu hỏi cho sinh viên, hỗ trợ random và giới hạn số lượng.
+     */
+    public function getQuestionsForStudent($quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $randomize = request()->query('randomize', false);
+        $limit = request()->query('limit', null);
+        $page = request()->query('page', 1);
+
+        $quiz = Quiz::with(['questions' => function ($query) use ($randomize, $limit, $page) {
+            $query->where('is_visible', true);
+            if ($randomize) {
+                $query->inRandomOrder();
+            } else {
+                $query->orderBy('sort_order');
+            }
+            if ($limit) {
+                $query->forPage($page, $limit);
+            }
+            $query->with('choices');
+        }])->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký khóa học
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $quiz->lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
+
+        return response()->json([
+            'data' => $quiz->questions,
+            'pagination' => $limit ? [
+                'page' => (int)$page,
+                'per_page' => (int)$limit,
+                'total' => $quiz->questions()->where('is_visible', true)->count(),
+            ] : null
+        ], 200);
+    }
+
+    /**
+     * Hiển thị chi tiết quiz cho sinh viên, bao gồm phản hồi.
+     */
+    public function showForStudent($quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with('lesson')->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký khóa học
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $quiz->lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
+
+        // Lấy các lần làm bài trước với phản hồi chi tiết
+        $attempts = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->with(['userAnswers' => function ($query) {
+                $query->with(['question' => function ($q) {
+                    $q->with(['choices' => function ($c) {
+                        $c->where('is_correct', true);
+                    }]);
+                }, 'choice']);
+            }])
+            ->orderBy('completed_at', 'desc')
+            ->get(['id', 'score', 'completed_at', 'attempt_number']);
+
+        return response()->json([
+            'data' => $quiz,
+            'attempts' => $attempts
+        ], 200);
+    }
+
+    /**
+     * Nộp bài quiz với kiểm tra thời gian.
+     */
+    public function submitQuiz(Request $request, $quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with('questions.choices')->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký hoặc quyền giảng viên
+        $lesson = Lesson::find($quiz->lesson_id);
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+            ->whereHas('instructor', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->first();
+
+        if (!$enrollment && !$instructor) {
+            return response()->json(['message' => 'Bạn không có quyền truy cập quiz này'], 403);
+        }
+
+        // Kiểm tra số lần làm bài
+        $attempts = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->count();
+
+        if ($attempts >= $quiz->max_attempts) {
+            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+        }
+
+        // Validate câu trả lời
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
+            'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+            'answers.*.answer_text' => 'nullable|string',
+        ]);
+
+        // Bắt đầu lần làm bài
+        $quizResult = QuizResult::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quiz_id,
+            'attempt_number' => $attempts + 1,
+            'started_at' => now(),
+            'score' => 0,
+        ]);
+
+        // Kiểm tra thời gian tại thời điểm nộp bài
+        if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
+            $quizResult->delete(); // Xóa lần làm bài không hợp lệ
+            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
+        }
+
+        // Xử lý câu trả lời
+        $totalScore = 0;
+        foreach ($validated['answers'] as $answer) {
+            $question = $quiz->questions->find($answer['question_id']);
+            $isCorrect = null;
+            $pointsEarned = 0;
+
+            if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+                $choice = QuestionChoice::find($answer['choice_id']);
+                if ($choice) {
+                    $isCorrect = $choice->is_correct;
+                    $pointsEarned = $isCorrect ? $question->points : 0;
+                }
+            } elseif ($question->question_type === 'open_ended') {
+                $isCorrect = null;
+                $pointsEarned = null;
+            }
+
+            $totalScore += $pointsEarned ?? 0;
+
+            UserAnswer::create([
+                'user_id' => $user->id,
+                'quiz_result_id' => $quizResult->id,
+                'question_id' => $answer['question_id'],
+                'choice_id' => $answer['choice_id'] ?? null,
+                'answer_text' => $answer['answer_text'] ?? null,
+                'is_correct' => $isCorrect,
+                'points_earned' => $pointsEarned,
+            ]);
+        }
+
+        // Cập nhật kết quả quiz
+        $quizResult->update([
+            'score' => $totalScore,
+            'completed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Nộp bài quiz thành công',
+            'data' => $quizResult->load('userAnswers'),
+        ], 201);
+    }
+
+    /**
+     * Thử lại quiz với kiểm tra thời gian.
+     */
+    public function retryQuiz(Request $request, $quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with('questions.choices')->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Kiểm tra đăng ký hoặc quyền giảng viên
+        $lesson = Lesson::find($quiz->lesson_id);
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $lesson->course_id)
+            ->where('status', 'active')
+            ->first();
+
+        $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+            ->whereHas('instructor', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->first();
+
+        if (!$enrollment && !$instructor) {
+            return response()->json(['message' => 'Bạn không có quyền truy cập quiz này'], 403);
+        }
+
+        // Kiểm tra số lần làm bài
+        $attempts = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quiz_id)
+            ->count();
+
+        if ($attempts >= $quiz->max_attempts) {
+            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+        }
+
+        // Validate câu trả lời
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
+            'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+            'answers.*.answer_text' => 'nullable|string',
+        ]);
+
+        // Bắt đầu lần làm bài
+        $quizResult = QuizResult::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quiz_id,
+            'attempt_number' => $attempts + 1,
+            'started_at' => now(),
+            'score' => 0,
+        ]);
+
+        // Kiểm tra thời gian tại thời điểm nộp bài
+        if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
+            $quizResult->delete();
+            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
+        }
+
+        // Xử lý câu trả lời
+        $totalScore = 0;
+        foreach ($validated['answers'] as $answer) {
+            $question = $quiz->questions->find($answer['question_id']);
+            $isCorrect = null;
+            $pointsEarned = 0;
+
+            if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+                $choice = QuestionChoice::find($answer['choice_id']);
+                if ($choice) {
+                    $isCorrect = $choice->is_correct;
+                    $pointsEarned = $isCorrect ? $question->points : 0;
+                }
+            } elseif ($question->question_type === 'open_ended') {
+                $isCorrect = null;
+                $pointsEarned = null;
+            }
+
+            $totalScore += $pointsEarned ?? 0;
+
+            UserAnswer::create([
+                'user_id' => $user->id,
+                'quiz_result_id' => $quizResult->id,
+                'question_id' => $answer['question_id'],
+                'choice_id' => $answer['choice_id'] ?? null,
+                'answer_text' => $answer['answer_text'] ?? null,
+                'is_correct' => $isCorrect,
+                'points_earned' => $pointsEarned,
+            ]);
+        }
+
+        // Cập nhật kết quả quiz
+        $quizResult->update([
+            'score' => $totalScore,
+            'completed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Thử lại quiz thành công',
+            'data' => $quizResult->load('userAnswers'),
+        ], 201);
+    }
 }

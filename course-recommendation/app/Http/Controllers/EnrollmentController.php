@@ -16,6 +16,11 @@ use App\Models\Lesson;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\Payment;
+use App\Models\Certificate;
+use Carbon\Carbon;
+use App\Http\Controllers\PaymentController;
+use App\Http\Requests\Enrollment\Renew;
+use Illuminate\Support\Facades\DB;
 
 class EnrollmentController extends Controller
 {
@@ -61,25 +66,243 @@ class EnrollmentController extends Controller
         'data' => $enrollment
     ], 201);
 }
-    public function update(UpdateEnrollmentRequest $request, $id): JsonResponse
-    {
+   /**
+     * Cập nhật enrollment (gia hạn thời gian truy cập)
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+  public function updateAdmin(UpdateEnrollmentRequest $request, $id)
+{
+    try {
+        // Tìm enrollment theo ID
         $enrollment = Enrollment::findOrFail($id);
-        $enrollment->update($request->validated());
-        return response()->json(['message' => 'Enrollment updated successfully', 'data' => $enrollment]);
-    }
 
-    public function destroy($id): JsonResponse
-    {
-        $enrollment = Enrollment::findOrFail($id);
-        $payment = Payment::where('user_id', $enrollment->user_id)
-    ->where('course_id', $enrollment->course_id)
-    ->where('status', 'completed')
-    ->first();
-if ($payment) {
-    return response()->json(['message' => 'Cannot unenroll from a paid course without a refund process'], 400);
+        // Kiểm tra trạng thái enrollment
+        if ($enrollment->status !== 'active') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Only active enrollments can be updated.'
+            ], 400);
+        }
+
+        // Cập nhật enrollment với dữ liệu hợp lệ
+        $enrollment->update($request->validated());
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Enrollment updated successfully.',
+            'data' => $enrollment
+        ], 200);
+
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Enrollment not found.'
+        ], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'An error occurred while updating enrollment.',
+            'error' => $e->getMessage() // Có thể bật khi debug
+        ], 500);
+    }
 }
-        $enrollment->delete();
-        return response()->json(['message' => 'Enrollment deleted successfully']);
+//Renew an enrollment
+    public function update(Renew $request, $id): JsonResponse
+    {
+        DB::beginTransaction();
+        try {
+            // Find the enrollment
+            $enrollment = Enrollment::where('id', $id)
+                ->where('user_id', Auth::user()->id)
+                ->first();
+
+            if (!$enrollment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Enrollment not found or you do not have permission.'
+                ], 404);
+            }
+
+            // Check enrollment status
+            if ($enrollment->status !== 'active') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only active enrollments can be renewed.'
+                ], 400);
+            }
+
+            // Check if expires_at is still valid or close to expiring
+            if (!$enrollment->expires_at || Carbon::parse($enrollment->expires_at)->isPast()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Enrollment has expired and cannot be renewed.'
+                ], 400);
+            }
+
+            // Get course details for renewal fee
+            $course = Course::find($enrollment->course_id);
+            if (!$course) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            // Calculate renewal fee (e.g., 50% of course price)
+            $renewalFee = $course->price * 0.5;
+            if ($renewalFee <= 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid renewal fee.'
+                ], 400);
+            }
+
+            // Prepare payment data
+            $paymentData = [
+                'amount' => $renewalFee,
+                'method' => $request->validated()['payment_method'],
+                'coupon_id' => null, // Optionally allow coupons in the future
+                'payment_date' => null,
+            ];
+
+            // Initiate payment using PaymentController::store
+            $paymentResponse = $this->paymentController->store(
+                $paymentData,
+                Auth::user()->id,
+                $enrollment->course_id
+            );
+
+            // Check if payment initiation was successful
+            if ($paymentResponse->getStatusCode() !== 201) {
+                return $paymentResponse; // Return error from PaymentController
+            }
+
+            // Extract payment from response
+            $payment = Payment::find(json_decode($paymentResponse->getContent(), true)['data']['id']);
+            if (!$payment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to retrieve payment record.'
+                ], 500);
+            }
+
+            // Simulate VNPay payment success (since VNPay is not fully implemented)
+            $payment->status = 'completed';
+            $payment->transaction_code = 'VNPAY_' . time();
+            $payment->payment_date = Carbon::now();
+            $payment->save();
+
+            // Update expires_at
+            $enrollment->expires_at = Carbon::parse($enrollment->expires_at)->addMonths(3);
+            $enrollment->save();
+
+            // Log the renewal
+            Log::info('Enrollment renewed', [
+                'enrollment_id' => $enrollment->id,
+                'user_id' => Auth::user()->id,
+                'course_id' => $enrollment->course_id,
+                'payment_id' => $payment->id,
+                'new_expires_at' => $enrollment->expires_at
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Enrollment renewed successfully.',
+                'data' => [
+                    'enrollment_id' => $enrollment->id,
+                    'course_id' => $enrollment->course_id,
+                    'expires_at' => $enrollment->expires_at,
+                    'payment_id' => $payment->id,
+                    'amount_paid' => $payment->amount,
+                    'payment_status' => $payment->status,
+                    'transaction_code' => $payment->transaction_code
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Enrollment renewal failed', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+                'enrollment_id' => $id
+            ]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while renewing enrollment: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Xóa enrollment (hủy đăng ký khóa học)
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy($id)
+    {
+        try {
+            // Tìm enrollment theo ID và đảm bảo thuộc về student
+            $enrollment = Enrollment::where('id', $id)
+                ->where('user_id', Auth::user()->id)
+                ->first();
+
+            if (!$enrollment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Enrollment not found or you do not have permission.'
+                ], 404);
+            }
+
+            // Kiểm tra trạng thái enrollment
+            if ($enrollment->status !== 'active' || $enrollment->completed_at) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Only active and incomplete enrollments can be cancelled.'
+                ], 400);
+            }
+
+            // Kiểm tra thời gian hủy (ví dụ: chỉ cho phép trong 7 ngày)
+            $enrollmentDate = Carbon::parse($enrollment->enrolled_at);
+            if ($enrollmentDate->diffInDays(Carbon::now()) > 7) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Cancellation period has expired (7 days).'
+                ], 400);
+            }
+
+            // Kiểm tra thanh toán liên quan
+            $payment = Payment::where('course_id', $enrollment->course_id)
+                ->where('user_id', Auth::user()->id)
+                ->where('status', 'completed')
+                ->first();
+
+            if ($payment) {
+                // TODO: Xử lý hoàn tiền nếu cần (cập nhật payments.status thành 'refunded')
+                // Ví dụ: $payment->status = 'refunded'; $payment->save();
+            }
+
+            // Vô hiệu hóa certificate nếu có
+            Certificate::where('enrollment_id', $enrollment->id)->delete();
+
+            // Xóa enrollment
+            $enrollment->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Enrollment cancelled successfully.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while cancelling enrollment.'
+            ], 500);
+        }
     }
     public function getStudentEnrollments(): JsonResponse
     {
@@ -263,15 +486,18 @@ if ($payment) {
             return response()->json(['message' => 'Course not found'], 404);
         }
 
-// Check if the course is free (price == 0)
-    if ($course->price > 0) {
-        return response()->json(['message' => 'This course requires payment. Please use the payment process.'], 400);
-    }
+        // Check if the course is free (price == 0)
+        if ($course->price > 0) {
+            return response()->json(['message' => 'This course requires payment. Please use the payment process.'], 400);
+        }
 
-        // Check for existing enrollment
         $existingEnrollment = Enrollment::where('user_id', $user->id)
-            ->where('course_id', $course_id)
-            ->first();
+        ->where('course_id', $course_id)
+        ->where(function ($query) {
+        $query->whereNull('expires_at')
+              ->orWhere('expires_at', '>=', now());
+        })
+        ->first();
 
         if ($existingEnrollment) {
             return response()->json(['message' => 'You are already enrolled in this course'], 409);
@@ -282,6 +508,7 @@ if ($payment) {
             'user_id' => $user->id,
             'course_id' => $course_id,
             'enrolled_at' => now(),
+            'expires_at' => Carbon::now()->addMonths(3), // Hết hạn sau 3 tháng
             'status' => 'active',
         ]);
 
@@ -324,7 +551,6 @@ if ($payment) {
             $user->id,
             $course_id
         );
-
         return $paymentResponse;
     }
 }

@@ -23,6 +23,7 @@ use App\Services\PaymentGateways\PaymentGateway;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
+
 // Existing General Routes
 Route::post('/recommend', [RecommendationController::class, 'recommend']);
 Route::post('/rate', [RecommendationController::class, 'rate']);

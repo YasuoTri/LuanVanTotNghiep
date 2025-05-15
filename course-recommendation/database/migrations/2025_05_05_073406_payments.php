@@ -26,7 +26,7 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('course_id');
             $table->integer('amount')->comment('Số tiền VND');
-            $table->enum('method', ['momo', 'zalopay', 'bank_transfer'])->comment('Phương thức thanh toán VN');
+            $table->enum('method', ['momo', 'zalopay', 'bank_transfer','vnpay','paypal'])->comment('Phương thức thanh toán VN');
             $table->string('transaction_code', 50)->nullable()->comment('Mã giao dịch ví điện tử');
             $table->unsignedBigInteger('coupon_id')->nullable();
             $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');

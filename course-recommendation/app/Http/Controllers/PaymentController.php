@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Http\Requests\Payment\UpdatePaymentRequest;
+use App\Models\AdminAccount;
 use App\Models\Payment;
+use App\Models\RevenueSession;
 use App\Services\PaymentGateways\PayPalGateway;
 use App\Services\PaymentGateways\VNPayGateway;
 use Illuminate\Http\JsonResponse;
@@ -165,75 +167,83 @@ class PaymentController extends Controller
         ]);
     }
 
-  /**
-     * Create a new payment.
-     */
-    public function store(array $paymentData, int $userId, int $courseId): JsonResponse
-    {
-        $user = Auth::user();
+  public function store(array $paymentData, int $userId, int $courseId): JsonResponse
+{
+    $user = Auth::user();
 
-        if ($user->role !== 'student' || $user->id !== $userId) {
-            return response()->json(['message' => 'Unauthorized: Only students can make payments'], 403);
+    if ($user->role !== 'student' || $user->id !== $userId) {
+        return response()->json(['message' => 'Unauthorized: Only students can make payments'], 403);
+    }
+
+    // Validate payment data
+    $requiredFields = ['amount', 'method'];
+    foreach ($requiredFields as $field) {
+        if (!isset($paymentData[$field])) {
+            return response()->json(['message' => "Missing required field: {$field}"], 400);
+        }
+    }
+
+    // Apply coupon if provided
+    $finalAmount = $paymentData['amount'];
+    $coupon = null;
+    if (!empty($paymentData['coupon_id'])) {
+        $coupon = Coupon::where('id', $paymentData['coupon_id'])
+            ->where('is_active', true)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->whereColumn('used_count', '<', 'usage_limit')
+            ->first();
+
+        if (!$coupon) {
+            return response()->json(['message' => 'Invalid or expired coupon'], 400);
         }
 
-        // Validate payment data (ensure required fields)
-        $requiredFields = ['amount', 'method'];
-        foreach ($requiredFields as $field) {
-            if (!isset($paymentData[$field])) {
-                return response()->json(['message' => "Missing required field: {$field}"], 400);
-            }
-        }
-        // Apply coupon if provided
-        $finalAmount = $paymentData['amount'];
-        $coupon = null;
-        if (!empty($paymentData['coupon_id'])) {
-            $coupon = Coupon::where('id', $paymentData['coupon_id'])
-                ->where('is_active', true)
-                ->where('start_date', '<=', now())
-                ->where('end_date', '>=', now())
-                ->whereColumn('used_count', '<', 'usage_limit')
-                ->first();
-
-            if (!$coupon) {
-                return response()->json(['message' => 'Invalid or expired coupon'], 400);
-            }
-
-            if ($coupon->discount_type === 'percent') {
-                $finalAmount = $finalAmount * (1 - $coupon->discount_value / 100);
-            } else {
-                $finalAmount = $finalAmount - $coupon->discount_value;
-            }
-
-            if ($finalAmount < 0) {
-                $finalAmount = 0;
-            }
+        if ($coupon->discount_type === 'percent') {
+            $finalAmount = $finalAmount * (1 - $coupon->discount_value / 100);
+        } else {
+            $finalAmount = $finalAmount - $coupon->discount_value;
         }
 
-        // Select payment gateway
-        $gatewayClass = $this->gateways[$paymentData['method']] ?? ZaloPayGateway::class;
-        $gateway = new $gatewayClass();
+        if ($finalAmount < 0) {
+            $finalAmount = 0;
+        }
+    }
 
-        // Create order
-        $orderData = [
-            'user_id' => $userId,
-            'course_id' => $courseId,
-            'amount' => $paymentData['amount'],
-            'final_amount' => $finalAmount,
-            'coupon_id' => $paymentData['coupon_id'] ?? null,
-        ];
+    // Get or create revenue session for current month
+    $currentMonth = now()->month;
+    $currentYear = now()->year;
+    $revenueSession = RevenueSession::firstOrCreate(
+        ['month' => $currentMonth, 'year' => $currentYear],
+        ['total_revenue' => 0, 'admin_share' => 0, 'instructor_share' => 0, 'status' => 'open']
+    );
 
-        $result = $gateway->createOrder($orderData);
+    // Select payment gateway
+    $gatewayClass = $this->gateways[$paymentData['method']] ?? ZaloPayGateway::class;
+    $gateway = new $gatewayClass();
 
-if (!$result['success']) {
-        // Không tăng used_count của coupon khi createOrder thất bại
+    // Create order
+    $orderData = [
+        'user_id' => $userId,
+        'course_id' => $courseId,
+        'amount' => $paymentData['amount'],
+        'final_amount' => $finalAmount,
+        'coupon_id' => $paymentData['coupon_id'] ?? null,
+    ];
+
+    $result = $gateway->createOrder($orderData);
+
+    if (!$result['success']) {
         return response()->json([
             'message' => $result['message'] ?? 'Failed to create payment order',
             'error' => $result
         ], 400);
     }
 
+    // Start transaction
+    DB::beginTransaction();
+    try {
         // Store payment
-        $paymentData = [
+        $payment = Payment::create([
             'user_id' => $userId,
             'course_id' => $courseId,
             'amount' => $paymentData['amount'],
@@ -242,122 +252,39 @@ if (!$result['success']) {
             'coupon_id' => $paymentData['coupon_id'] ?? null,
             'status' => 'pending',
             'payment_date' => $paymentData['payment_date'] ?? null,
-        ];
-        if($result['success']!= true)
-         {
-            return response()->json([
-                'message' => 'Failed to create payment order',
-                'error' => $result['data']
-            ], 400);
+            'revenue_session_id' => $revenueSession->id,
+        ]);
+
+        // Update coupon
+        if ($coupon) {
+            $coupon->increment('used_count');
         }
-        $payment = Payment::create($paymentData);
-// Tăng used_count của coupon khi tạo payment thành công
-    if ($coupon) {
-        $coupon->increment('used_count');
-    }
+
+        // Update admin account balance when payment is completed
+        if ($result['success'] && $finalAmount > 0) {
+            $adminAccount = AdminAccount::firstOrCreate(
+                ['admin_id' => Admins::first()->id], // Giả sử có 1 admin chính
+                ['balance' => 0]
+            );
+            $adminAccount->increment('balance', $finalAmount);
+        }
+
+        DB::commit();
+
         return response()->json([
             'message' => 'Payment initiated successfully',
             'data' => $payment,
             'order' => $result['data']
         ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Payment creation failed', ['error' => $e->getMessage()]);
+        return response()->json([
+            'message' => 'Failed to create payment',
+            'error' => $e->getMessage()
+        ], 500);
     }
- /**
-     * Create a new payment for admin.
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function storeAdmin(Request $request): JsonResponse
-    {
-        // Kiểm tra vai trò admin
-        $admin = Auth::user();
-        if (!$admin || $admin->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized: Only admins can create payments'
-            ], 403);
-        }
-
-        // Validate request
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'course_id' => 'required|exists:courses,id',
-            'amount' => 'required|integer|min:0',
-            'method' => 'required|in:momo,zalopay,bank_transfer,vnpay,paypal',
-            'transaction_code' => 'nullable|string|max:50|unique:payments,transaction_code',
-            'coupon_id' => 'nullable|exists:coupons,id',
-            'status' => 'required|in:pending,completed,failed',
-            'payment_date' => 'nullable|date|before_or_equal:now'
-        ]);
-
-        // Kiểm tra user là student
-        $user = User::find($validated['user_id']);
-        if ($user->role !== 'student') {
-            return response()->json([
-                'message' => 'Only students can have payments created'
-            ], 422);
-        }
-
-        // Kiểm tra enrollment
-        $enrollment = Enrollment::where('user_id', $validated['user_id'])
-            ->where('course_id', $validated['course_id'])
-            ->where('status', 'active')
-            ->first();
-        if (!$enrollment) {
-            return response()->json([
-                'message' => 'The student is not enrolled in this course'
-            ], 422);
-        }
-
-        // Kiểm tra coupon (nếu có)
-        if (isset($validated['coupon_id'])) {
-            $coupon = Coupon::find($validated['coupon_id']);
-            if (!$coupon->is_active || ($coupon->usage_limit && $coupon->used_count >= $coupon->usage_limit)) {
-                return response()->json([
-                    'message' => 'Coupon is invalid or has reached usage limit'
-                ], 422);
-            }
-        }
-
-        // Tạo payment
-        DB::beginTransaction();
-        try {
-            $payment = Payment::create([
-                'user_id' => $validated['user_id'],
-                'course_id' => $validated['course_id'],
-                'amount' => $validated['amount'],
-                'method' => $validated['method'],
-                'transaction_code' => $validated['transaction_code'],
-                'coupon_id' => $validated['coupon_id'],
-                'status' => $validated['status'],
-                'payment_date' => $validated['payment_date'] ?? now(),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            // Cập nhật used_count của coupon nếu có
-            if (isset($validated['coupon_id']) && $validated['status'] === 'completed') {
-                $coupon->increment('used_count');
-            }
-
-            // Ghi log hoạt động admin
-            Admins::where('user_id', $admin->id)->update([
-                'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Created payment ID {$payment->id} for user {$validated['user_id']} at ', NOW())")
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Payment created successfully',
-                'data' => $payment->load(['user', 'course', 'coupon'])
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to create payment',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
+}
     public function update(UpdatePaymentRequest $request, $id): JsonResponse
     {
         $payment = Payment::findOrFail($id);
@@ -417,13 +344,6 @@ if (!$result['success']) {
 
 public function handleVNPayCallback(Request $request): JsonResponse
 {
-    // $gateway = new VNPayGateway();
-    // $result = $gateway->verifyCallback($request->query());
-
-    // if (!$result['success']) {
-    //     Log::error('VNPay callback: Verification failed', ['error' => $result['message']]);
-    //     return response()->json(['message' => $result['message']], 400);
-    // }
     $result = $request->all();
     $txnRef = $result['transaction_code'];
     $payment = Payment::where('transaction_code', $txnRef)->first();
@@ -433,20 +353,25 @@ public function handleVNPayCallback(Request $request): JsonResponse
         return response()->json(['message' => 'Payment not found'], 404);
     }
 
-    // $status = ($result['data']['vnp_ResponseCode'] ?? '99') === '00' ? 'completed' : 'failed';
-    $status= $result['transaction_code'] ? 'completed' : 'failed';
+    $status = $result['transaction_code'] ? 'completed' : 'failed';
+
     if ($payment->status === 'completed') {
         Log::info('VNPay callback: Payment already completed', ['txnRef' => $txnRef]);
         return response()->json(['message' => 'Payment already completed']);
     }
-        $payment->update([
-        'status' => $status,
-        'payment_date' => now(),
-    ]);
 
-    if ($status === 'completed' && $payment->status === 'completed') {
-        $courseId = $result['data']['course_id'] ?? $payment->course_id; // Lấy từ payment thay vì vnp_ExtraData
-        if ($courseId) {
+    // Start transaction
+    DB::beginTransaction();
+    try {
+        $payment->update([
+            'status' => $status,
+            'payment_date' => now(),
+        ]);
+
+        if ($status === 'completed' && $payment->status === 'completed') {
+            $courseId = $payment->course_id;
+
+            // Create enrollment
             Enrollment::firstOrCreate(
                 [
                     'user_id' => $payment->user_id,
@@ -457,16 +382,34 @@ public function handleVNPayCallback(Request $request): JsonResponse
                     'status' => 'active',
                 ]
             );
+
+            // Update coupon
+            if ($payment->coupon_id) {
+                $coupon = Coupon::find($payment->coupon_id);
+                $coupon?->increment('used_count');
+            }
+
+            // Update revenue session
+            $revenueSession = RevenueSession::find($payment->revenue_session_id);
+            if ($revenueSession) {
+                $revenueSession->increment('total_revenue', $payment->amount);
+            }
+
+            // Update admin account balance (if not already updated)
+            $adminAccount = AdminAccount::first();
+            if ($adminAccount) {
+                $adminAccount->increment('balance', $payment->amount);
+            }
         }
 
-        if ($payment->coupon_id) {
-            $coupon = Coupon::find($payment->coupon_id);
-            $coupon?->increment('used_count');
-        }
+        DB::commit();
+        Log::info('VNPay callback processed', ['payment_id' => $payment->id, 'status' => $status]);
+        return response()->json(['message' => 'Payment status updated']);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('VNPay callback processing failed', ['error' => $e->getMessage()]);
+        return response()->json(['message' => 'Failed to process callback'], 500);
     }
-
-    Log::info('VNPay callback processed', ['payment_id' => $payment->id, 'status' => $status]);
-    return response()->json(['message' => 'Payment status updated']);
 }
 
 public function handleVNPayIPN(Request $request): JsonResponse

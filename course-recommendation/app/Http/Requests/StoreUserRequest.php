@@ -34,10 +34,13 @@ class StoreUserRequest extends FormRequest
             'YoB' => 'nullable|integer|min:1900|max:' . date('Y'),
             'gender' => 'nullable|string|max:20',
             'role' => 'required|in:student,instructor,admin',
+            'provider' => 'nullable|string|max:50',
+            'provider_id' => 'nullable|string|max:255',
             'admin_level' => [
                 'required_if:role,admin',
                 Rule::in(['organization', 'program'])
             ]
+            
         ];
     }
 

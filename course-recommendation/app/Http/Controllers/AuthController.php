@@ -11,6 +11,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -168,6 +169,112 @@ class AuthController extends Controller
                 'message' => 'Logout failed',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+    // Redirect to Google login
+    public function redirectToGoogle()
+    {
+        return Socialite::driver('google')->redirect();
+    }
+
+    // Handle Google callback
+    public function handleGoogleCallback()
+    {
+        try {
+            $socialUser = Socialite::driver('google')->user();
+            return $this->handleSocialLogin($socialUser, 'google');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Google login failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Redirect to Facebook login
+    public function redirectToFacebook()
+    {
+       return Socialite::driver('facebook')->redirect();
+    }
+
+    // Handle Facebook callback
+    public function handleFacebookCallback()
+    {
+        try {
+            $socialUser = Socialite::driver('facebook')->user();
+            return $this->handleSocialLogin($socialUser, 'facebook');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Facebook login failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Handle social login logic
+    protected function handleSocialLogin($socialUser, $provider)
+    {
+        // Find or create the user
+        $user = User::where('provider_id', $socialUser->getId())
+            ->where('provider', $provider)
+            ->first();
+
+        if (!$user) {
+            // Check if email already exists
+            $existingUser = User::where('email', $socialUser->getEmail())->first();
+            if ($existingUser) {
+                return response()->json([
+                    'error' => 'Email already registered with another account.',
+                ], 400);
+            }
+
+            // Create new user
+            $user = User::create([
+                'userid_DI' => 'user_' . Str::random(10),
+                'email' => $socialUser->getEmail()??$socialUser->getId().'@gmail.com',
+                'final_cc_cname_DI' => $socialUser->getName() ?? 'Unknown',
+                'role' => 'student', // Default to student
+                'password' => Hash::make(Str::random(16)), // Random password
+                'provider' => $provider,
+                'provider_id' => $socialUser->getId(),
+            ]);
+
+            // Create student record
+            Student::create([
+                'user_id' => $user->id,
+                'learning_goals' => null,
+                'interests' => null,
+                'total_courses_completed' => 0,
+            ]);
+        }
+
+        // Generate JWT token
+        $token = JWTAuth::fromUser($user);
+
+        // Call FastAPI recommendation service
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+            ])->post('http://localhost:8100/recommend-laravel', [
+                'user_id' => $user->id,
+                'course_name' => null,
+            ]);
+
+            $recommendedCourses = $response->successful()
+                ? $response->json()['courses']
+                : null;
+
+            return response()->json([
+                'message' => 'Social login successful',
+                'user' => $user,
+                'token' => $token,
+                'recommended_courses' => $recommendedCourses,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Social login successful',
+                'user' => $user,
+                'token' => $token,
+                'recommendation_error' => 'Recommendation service unavailable: ' . $e->getMessage(),
+            ], 200);
         }
     }
 }

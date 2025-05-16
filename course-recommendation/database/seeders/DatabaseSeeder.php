@@ -371,13 +371,20 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed enrollments table
      */
-    private function seedEnrollments()
-    {
-        $this->command->info('Seeding enrollments...');
-        
-        $interactions = Interaction::where('viewed', true)->get();
-        
-        foreach ($interactions as $interaction) {
+   private function seedEnrollments()
+{
+    $this->command->info('Seeding enrollments...');
+    
+    $interactions = Interaction::where('viewed', true)
+        ->groupBy('user_id', 'course_id') // Lấy bản ghi đầu tiên cho mỗi tổ hợp user_id, course_id
+        ->select('user_id', 'course_id', 'start_time', 'certified')
+        ->get();
+    
+    foreach ($interactions as $interaction) {
+        // Kiểm tra xem enrollment đã tồn tại chưa
+        if (!Enrollment::where('user_id', $interaction->user_id)
+            ->where('course_id', $interaction->course_id)
+            ->exists()) {
             $status = $interaction->certified ? 'completed' : 'active';
             $completedAt = $interaction->certified ? now()->subDays(rand(1, 100)) : null;
             $expiresAt = now()->addDays(rand(30, 365));
@@ -393,9 +400,10 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => now(),
             ]);
         }
-        
-        $this->command->info('Enrollments seeded successfully!');
     }
+    
+    $this->command->info('Enrollments seeded successfully!');
+}
     
     /**
      * Seed certificates table

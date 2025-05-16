@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'instructor' => CheckInstructorRole::class,
             'instructor_or_admin' => InstructorOrAdmin::class,
             'student_or_admin' => StudentOrAdmin::class,
+            'jwt_cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
         ]);
 
         // (Tùy chọn) Áp dụng middleware cho các route hoặc group

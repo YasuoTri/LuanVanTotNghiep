@@ -36,7 +36,7 @@ Route::get('/courses/search', [SearchController::class, 'search'])->name('course
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{id}', [CourseController::class, 'show']);
 // Student Routes
-Route::middleware(['auth:api', 'student'])->group(function () {
+Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
     Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);//xong
@@ -80,7 +80,7 @@ Route::middleware(['auth:api', 'student'])->group(function () {
 });
 
 // Instructor Routes
-Route::middleware(['auth:api', 'instructor'])->group(function () {
+Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
   
     Route::get('/instructor/courses', [CourseController::class, 'indexCourseInstructor']);
     Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);
@@ -134,12 +134,12 @@ Route::middleware(['auth:api', 'instructor'])->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['auth:api', 'admin'])->group(function () {
+Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     // Existing Routes
-    Route::post('/courses', [CourseController::class, 'store']);
-    Route::put('/courses/{id}', [CourseController::class, 'update']);
-    Route::delete('/courses/{id}', [CourseController::class, 'destroy']);
-    Route::get('/courses/{id}/admin-stats', [CourseController::class, 'adminStats']);
+    Route::post('/admin/courses', [CourseController::class, 'store']);
+    Route::put('/admin/courses/{id}', [CourseController::class, 'update']);
+    Route::delete('/admin/courses/{id}', [CourseController::class, 'destroy']);
+    Route::get('/admin/courses/{id}/admin-stats', [CourseController::class, 'adminStats']);
     Route::get('/courses/pending', [CourseController::class, 'getPendingCourses']);
     Route::put('/courses/{id}/approve', [CourseController::class, 'approveCourse']);
     Route::put('/courses/{id}/reject', [CourseController::class, 'rejectCourse']);
@@ -173,6 +173,8 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     Route::post('/admin/lessons', [LessonController::class, 'store']);
     Route::put('/admin/lessons/{id}', [LessonController::class, 'update']);
     Route::delete('/admin/lessons/{id}', [LessonController::class, 'destroy']);
+    Route::put('/admin/courses/{course_id}/lessons/{lesson_id}/approve', [LessonController::class, 'approve'])->name('lessons.approve');
+    Route::put('/admin/courses/{course_id}/lessons/{lesson_id}/reject', [LessonController::class, 'reject'])->name('lessons.reject');
     Route::get('/admin/lessonProgress', [LessonProgressController::class, 'index']);
     Route::get('/admin/lessonProgress/{id}', [LessonProgressController::class, 'show']);
     Route::post('/admin/lessonProgress', [LessonProgressController::class, 'store']);
@@ -215,4 +217,6 @@ Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);
 Route::post('/payments/callback', [PaymentController::class, 'handleZaloPayCallback']);
 Route::post('/payments/vnpay/callback', [PaymentController::class, 'handleVNPayCallback']);
 Route::get('/vnpay/ipn', [PaymentController::class, 'handleVNPayIPN'])->name('vnpay.ipn');
+Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::post('/password/reset', [AuthController::class, 'reset'])->name('password.reset');
 

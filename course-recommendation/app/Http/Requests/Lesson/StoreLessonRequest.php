@@ -16,7 +16,7 @@ class StoreLessonRequest extends FormRequest
         return [
             'course_id' => 'required|exists:courses,id',
             'title' => 'required|string|max:255',
-            'video' => 'required|file|mimetypes:video/mp4,video/avi,video/mov|max:102400', // Video tối đa 100MB
+            'video' => 'required|file|max:102400', // Video tối đa 100MB
             'duration' => 'nullable|integer|min:0',
             'is_preview' => 'boolean',
             'sort_order' => 'integer|min:0',

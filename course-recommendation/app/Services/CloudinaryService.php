@@ -27,7 +27,7 @@ class CloudinaryService
             $file->getRealPath(),
             [
                 'folder' => $folder,
-                'resource_type' => 'auto',
+                'resource_type' => 'video',
             ]
         );
 

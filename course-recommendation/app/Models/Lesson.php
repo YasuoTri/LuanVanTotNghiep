@@ -10,7 +10,7 @@ class Lesson extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = [
-        'course_id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order'
+        'course_id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order','status', 'created_at', 'updated_at'
     ];
     protected $casts = [
         'is_preview' => 'boolean',

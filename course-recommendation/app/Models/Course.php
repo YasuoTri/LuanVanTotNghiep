@@ -3,16 +3,32 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Course extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $table = 'courses';
     protected $primaryKey = 'id';
     protected $fillable = [
         'course_name', 'university', 'difficulty_level', 'course_rating',
         'course_url', 'course_description', 'price','skills','status',
     ];
+    
+    protected $dates = ['deleted_at'];
+
+    // Automatically generate slug from course_name
+    public function setCourseNameAttribute($value)
+    {
+        $this->attributes['course_name'] = $value;
+        $this->attributes['course_url'] = Str::slug($value);
+    }
+        // Accessor for full URL
+    public function getFullCourseUrlAttribute()
+    {
+        return url("/courses/{$this->course_url}");
+    }
 public function categories()
     {
         return $this->belongsToMany(Category::class, 'course_category', 'course_id', 'category_id');

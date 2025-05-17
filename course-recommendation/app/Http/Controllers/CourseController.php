@@ -10,16 +10,50 @@ use App\Models\CourseReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
-    public function index()
-{
-    $courses = Course::with(['instructors', 'reviews'])
-        ->where('status', 'approved')
-        ->paginate(10); // giữ phân trang nếu cần
-    return response()->json($courses);
-}
+      public function index()
+    {
+        // Fetch only non-deleted, approved courses (SoftDeletes ensures deleted_at is null)
+        $courses = Course::with(['instructors', 'reviews'])
+            ->where('status', 'approved')
+            ->paginate(10);
+        return response()->json($courses);
+    }
+
+    public function getAllCoursesForAdmin()
+    {
+        try {
+            // Fetch all courses, including soft-deleted ones
+            $courses = Course::with(['instructors', 'reviews'])
+                ->withTrashed() // Include soft-deleted courses
+                ->get(); // No pagination for admin view, or use paginate(10) if preferred
+            return response()->json($courses, 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch all courses for admin: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to fetch courses'], 500);
+        }
+    }
+    public function getDeletedCoursesForAdmin()
+    {
+        try {
+            // Check if user is admin
+            if (!Auth::user()->admin) {
+                return response()->json(['message' => 'Unauthorized: Admin access required'], 403);
+            }
+
+            // Fetch only soft-deleted courses
+            $courses = Course::onlyTrashed()
+                ->with(['instructors', 'reviews'])
+                ->paginate(10); // Paginate for consistency with index
+            return response()->json($courses, 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch deleted courses: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to fetch deleted courses'], 500);
+        }
+    }
 
 public function show($id)
 {
@@ -28,26 +62,43 @@ public function show($id)
         ->findOrFail($id);
     return response()->json($course);
 }
+ public function showSlug($slug)
+    {
+        try {
+            $course = Course::with(['instructors', 'reviews', 'lessons'])
+                ->where('status', 'approved')
+                ->where('course_url', $slug)
+                ->firstOrFail();
+            return response()->json($course);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch course with slug {$slug}: {$e->getMessage()}");
+            return response()->json(['message' => 'Course not found'], 404);
+        }
+    }
 
 
     public function store(CreateCourseRequest $request)
     {
-        $course = Course::create($request->validated());
+        $validated = $request->validated();
+        $validated['course_url'] = Str::slug($validated['course_name']);
+        $course = Course::create($validated);
         return response()->json($course, 201);
     }
 
     public function update(UpdateCourseRequest $request, $id)
     {
         $course = Course::findOrFail($id);
-        $course->update($request->validated());
+        $validated = $request->validated();
+        $validated['course_url'] = Str::slug($validated['course_name']);
+        $course->update($validated);
         return response()->json($course, 200);
     }
 
-    public function destroy($id)
+   public function destroy($id)
     {
         $course = Course::findOrFail($id);
-        $course->delete();
-        return response()->json(['message' => 'Course deleted'], 200);
+        $course->delete(); // Soft delete
+        return response()->json(['message' => 'Course soft deleted'], 200);
     }
 
     // Admin-specific APIs
@@ -162,6 +213,29 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             return response()->json(['message' => 'Failed to delete course'], 500);
         }
     }
+
+     public function getDeletedCoursesForInstructor()
+    {
+        try {
+            $instructor = Auth::user()->instructor;
+            if (!$instructor) {
+                return response()->json(['message' => 'Unauthorized: Instructor access required'], 403);
+            }
+
+            $courses = Course::onlyTrashed()
+                ->with(['instructors', 'reviews'])
+                ->whereHas('instructors', function ($query) use ($instructor) {
+                    $query->where('instructor_id', $instructor->id);
+                })
+                ->paginate(10);
+
+            return response()->json($courses, 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch deleted courses for instructor: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to fetch deleted courses'], 500);
+        }
+    }
+
     public function approveCourse(Request $request, $id)
 {
     $course = Course::findOrFail($id);
@@ -205,5 +279,20 @@ public function getPendingCourses()
     $courses = Course::where('status', 'pending')->get();
     return response()->json($courses);
 }
-    
+     public function restoreCourse($id)
+    {
+        try {
+
+            $course = Course::withTrashed()->find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
+
+            $course->restore();
+            return response()->json(['message' => 'Course restored successfully'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to restore course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to restore course'], 500);
+        }
+    }
 }

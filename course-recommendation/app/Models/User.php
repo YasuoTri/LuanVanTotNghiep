@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Support\Str;
 class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens,HasFactory, Notifiable;
+    use HasApiTokens,HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'userid_DI',
@@ -23,7 +25,7 @@ class User extends Authenticatable implements JWTSubject
         'provider',
         'provider_id',
         'created_at',
-        'updated_at'
+        'updated_at',
     ];
 
     protected $hidden = [
@@ -33,6 +35,7 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'YoB' => 'integer',
         'password' => 'hashed',
+        'deleted_at' => 'datetime',
     ];
 
     public function admin()

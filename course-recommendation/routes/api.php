@@ -81,6 +81,8 @@ Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::post('/quizzes/{quiz_id}/draft', [QuizController::class, 'saveDraftAnswers'])->name('quizzes.saveDraftAnswers');//xong
     Route::post('/user-answers', [UserAnswerController::class, 'store'])->name('user-answers.store');//xong
     Route::get('/user-answers/{answer}', [UserAnswerController::class, 'show'])->name('user-answers.show');//xong
+
+    Route::post('/instructor/request', [AuthController::class, 'requestInstructorRole']);
 });
 
 // Instructor Routes
@@ -270,8 +272,10 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
 
     Route::post('/admin/forum-posts/restore/{id}', [ForumPostController::class, 'restore']);
     Route::delete('/admin/forum-posts/force-delete/{id}', [ForumPostController::class, 'forceDelete']);
-});
 
+    Route::put('/instructor/request/{requestId}/review', [AuthController::class, 'reviewInstructorRequest']);
+});
+Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)
 Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);
 Route::post('/payments/callback', [PaymentController::class, 'handleZaloPayCallback']);

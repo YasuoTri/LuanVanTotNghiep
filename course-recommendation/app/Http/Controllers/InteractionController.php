@@ -40,4 +40,32 @@ class InteractionController extends Controller
         $interaction->delete();
         return response()->json(['message' => 'Interaction deleted successfully']);
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments = Interaction::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment = Interaction::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Interaction restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $enrollment = Interaction::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        return response()->json(['message' => 'Interaction permanently deleted'], 200);
+    }
 }

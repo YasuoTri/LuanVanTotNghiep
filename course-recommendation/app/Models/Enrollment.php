@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 
 class Enrollment extends Model
 {
+    use SoftDeletes;
     protected $table = 'enrollments';
     protected $primaryKey = 'id';
     public $timestamps = false;
@@ -13,6 +16,7 @@ class Enrollment extends Model
     protected $fillable = [
         'user_id', 'course_id', 'enrolled_at', 'completed_at', 'expires_at', 'status'
     ];
+    protected $dates = ['deleted_at'];
     protected $casts = [
         'enrolled_at' => 'datetime',
         'completed_at' => 'datetime',

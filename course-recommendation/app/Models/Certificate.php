@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Certificate extends Model
 {
+    use SoftDeletes;
     protected $table = 'certificates';
     protected $primaryKey = 'id';
     public $timestamps = false;
@@ -18,6 +20,7 @@ class Certificate extends Model
         'download_url',
     ];
 
+    protected $dates = ['deleted_at'];
     protected $casts = [
         'issued_at' => 'datetime',
         'created_at' => 'datetime',

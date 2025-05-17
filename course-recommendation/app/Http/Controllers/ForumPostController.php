@@ -157,4 +157,32 @@ class ForumPostController extends Controller
         $post->delete();
         return response()->json(['message' => 'Forum post removed successfully'], 200);
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments = ForumPost::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment = ForumPost::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Forum post restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $enrollment = ForumPost::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        return response()->json(['message' => 'Forum post permanently deleted'], 200);
+    }
 }

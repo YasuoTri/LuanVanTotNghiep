@@ -104,4 +104,32 @@ public function destroy($id): JsonResponse
             ], 500);
         }
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments = Certificate::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment = Certificate::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Certificate restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $enrollment = Certificate::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        return response()->json(['message' => 'Certificate permanently deleted'], 200);
+    }
 }

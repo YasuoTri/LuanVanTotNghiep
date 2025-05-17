@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Interaction;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreInteractionRequest extends FormRequest
 {
@@ -15,7 +16,11 @@ class StoreInteractionRequest extends FormRequest
     {
         return [
             'user_id' => 'required|exists:users,id',
-            'course_id' => 'required|exists:courses,id',
+             'course_id' => [
+                'required',
+                'integer',
+                Rule::unique('interactions', 'course_id'),
+            ],
             'rating' => 'nullable|numeric|min:0|max:5',
             'viewed' => 'boolean',
             'explored' => 'boolean',

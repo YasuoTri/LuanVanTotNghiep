@@ -40,4 +40,32 @@ class ReviewController extends Controller
         $review->delete();
         return response()->json(['message' => 'Review deleted successfully']);
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments =Review::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment =Review::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Review restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $enrollment =Review::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        return response()->json(['message' => 'Review permanently deleted'], 200);
+    }
 }

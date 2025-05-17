@@ -553,4 +553,36 @@ class EnrollmentController extends Controller
         );
         return $paymentResponse;
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments = Enrollment::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment = Enrollment::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Enrollment restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        try{
+        $enrollment = Enrollment::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        }catch(\Exception $e){
+            return response()->json(['message' => 'Error deleting enrollment: ' . $e->getMessage()], 500);
+        }
+        return response()->json(['message' => 'Enrollment permanently deleted'], 200);
+    }
 }

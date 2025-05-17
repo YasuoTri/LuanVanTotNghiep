@@ -10,12 +10,15 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\QuizResultController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ForumPostController;
+use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LessonProgressController;
 use App\Http\Controllers\QuestionChoiceController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserAnswerController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ZaloPayController;
@@ -141,6 +144,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/courses', [CourseController::class, 'store']);
     Route::put('/admin/courses/{id}', [CourseController::class, 'update']);
     Route::delete('/admin/courses/{id}', [CourseController::class, 'destroy']);
+    Route::delete('/admin/force-delete/{id}', [CourseController::class, 'forceDelete']);
     Route::get('/admin/courses/{id}/admin-stats', [CourseController::class, 'adminStats']);
     Route::get('/courses/pending', [CourseController::class, 'getPendingCourses']);
     Route::put('/courses/{id}/approve', [CourseController::class, 'approveCourse']);
@@ -155,16 +159,19 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/quiz-results', [QuizResultController::class, 'store']);
     Route::put('/admin/quiz-results/{id}', [QuizResultController::class, 'update']);
     Route::delete('/admin/quiz-results/{id}', [QuizResultController::class, 'destroy']);
+    Route::get('/admin/certificates/trashed', [CertificateController::class, 'trashed']);
     Route::get('/admin/certificates', [CertificateController::class, 'index']);
     Route::get('/admin/certificates/{id}', [CertificateController::class, 'show']);
     Route::post('/admin/certificates', [CertificateController::class, 'store']);
     Route::put('/admin/certificates/{id}', [CertificateController::class, 'update']);
     Route::delete('/admin/certificates/{id}', [CertificateController::class, 'destroy']);
+    Route::get('/admin/forum-posts/trashed', [ForumPostController::class, 'trashed']);
     Route::get('/admin/forum-posts', [ForumPostController::class, 'index']);
     Route::get('/admin/forum-posts/{id}', [ForumPostController::class, 'show']);
     Route::post('/admin/forum-posts', [ForumPostController::class, 'store']);
     Route::put('/admin/forum-posts/{id}', [ForumPostController::class, 'update']);
     Route::delete('/admin/forum-posts/{id}', [ForumPostController::class, 'destroy']);
+    Route::get('/admin/reviews/trashed', [ReviewController::class, 'trashed']);
     Route::get('/admin/reviews', [ReviewController::class, 'index']);
     Route::get('/admin/reviews/{id}', [ReviewController::class, 'show']);
     Route::post('/admin/reviews', [ReviewController::class, 'store']);
@@ -184,6 +191,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/lessonProgress/{id}', [LessonProgressController::class, 'destroy']);
      Route::post('/admin/enrollments', [EnrollmentController::class, 'store']);
     // Manage Payments
+    Route::get('/admin/payments/trashed', [PaymentController::class, 'trashed']);
     Route::get('/admin/payments', [PaymentController::class, 'indexForAdmin'])->name('payments.indexForAdmin');
     Route::get('/admin/payments/{id}', [PaymentController::class, 'showForAdmin'])->name('payments.showForAdmin');
     
@@ -211,11 +219,57 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
 
     Route::apiResource('/admin/questions', QuestionController::class);
     Route::apiResource('/admin/question-choices', QuestionChoiceController::class);
+    Route::get('/admin/enrollments/trashed', [EnrollmentController::class, 'trashed']);
     Route::get('admin/enrollments', [EnrollmentController::class, 'index']);//xong
     Route::get('admin/enrollments/{id}', [EnrollmentController::class, 'show']);//xong
     Route::put('/admin/enrollments/{id}', [EnrollmentController::class, 'updateAdmin']);//xong
     Route::get('/admin/deleted-courses', [CourseController::class, 'getDeletedCoursesForAdmin']);
     Route::get('/admin/courses', [CourseController::class, 'getAllCoursesForAdmin']);
+
+    Route::post('/admin/enrollments/restore/{id}', [EnrollmentController::class, 'restore']);
+    Route::delete('/admin/enrollments/force-delete/{id}', [EnrollmentController::class, 'forceDelete']);
+
+
+    Route::post('/admin/reviews/restore/{id}', [ReviewController::class, 'restore']);
+    Route::delete('/admin/reviews/force-delete/{id}', [ReviewController::class, 'forceDelete']);
+
+    Route::get('/admin/instructors/trashed', [InstructorController::class, 'trashed']);
+    Route::get('/admin/instructors', [InstructorController::class, 'index']);
+    Route::get('/admin/instructors/{id}', [InstructorController::class, 'show']);
+    Route::post('/admin/instructors', [InstructorController::class, 'store']);
+    Route::put('/admin/instructors/{id}', [InstructorController::class, 'update']);
+    Route::delete('/admin/instructors/{id}', [InstructorController::class, 'destroy']);
+    Route::post('/admin/instructors/restore/{id}', [InstructorController::class, 'restore']);
+    Route::delete('/admin/instructors/force-delete/{id}', [InstructorController::class, 'forceDelete']);
+
+    Route::post('/admin/certificates/restore/{id}', [CertificateController::class, 'restore']);
+    Route::delete('/admin/certificates/force-delete/{id}', [CertificateController::class, 'forceDelete']);
+
+   
+    Route::post('/admin/payments/restore/{id}', [PaymentController::class, 'restore']);
+    Route::delete('/admin/payments/force-delete/{id}', [PaymentController::class, 'forceDelete']);
+
+    Route::get('/admin/interaction/trashed', [InteractionController::class, 'trashed']);
+    Route::get('/admin/interaction', [InteractionController::class, 'index']);
+    Route::get('/admin/interaction/{id}', [InteractionController::class, 'show']);
+    Route::post('/admin/interaction', [InteractionController::class, 'store']);
+    Route::put('/admin/interaction/{id}', [InteractionController::class, 'update']);
+    Route::delete('/admin/interaction/{id}', [InteractionController::class, 'destroy']);
+    Route::post('/admin/interaction/restore/{id}', [InteractionController::class, 'restore']);
+    Route::delete('/admin/interaction/force-delete/{id}', [InteractionController::class, 'forceDelete']);
+
+    Route::get('/admin/students/trashed', [StudentController::class, 'trashed']);
+    Route::get('/admin/students', [StudentController::class, 'index']);
+    Route::get('/admin/students/{id}', [StudentController::class, 'show']);
+    Route::post('/admin/students', [StudentController::class, 'store']);
+    Route::put('/admin/students/{id}', [StudentController::class, 'update']);
+    Route::delete('/admin/students/{id}', [StudentController::class, 'destroy']);
+    Route::post('/admin/students/restore/{id}', [StudentController::class, 'restore']);
+    Route::delete('/admin/students/force-delete/{id}', [StudentController::class, 'forceDelete']);
+
+
+    Route::post('/admin/forum-posts/restore/{id}', [ForumPostController::class, 'restore']);
+    Route::delete('/admin/forum-posts/force-delete/{id}', [ForumPostController::class, 'forceDelete']);
 });
 
 // Payment Callback (Existing)

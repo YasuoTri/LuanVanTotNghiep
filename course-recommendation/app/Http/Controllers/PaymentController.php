@@ -523,4 +523,32 @@ public function handleVNPayIPN(Request $request): JsonResponse
             ], 500);
         }
     }
+     /**
+     * Display a listing of trashed enrollments.
+     */
+    public function trashed(): JsonResponse
+    {
+        $enrollments =Payment::onlyTrashed()->get();
+        return response()->json(['data' => $enrollments], 200);
+    }
+
+    /**
+     * Restore a soft-deleted enrollment.
+     */
+    public function restore($id): JsonResponse
+    {
+        $enrollment =Payment::onlyTrashed()->findOrFail($id);
+        $enrollment->restore();
+        return response()->json(['message' => 'Payment restored successfully'], 200);
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        $enrollment =Payment::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        return response()->json(['message' => 'Payment permanently deleted'], 200);
+    }
 }

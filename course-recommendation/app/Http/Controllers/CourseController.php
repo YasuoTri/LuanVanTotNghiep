@@ -7,6 +7,7 @@ use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseReview;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -294,5 +295,20 @@ public function getPendingCourses()
             Log::error("Failed to restore course: {$e->getMessage()}");
             return response()->json(['message' => 'Failed to restore course'], 500);
         }
+    }
+
+    /**
+     * Permanently delete a soft-deleted enrollment.
+     */
+    public function forceDelete($id): JsonResponse
+    {
+        try{
+        $enrollment = Course::onlyTrashed()->findOrFail($id);
+        $enrollment->forceDelete();
+        } catch (\Exception $e) {
+            Log::error("Failed to permanently delete course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to permanently delete course'], 500);
+        }
+        return response()->json(['message' => 'Course permanently deleted'], 200);
     }
 }

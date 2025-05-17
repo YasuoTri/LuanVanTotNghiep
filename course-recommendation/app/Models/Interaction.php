@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Interaction extends Model
 {
+    use SoftDeletes;
     protected $table = 'interactions';
     protected $primaryKey = 'id';
     protected $fillable = [
@@ -13,6 +15,7 @@ class Interaction extends Model
         'start_time', 'last_event', 'nevents', 'ndays_act', 'nplay_video',
         'nchapters', 'nforum_posts'
     ];
+        protected $dates = ['deleted_at'];
     protected $casts = [
         'viewed' => 'boolean',
         'explored' => 'boolean',

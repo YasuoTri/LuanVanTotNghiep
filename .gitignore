@@ -7,6 +7,7 @@
 /course-recommendation/storage/pail
 /course-recommendation/vendor
 /course-recommendation/.env
+/course-recommendation/.env.testing
 /course-recommendation/.env.backup
 /course-recommendation/.env.production
 /course-recommendation/.phpactor.json

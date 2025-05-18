@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\QuizController;
@@ -283,7 +285,24 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/forum-posts/force-delete/{id}', [ForumPostController::class, 'forceDelete']);
 
     Route::put('/instructor/request/{requestId}/review', [AuthController::class, 'reviewInstructorRequest']);
+
+    Route::apiResource('/admin/category', CategoryController::class);
+    Route::apiResource('/admin/coupons', CouponController::class);
 });
+    // Advanced Search Routes (one per table)
+Route::get('/search/lessons', [LessonController::class, 'search']);
+Route::get('/search/quizzes', [QuizController::class, 'search']);
+Route::get('/search/questions', [QuestionController::class, 'search']);
+Route::get('/search/question-choices', [QuestionChoiceController::class, 'search']);
+Route::get('/search/users', [UserController::class, 'search']);
+Route::get('/search/instructors', [InstructorController::class, 'search']);
+Route::get('/search/students', [StudentController::class, 'search']);
+Route::get('/search/reviews', [ReviewController::class, 'search']);
+Route::get('/search/payments', [PaymentController::class, 'search']);
+Route::get('/search/enrollments', [EnrollmentController::class, 'search']);
+Route::get('/search/forum-posts', [ForumPostController::class, 'search']);
+
+
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)
 Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);

@@ -107,4 +107,11 @@ public function getChoicesByQuestionId($question_id)
         'choices' => $choices,
     ]);
 }
+   function search(Request $request) {
+    return Question::query()
+        ->when($request->filled('quiz_id'), fn($q) => $q->where('quiz_id', $request->input('quiz_id')))
+        ->when($request->filled('title'), fn($q) => $q->where('title', 'like', "%{$request->input('title')}%"))
+        ->when($request->filled('question_type'), fn($q) => $q->where('question_type', $request->input('question_type')))
+        ->get();
+}
 }

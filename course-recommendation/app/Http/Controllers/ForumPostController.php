@@ -185,4 +185,13 @@ class ForumPostController extends Controller
         $enrollment->forceDelete();
         return response()->json(['message' => 'Forum post permanently deleted'], 200);
     }
+
+    // Forum Posts
+function search(Request $request) {
+    return ForumPost::query()
+        ->when($request->filled('title'), fn($q) => $q->where('title', 'like', "%{$request->input('title')}%"))
+        ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
+        ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
+        ->get();
+    }
 }

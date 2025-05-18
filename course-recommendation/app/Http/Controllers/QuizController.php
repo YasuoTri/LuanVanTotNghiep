@@ -1633,4 +1633,24 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
             'data' => $quiz
         ], 200);
     }
+
+    public function search(Request $request)
+{
+    $query = Quiz::query();
+
+    if ($request->filled('lesson_id')) {
+        $query->where('lesson_id', $request->lesson_id);
+    }
+
+    if ($request->filled('title')) {
+        $query->where('title', 'like', '%' . $request->title . '%');
+    }
+
+    if ($request->filled('is_visible')) {
+        $query->where('is_visible', $request->is_visible);
+    }
+
+    return response()->json($query->get());
+}
+
 }

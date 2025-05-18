@@ -18,7 +18,7 @@ use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
 use Pion\Laravel\ChunkUpload\Receiver\FileReceiver;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Exception;
-use Illuminate\Http\Client\Request;
+use Illuminate\Http\Request;;
 
 class LessonController extends Controller
 {
@@ -756,4 +756,26 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             ]
         ], 200);
     }
+
+    public function search(Request $request)
+{
+    $query = Lesson::query();
+
+    if ($request->filled('title')) {
+        $query->where('title', 'like', '%' . $request->input('title')
+ . '%');
+    }
+
+    if ($request->filled('course_id')) {
+        $query->where('course_id', $request->input('course_id'));
+    }
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->input('status')
+);
+    }
+
+    return response()->json($query->get());
+}
+
 }

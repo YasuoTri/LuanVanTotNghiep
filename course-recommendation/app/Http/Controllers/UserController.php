@@ -506,4 +506,24 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    public function search(Request $request)
+{
+    $query = User::query();
+
+    if ($request->filled('email')) {
+        $query->where('email', 'like', '%' . $request->email . '%');
+    }
+
+    if ($request->filled('role')) {
+        $query->where('role', $request->role);
+    }
+
+    if ($request->filled('gender')) {
+        $query->where('gender', $request->gender);
+    }
+
+    return response()->json($query->get());
+}
+
 }

@@ -551,4 +551,28 @@ public function handleVNPayIPN(Request $request): JsonResponse
         $enrollment->forceDelete();
         return response()->json(['message' => 'Payment permanently deleted'], 200);
     }
+
+    public function search(Request $request)
+{
+    $query = Payment::query();
+
+    if ($request->filled('method')) {
+        $query->where('method', $request->method);
+    }
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('min_amount')) {
+        $query->where('amount', '>=', $request->min_amount);
+    }
+
+    if ($request->filled('max_amount')) {
+        $query->where('amount', '<=', $request->max_amount);
+    }
+
+    return response()->json($query->get());
+}
+
 }

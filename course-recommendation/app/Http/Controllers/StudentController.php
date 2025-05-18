@@ -74,4 +74,20 @@ class StudentController extends Controller
         $enrollment->forceDelete();
         return response()->json(['message' => 'Student permanently deleted'], 200);
     }
+
+    public function search(Request $request)
+{
+    $query = Student::query();
+
+    if ($request->filled('interests')) {
+        $query->where('interests', 'like', '%' . $request->interests . '%');
+    }
+
+    if ($request->filled('learning_goals')) {
+        $query->where('learning_goals', 'like', '%' . $request->learning_goals . '%');
+    }
+
+    return response()->json($query->get());
+}
+
 }

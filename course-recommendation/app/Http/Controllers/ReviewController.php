@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Review\StoreReviewRequest;
 use App\Http\Requests\Review\UpdateReviewRequest;
 use App\Models\Review;
+use Illuminate\Http\Request;;
 use Illuminate\Http\JsonResponse;
 
 class ReviewController extends Controller
@@ -68,4 +69,13 @@ class ReviewController extends Controller
         $enrollment->forceDelete();
         return response()->json(['message' => 'Review permanently deleted'], 200);
     }
+
+// Reviews
+function search(Request $request) {
+    return Review::query()
+        ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
+        ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
+        ->when($request->filled('rating'), fn($q) => $q->where('rating', $request->input('rating')))
+        ->get();
+}
 }

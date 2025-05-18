@@ -46,4 +46,11 @@ class QuestionChoiceController extends Controller
         $choice->delete();
         return response()->json(['message'=>"deleted successfully",'choice'=>$choice], 200);
     }
+
+ function search(Request $request) {
+    return QuestionChoice::query()
+        ->when($request->filled('question_id'), fn($q) => $q->where('question_id', $request->input('question_id')))
+        ->when($request->filled('is_correct'), fn($q) => $q->where('is_correct', $request->input('is_correct')))
+        ->get();
+}
 }

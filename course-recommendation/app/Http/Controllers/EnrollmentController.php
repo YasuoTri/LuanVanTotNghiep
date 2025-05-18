@@ -585,4 +585,12 @@ class EnrollmentController extends Controller
         }
         return response()->json(['message' => 'Enrollment permanently deleted'], 200);
     }
+
+    function search(Request $request) {
+    return Enrollment::query()
+        ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
+        ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
+        ->when($request->filled('status'), fn($q) => $q->where('status', $request->input('status')))
+        ->get();
+}
 }

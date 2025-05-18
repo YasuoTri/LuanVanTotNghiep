@@ -75,4 +75,20 @@ class InstructorController extends Controller
         $enrollment->forceDelete();
         return response()->json(['message' => 'Instructor permanently deleted'], 200);
     }
+
+    public function search(Request $request)
+{
+    $query = Instructors::query();
+
+    if ($request->filled('name')) {
+        $query->where('name', 'like', '%' . $request->name . '%');
+    }
+
+    if ($request->filled('organization')) {
+        $query->where('organization', 'like', '%' . $request->organization . '%');
+    }
+
+    return response()->json($query->get());
+}
+
 }

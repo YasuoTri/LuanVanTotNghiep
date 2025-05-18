@@ -69,7 +69,7 @@ class AuthController extends Controller
             true,
             true,
             false,
-            'SameSite=Strict'
+            'Strict'
         );
 
         // Call FastAPI recommendation service

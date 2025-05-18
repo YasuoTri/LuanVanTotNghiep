@@ -97,7 +97,10 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
     Route::get('/instructor/courses', [CourseController::class, 'indexCourseInstructor']);//xong
     Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);//xong
     Route::put('instructor/courses/{id}', [CourseController::class, 'updateCourseInstructor']);//xong
-    Route::delete('instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);//xong
+    Route::delete('/instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);//xong
+    Route::put('/instructor/courses/unavailable/{id}', [CourseController::class, 'makeCourseUnavailableInstructor']);//xong
+    Route::put('/instructor/courses/available/{id}', [CourseController::class, 'makeCourseAvailableInstructor']);//xong
+    Route::get('/instructor/courses/unavailable/getcourse', [CourseController::class, 'getUnavailableCourses']);//xong
 
     // Quiz Results and Statistics
     Route::get('/instructor/quizzes/{quiz_id}/results', [QuizController::class, 'studentQuizResults'])->name('quizzes.studentResults');//xong

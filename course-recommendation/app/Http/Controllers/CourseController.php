@@ -7,6 +7,7 @@ use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseReview;
+use App\Models\Instructors;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -131,6 +132,7 @@ public function show($id)
             return response()->json(['message' => 'Failed to fetch courses'], 500);
         }
     }
+   
 
 public function storeCourseInstructor(CreateCourseRequest $request)
 {
@@ -207,14 +209,81 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
 
             $course->delete();
-
             return response()->json(['message' => 'Course deleted successfully'], 200);
         } catch (\Exception $e) {
             Log::error("Failed to delete course: {$e->getMessage()}");
             return response()->json(['message' => 'Failed to delete course'], 500);
         }
     }
+      public function makeCourseUnavailableInstructor($id)
+    {
+        try {
+            $course = Course::find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
 
+            $instructor = Auth::user()->instructor;
+            $courseInstructor = Course_Instructors::where('course_id', $id)
+                                                ->where('instructor_id', $instructor->id)
+                                                ->first();
+            if (!$courseInstructor) {
+                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
+
+            $course->update(['status' => 'unavailable']);
+            return response()->json(['message' => 'Course marked as unavailable'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course'], 500);
+        }
+    }
+      public function makeCourseAvailableInstructor($id)
+    {
+        try {
+            $course = Course::find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
+
+            $instructor = Auth::user()->instructor;
+            $courseInstructor = Course_Instructors::where('course_id', $id)
+                                                ->where('instructor_id', $instructor->id)
+                                                ->first();
+            if (!$courseInstructor) {
+                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
+
+            $course->update(['status' => 'approved']);
+            return response()->json(['message' => 'Course marked as available'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course'], 500);
+        }
+    }
+    public function getUnavailableCourses(Request $request)
+    {
+        // Lấy instructor dựa trên user_id của người dùng đang đăng nhập
+        $instructor = Instructors::where('user_id', Auth::id())->first();
+
+        if (!$instructor) {
+            return response()->json([
+                'message' => 'Instructor not found.'
+            ], 404);
+        }
+
+        // Lấy các khóa học của instructor có status là unavailable
+        $courses = Course::whereHas('instructors', function ($query) use ($instructor) {
+            $query->where('instructor_id', $instructor->id);
+        })
+        ->where('status', 'unavailable')
+        ->get();
+
+        return response()->json([
+            'message' => 'Unavailable courses retrieved successfully.',
+            'data' => $courses
+        ], 200);
+    }
      public function getDeletedCoursesForInstructor()
     {
         try {

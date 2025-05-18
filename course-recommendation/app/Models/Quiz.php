@@ -8,7 +8,7 @@ class Quiz extends Model
 {
     protected $table = 'quizzes';
     protected $primaryKey = 'id';
-    protected $fillable = ['lesson_id', 'title'];
+    protected $fillable = ['lesson_id', 'title', 'max_attempts', 'time_limit', 'is_visible'];
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

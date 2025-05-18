@@ -82,4 +82,8 @@ public function categories()
         return $this->belongsToMany(Course::class, 'similarity_matrix', 'course_id_1', 'course_id_2')
                     ->withPivot('similarity_score');
     }
+        public function Course_Instructorss()
+    {
+        return $this->belongsTo(Course_Instructors::class);
+    }
 }

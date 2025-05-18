@@ -9,6 +9,7 @@ use App\Models\Lesson;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\Enrollment;
+use App\Models\Instructors;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
 use Pion\Laravel\ChunkUpload\Receiver\FileReceiver;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Exception;
+use Illuminate\Http\Client\Request;
 
 class LessonController extends Controller
 {
@@ -318,9 +320,9 @@ class LessonController extends Controller
                 return response()->json(['message' => 'You are not an instructor for this course'], 403);
             }
 
-            $lesson = Lesson::where('id', $lesson_id)
+            $lesson = Lesson::with(['quizzes','course'])->where('id', $lesson_id)
                 ->where('course_id', $course_id)
-                ->first();
+                ->paginate(10);
 
             if (!$lesson) {
                 return response()->json(['message' => 'Lesson not found'], 404);
@@ -695,5 +697,63 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         $filename = str_replace('.' . $extension, '', $file->getClientOriginalName());
         $filename .= '_' . md5(time()) . '.' . $extension;
         return $filename;
+    }
+
+
+      public function getCourseLessonsInstructor(Request $request, $courseId): JsonResponse
+    {
+        // Get the authenticated user
+        $user = Auth::user();
+
+        // Check if the user exists and has the 'instructor' role
+        if (!$user || $user->role !== 'instructor') {
+            return response()->json([
+                'message' => 'Unauthorized. Only instructors can access this endpoint.'
+            ], 403);
+        }
+
+        // Find the instructor record for the user
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor) {
+            return response()->json([
+                'message' => 'Instructor profile not found.'
+            ], 404);
+        }
+
+        // Check if the course exists
+        $course = Course::find($courseId);
+        if (!$course) {
+            return response()->json([
+                'message' => 'Course not found.'
+            ], 404);
+        }
+
+        // Verify that the instructor is associated with the course
+        $isInstructorOfCourse = Course_Instructors::where('course_id', $courseId)
+            ->where('instructor_id', $instructor->id)
+            ->exists();
+
+        if (!$isInstructorOfCourse) {
+            return response()->json([
+                'message' => 'You are not authorized to view lessons for this course.'
+            ], 403);
+        }
+
+        // Fetch all lessons for the course (only approved lessons)
+        $lessons = Lesson::where('course_id', $courseId)
+            ->where('status', 'approved')
+            ->select('id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order', 'created_at', 'updated_at')
+            ->orderBy('sort_order', 'asc')
+            ->get();
+
+        // Return the lessons in a JSON response
+        return response()->json([
+            'message' => 'Lessons retrieved successfully.',
+            'data' => [
+                'course_id' => $courseId,
+                'course_name' => $course->course_name,
+                'lessons' => $lessons
+            ]
+        ], 200);
     }
 }

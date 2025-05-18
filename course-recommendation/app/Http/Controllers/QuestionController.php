@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateQuestionRequest;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\Course_Instructors;
+use App\Models\QuestionChoice;
 use App\Models\QuizResult;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,5 +85,26 @@ public function destroy(Question $question)
 
     $question->delete();
     return response()->json(['message' => 'Deleted question successfully'], 201);
+}
+
+public function getChoicesByQuestionId($question_id)
+{
+    // Kiểm tra xem câu hỏi có tồn tại không
+    $question = Question::find($question_id);
+
+    if (!$question) {
+        return response()->json(['message' => 'Question not found'], 404);
+    }
+
+    // Lấy danh sách các lựa chọn
+    $choices = QuestionChoice::where('question_id', $question_id)
+        ->orderBy('sort_order') // nếu muốn sắp xếp theo thứ tự hiển thị
+        ->get();
+
+    return response()->json([
+        'question_id' => $question_id,
+        'question_title' => $question->title,
+        'choices' => $choices,
+    ]);
 }
 }

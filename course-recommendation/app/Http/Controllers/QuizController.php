@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Quiz\StoreQuizRequest;
 use App\Http\Requests\Quiz\UpdateQuizRequest;
+use App\Models\Course;
 use App\Models\Quiz;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Lesson;
 use App\Models\Enrollment;
 use App\Models\Course_Instructors;
+use App\Models\Instructors;
 use App\Models\QuizResult;
 use App\Models\UserAnswer;
 use App\Models\QuestionChoice;
@@ -54,17 +56,72 @@ class QuizController extends Controller
     }
     // Instructor quiz
 
-    public function indexForInstructor()
+public function indexForInstructor(Request $request, $courseId): JsonResponse
     {
+        // Get the authenticated user
         $user = Auth::user();
-        $quizzes = Quiz::whereHas('lesson.course.Course_Instructorss', function ($query) use ($user) {
-            $query->whereHas('instructor', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            });
-        })->get();
 
-        return response()->json($quizzes, 200);
+        // Check if the user is authenticated and has the instructor role
+        if (!$user || $user->role !== 'instructor') {
+            return response()->json([
+                'message' => 'Unauthorized. Only instructors can access this endpoint.'
+            ], 403);
+        }
+
+        // Find the instructor record for the user
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor) {
+            return response()->json([
+                'message' => 'Instructor profile not found.'
+            ], 404);
+        }
+
+        // Validate course ID and check if the course exists
+        if (!$courseId || !is_numeric($courseId)) {
+            return response()->json([
+                'message' => 'Valid Course ID is required.'
+            ], 422);
+        }
+
+        $course = Course::find($courseId);
+        if (!$course) {
+            return response()->json([
+                'message' => 'Course not found.'
+            ], 404);
+        }
+
+        // Verify that the instructor is associated with the course
+        $isInstructorOfCourse = Course_Instructors::where('course_id', $courseId)
+            ->where('instructor_id', $instructor->id)
+            ->exists();
+
+        if (!$isInstructorOfCourse) {
+            return response()->json([
+                'message' => 'You are not authorized to view quizzes for this course.'
+            ], 403);
+        }
+
+        // Fetch all quizzes for the course
+        $quizzes = Quiz::whereHas('lesson', function ($query) use ($courseId) {
+            $query->where('course_id', $courseId);
+        })
+            ->select('id', 'lesson_id', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at')
+            ->with(['lesson' => function ($query) {
+                $query->select('id', 'course_id', 'title');
+            }])
+            ->paginate();
+
+        // Return the quizzes in a JSON response
+        return response()->json([
+            'message' => 'Quizzes retrieved successfully.',
+            'data' => [
+                'course_id' => $courseId,
+                'course_name' => $course->course_name,
+                'quizzes' => $quizzes
+            ]
+        ], 200);
     }
+
 
     public function showForInstructor($id)
     {
@@ -1041,6 +1098,108 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         ], 201);
     }
 
+     public function submitQuizForInstructor(Request $request, $quizId): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Check if user is authenticated and has instructor role
+        if (!$user || $user->role !== 'instructor') {
+            return response()->json(['message' => 'Unauthorized. Only instructors can access this endpoint.'], 403);
+        }
+
+        // Find the quiz with its questions and choices
+        $quiz = Quiz::with('questions.choices')->find($quizId);
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Check if the instructor is associated with the course
+        $lesson = Lesson::find($quiz->lesson_id);
+        if (!$lesson) {
+            return response()->json(['message' => 'Lesson không tìm thấy'], 404);
+        }
+
+        $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+            ->whereHas('instructor', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->first();
+
+        if (!$instructor) {
+            return response()->json(['message' => 'Bạn không có quyền truy cập quiz này'], 403);
+        }
+
+        // Validate answers
+        $validated = $request->validate([
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quizId,
+            'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+            'answers.*.answer_text' => 'nullable|string',
+        ]);
+
+        // Count previous attempts (for attempt_number, no limit enforced)
+        $attempts = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quizId)
+            ->count();
+
+        // Start a new quiz attempt
+        $quizResult = QuizResult::create([
+            'user_id' => $user->id,
+            'quiz_id' => $quizId,
+            'attempt_number' => $attempts + 1,
+            'started_at' => now(),
+            'score' => 0,
+        ]);
+
+        // Check time limit (if applicable)
+        if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
+            $quizResult->delete(); // Delete invalid attempt
+            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
+        }
+
+        // Process answers
+        $totalScore = 0;
+        foreach ($validated['answers'] as $answer) {
+            $question = $quiz->questions->find($answer['question_id']);
+            $isCorrect = null;
+            $pointsEarned = 0;
+
+            if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+                $choice = QuestionChoice::find($answer['choice_id']);
+                if ($choice) {
+                    $isCorrect = $choice->is_correct;
+                    $pointsEarned = $isCorrect ? $question->points : 0;
+                }
+            } elseif ($question->question_type === 'open_ended') {
+                $isCorrect = null;
+                $pointsEarned = null; // Open-ended questions may require manual grading
+            }
+
+            $totalScore += $pointsEarned ?? 0;
+
+            UserAnswer::create([
+                'user_id' => $user->id,
+                'quiz_result_id' => $quizResult->id,
+                'question_id' => $answer['question_id'],
+                'choice_id' => $answer['choice_id'] ?? null,
+                'answer_text' => $answer['answer_text'] ?? null,
+                'is_correct' => $isCorrect,
+                'points_earned' => $pointsEarned,
+            ]);
+        }
+
+        // Update quiz result
+        $quizResult->update([
+            'score' => $totalScore,
+            'completed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Nộp bài quiz thành công',
+            'data' => $quizResult->load('userAnswers'),
+        ], 201);
+    }
+
     /**
      * Thử lại quiz với kiểm tra thời gian.
      */
@@ -1143,5 +1302,335 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             'message' => 'Thử lại quiz thành công',
             'data' => $quizResult->load('userAnswers'),
         ], 201);
+    }
+
+    public function indexQuestionsForInstructor($quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::with(['questions.choices'])->find($quiz_id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    return response()->json([
+        'message' => 'Questions retrieved successfully',
+        'data' => $quiz->questions
+    ], 200);
+}
+
+public function storeQuestionForInstructor(Request $request, $quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::find($quiz_id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $validated = $request->validate([
+        'title' => 'required|string',
+        'question_type' => 'required|in:multiple_choice,true_false,open_ended',
+        'points' => 'required|numeric|min:0',
+        'sort_order' => 'nullable|integer',
+        'is_visible' => 'nullable|boolean',
+        'choices' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
+        'choices.*.content' => 'required|string',
+        'choices.*.is_correct' => 'required|boolean',
+    ]);
+
+    $question = Question::create([
+        'quiz_id' => $quiz_id,
+        'title' => $validated['title'],
+        'question_type' => $validated['question_type'],
+        'points' => $validated['points'],
+        'sort_order' => $validated['sort_order'] ?? 0,
+        'is_visible' => $validated['is_visible'] ?? true,
+    ]);
+
+    if (in_array($validated['question_type'], ['multiple_choice', 'true_false'])) {
+        foreach ($validated['choices'] as $index => $choice) {
+            QuestionChoice::create([
+                'question_id' => $question->id,
+                'content' => $choice['content'],
+                'is_correct' => $choice['is_correct'],
+                'sort_order' => $index,
+            ]);
+        }
+    }
+
+    return response()->json([
+        'message' => 'Question created successfully',
+        'data' => $question->load('choices')
+    ], 201);
+}
+
+public function quizAnalyticsForInstructor($quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::with('questions')->find($quiz_id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $analytics = [];
+    foreach ($quiz->questions as $question) {
+        $answers = UserAnswer::where('question_id', $question->id)->get();
+        $total = $answers->count();
+        $correct = $answers->where('is_correct', true)->count();
+        $analytics['questions'][$question->id] = [
+            'title' => $question->title,
+            'total_answers' => $total,
+            'correct_answers' => $correct,
+            'correct_rate' => $total ? round(($correct / $total) * 100, 2) : 0,
+        ];
+    }
+
+    $scores = QuizResult::where('quiz_id', $quiz_id)->pluck('score')->toArray();
+    $scoreDistribution = array_count_values($scores);
+
+    return response()->json([
+        'message' => 'Quiz analytics retrieved successfully',
+        'data' => [
+            'question_analytics' => $analytics['questions'],
+            'score_distribution' => $scoreDistribution,
+        ],
+        'chart' => [
+            'type' => 'chartjs',
+            'data' => [
+                'type' => 'bar',
+                'data' => [
+                    'labels' => array_keys($scoreDistribution),
+                    'datasets' => [
+                        [
+                            'label' => 'Score Distribution',
+                            'data' => array_values($scoreDistribution),
+                            'backgroundColor' => '#4CAF50',
+                            'borderColor' => '#388E3C',
+                            'borderWidth' => 1,
+                        ],
+                    ],
+                ],
+                'options' => [
+                    'scales' => [
+                        'y' => [
+                            'beginAtZero' => true,
+                            'title' => ['display' => true, 'text' => 'Number of Students'],
+                        ],
+                        'x' => [
+                            'title' => ['display' => true, 'text' => 'Score'],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ], 200);
+}
+
+public function storeDraftQuiz(Request $request): JsonResponse
+{
+    $user = Auth::user();
+    $validated = $request->validate([
+        'lesson_id' => 'required|exists:lessons,id',
+        'title' => 'required|string|max:255',
+        'status' => 'nullable|in:draft,published',
+    ]);
+
+    $lesson = Lesson::find($validated['lesson_id']);
+    $instructor = Course_Instructors::where('course_id', $lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $quiz = Quiz::create([
+        'lesson_id' => $validated['lesson_id'],
+        'title' => $validated['title'],
+        'status' => $validated['status'] ?? 'draft',
+        'max_attempts' => 3,
+        'is_visible' => false,
+    ]);
+
+    return response()->json([
+        'message' => 'Draft quiz created successfully',
+        'data' => $quiz
+    ], 201);
+}
+
+public function restoreQuiz($id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::onlyTrashed()->find($id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $quiz->restore();
+    return response()->json([
+        'message' => 'Quiz restored successfully',
+        'data' => $quiz
+    ], 200);
+}
+
+public function viewStudentAnswers($quiz_id, $quiz_result_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::find($quiz_id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $quizResult = QuizResult::where('id', $quiz_result_id)
+        ->where('quiz_id', $quiz_id)
+        ->with(['userAnswers' => function ($query) {
+            $query->with(['question' => function ($q) {
+                $q->with(['choices' => function ($c) {
+                    $c->where('is_correct', true);
+                }]);
+            }, 'choice']);
+        }])
+        ->first();
+
+    if (!$quizResult) {
+        return response()->json(['message' => 'Quiz result not found'], 404);
+    }
+
+    return response()->json([
+        'message' => 'Student answers retrieved successfully',
+        'data' => $quizResult->userAnswers
+    ], 200);
+}
+
+//sap chép
+public function reuseQuestions(Request $request, $quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::find($quiz_id);
+
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz not found'], 404);
+    }
+
+    $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+        ->whereHas('instructor', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'You are not an instructor for this course'], 403);
+    }
+
+    $validated = $request->validate([
+        'question_ids' => 'required|array',
+        'question_ids.*' => 'exists:questions,id',
+        'source_quiz_id' => 'nullable|exists:quizzes,id',
+    ]);
+
+    $newQuestions = [];
+    foreach ($validated['question_ids'] as $question_id) {
+        $originalQuestion = Question::with('choices')->find($question_id);
+        if ($originalQuestion) {
+            $newQuestion = $originalQuestion->replicate();
+            $newQuestion->quiz_id = $quiz_id;
+            $newQuestion->save();
+
+            foreach ($originalQuestion->choices as $choice) {
+                $newChoice = $choice->replicate();
+                $newChoice->question_id = $newQuestion->id;
+                $newChoice->save();
+            }
+
+            $newQuestions[] = $newQuestion->load('choices');
+        }
+    }
+
+    return response()->json([
+        'message' => 'Questions reused successfully',
+        'data' => $newQuestions
+    ], 201);
+}
+
+public function fullPreviewQuiz($quiz_id): JsonResponse
+    {
+        $user = Auth::user();
+        $quiz = Quiz::with([
+            'lesson',
+            'questions' => function ($query) {
+                $query->where('is_visible', true)
+                      ->with('choices')
+                      ->orderBy('sort_order');
+            }
+        ])->find($quiz_id);
+
+        if (!$quiz) {
+            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        }
+
+        // Check if the user is an instructor for the course
+        $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
+            ->whereHas('instructor', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->first();
+
+        if (!$instructor) {
+            return response()->json(['message' => 'Bạn không phải là giảng viên của khóa học này'], 403);
+        }
+
+        return response()->json([
+            'message' => 'Lấy thông tin quiz thành công',
+            'data' => $quiz
+        ], 200);
     }
 }

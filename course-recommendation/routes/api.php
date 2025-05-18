@@ -88,42 +88,49 @@ Route::middleware(['jwt_cookie', 'student'])->group(function () {
 // Instructor Routes
 Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
   
-    Route::get('/instructor/courses', [CourseController::class, 'indexCourseInstructor']);
-    Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);
-    Route::put('instructor/courses/{id}', [CourseController::class, 'updateCourseInstructor']);
-    Route::delete('instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);
-
-    // New Routes for Instructors
     // View Lesson Content (Preview Own Courses)
-    Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');
-
+    Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'getCourseLessonsInstructor'])->name('lessons.getCourseLessonsInstructor');//xong
+    Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');//xong
    
+    Route::get('/instructor/courses', [CourseController::class, 'indexCourseInstructor']);//xong
+    Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);//xong
+    Route::put('instructor/courses/{id}', [CourseController::class, 'updateCourseInstructor']);//xong
+    Route::delete('instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);//xong
+
     // Quiz Results and Statistics
-    Route::get('/instructor/quizzes/{quiz_id}/results', [QuizController::class, 'studentQuizResults'])->name('quizzes.studentResults');
+    Route::get('/instructor/quizzes/{quiz_id}/results', [QuizController::class, 'studentQuizResults'])->name('quizzes.studentResults');//xong
     // Update Quiz Settings
-    Route::put('/instructor/quizzes/{quiz_id}/settings', [QuizController::class, 'updateQuizSettings'])->name('quizzes.updateSettings');
+    Route::put('/instructor/quizzes/{quiz_id}/settings', [QuizController::class, 'updateQuizSettings'])->name('quizzes.updateSettings');//xong
     // Preview Quiz
     Route::get('/instructor/quizzes/{quiz_id}/preview', [QuizController::class, 'previewQuiz'])->name('quizzes.preview');
      // Take Quizzes (Test Own Quizzes)
-    Route::post('/instructor/quizzes/{quiz_id}/test', [QuizController::class, 'submitQuiz'])->name('quizzes.testForInstructor');
+    Route::post('/instructor/quizzes/{quiz_id}/test', [QuizController::class, 'submitQuizForInstructor'])->name('quizzes.testForInstructor');
 
     // Track Student Progress in Their Courses
     Route::get('/instructor/courses/{course_id}/student-progress', [LessonProgressController::class, 'indexForInstructor'])->name('lessonProgress.indexForInstructor');
 
     // Manage Quizzes
-    Route::get('/instructor/quizzes', [QuizController::class, 'indexForInstructor'])->name('quizzes.indexForInstructor');
+    Route::get('/instructor/courses/{courseId}/quizzes', [QuizController::class, 'indexForInstructor'])->name('quizzes.indexForInstructor');
     Route::get('/instructor/quizzes/{id}', [QuizController::class, 'showForInstructor'])->name('quizzes.showForInstructor');
     Route::post('/instructor/quizzes', [QuizController::class, 'storeForInstructor'])->name('quizzes.storeForInstructor');
     Route::put('/instructor/quizzes/{id}', [QuizController::class, 'updateForInstructor'])->name('quizzes.updateForInstructor');
     Route::delete('/instructor/quizzes/{id}', [QuizController::class, 'destroyForInstructor'])->name('quizzes.destroyForInstructor');
 
+    Route::get('/instructor/quizzes/{quiz_id}/questions', [QuizController::class, 'indexQuestionsForInstructor'])->name('quizzes.questions.index');
+    Route::post('/instructor/quizzes/{quiz_id}/questions', [QuizController::class, 'storeQuestionForInstructor'])->name('quizzes.questions.store');
+    Route::get('/instructor/quizzes/{quiz_id}/analytics', [QuizController::class, 'quizAnalyticsForInstructor'])->name('quizzes.analytics');
     // Manage Lessons
     Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'indexForInstructor'])->name('lessons.indexForInstructor');
     Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');
     Route::post('/instructor/courses/{course_id}/lessons', [LessonController::class, 'storeForInstructor'])->name('lessons.storeForInstructor');
     Route::put('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'updateForInstructor'])->name('lessons.updateForInstructor');
     Route::delete('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'destroyForInstructor'])->name('lessons.destroyForInstructor');
-
+    Route::post('/instructor/quizzes/draft', [QuizController::class, 'storeDraftQuiz'])->name('quizzes.draft');
+    Route::post('/instructor/quizzes/{id}/restore', [QuizController::class, 'restoreQuiz'])->name('quizzes.restore');
+    Route::get('/instructor/quizzes/{quiz_id}/results/{quiz_result_id}/answers', [QuizController::class, 'viewStudentAnswers'])->name('quizzes.studentAnswers');
+    Route::post('/instructor/quizzes/{quiz_id}/questions/reuse', [QuizController::class, 'reuseQuestions'])->name('quizzes.questions.reuse');
+    Route::get('/instructor/quizzes/{quiz_id}/full-preview', [QuizController::class, 'fullPreviewQuiz'])->name('quizzes.fullPreview');
+    
     // Participate in Forum Discussions
     Route::get('/instructor/courses/{course_id}/forum-posts', [ForumPostController::class, 'indexForInstructor'])->name('forumPosts.indexForInstructor');
     Route::post('/instructor/courses/{course_id}/forum-posts', [ForumPostController::class, 'storeForInstructor'])->name('forumPosts.storeForInstructor');
@@ -136,6 +143,8 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
 
     // Routes cho QuestionChoice
     Route::apiResource('question-choices', QuestionChoiceController::class);
+    Route::get('/instructor/questions/{id}/choices', [QuestionController::class, 'getChoicesByQuestionId']);
+
     Route::post('/user-answers/{user_answer_id}/grade', [QuizController::class, 'gradeOpenEndedAnswer'])->name('user-answers.grade');
     Route::get('/instructor/deleted-courses', [CourseController::class, 'getDeletedCoursesForInstructor']);
 });

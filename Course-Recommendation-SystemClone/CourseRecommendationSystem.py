@@ -327,129 +327,572 @@
 #     exit(1)
 
 
+# import pandas as pd
+# import numpy as np
+# try:
+#     from sentence_transformers import SentenceTransformer
+# except ImportError:
+#     print("Error: 'sentence_transformers' not installed. Run 'pip install sentence-transformers'.")
+#     exit(1)
+# from sklearn.metrics.pairwise import cosine_similarity
+# from surprise import SVD, Dataset, Reader
+# import pickle
+# import os
+# import sqlite3
+
+# # Tạo thư mục models nếu chưa tồn tại
+# if not os.path.exists('models'):
+#     os.makedirs('models')
+
+# # Đọc dữ liệu
+# try:
+#     data = pd.read_csv('Data/Coursera.csv')
+#     user_behavior = pd.read_csv('Data/Courseuserbehavior.csv')
+# except FileNotFoundError as e:
+#     print(f"Error: {e}. Please ensure 'Coursera.csv' and 'Courseuserbehavior.csv' exist in the 'Data' folder.")
+#     exit(1)
+
+# # Tiền xử lý dữ liệu khóa học
+# data['Course Description'].fillna('', inplace=True)
+# data['course_name'] = data['Course Name']
+# data['course_id'] = range(1, len(data) + 1)
+# courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level']]
+
+# # Tạo ma trận tương đồng bằng BERT
+# try:
+#     model = SentenceTransformer('all-MiniLM-L6-v2')
+#     course_embeddings = model.encode(courses_list['Course Description'].tolist(), show_progress_bar=True)
+#     similarity = cosine_similarity(course_embeddings)
+# except Exception as e:
+#     print(f"Error generating BERT embeddings: {e}")
+#     exit(1)
+
+# # Tiền xử lý dữ liệu người dùng
+# unique_course_ids = user_behavior['course_id'].unique()
+# unique_user_ids = user_behavior['userid_DI'].unique()
+
+# # Cải thiện ánh xạ course_id bằng cách ánh xạ ngẫu nhiên tới course_id trong courses_list
+# np.random.seed(42)
+# course_id_map = {cid: np.random.choice(courses_list['course_id']) for cid in unique_course_ids}
+# user_id_map = {uid: i+1 for i, uid in enumerate(unique_user_ids)}
+
+# # Kiểm tra dữ liệu
+# print("Columns in user_behavior:", user_behavior.columns.tolist())
+# print("Unique values in 'grade':", user_behavior['grade'].unique())
+# print("Number of NaN in 'grade':", user_behavior['grade'].isna().sum())
+# if 'explored' in user_behavior.columns:
+#     print("Unique values in 'explored':", user_behavior['explored'].unique())
+# if 'nchapters' in user_behavior.columns:
+#     print("Unique values in 'nchapters':", user_behavior['nchapters'].unique())
+
+# # Hàm tính rating mới (ngẫu nhiên với xác suất cao cho rating 4 và 5)
+# def calculate_rating(row):
+#     ratings = [1.0, 2.0, 3.0, 4.0, 5.0]
+#     probabilities = [0.1, 0.1, 0.2, 0.3, 0.3]  # Ưu tiên rating 4 và 5
+#     return np.random.choice(ratings, p=probabilities)
+
+# # Tạo user_interactions
+# user_interactions = pd.DataFrame({
+#     'user_id': user_behavior['userid_DI'].map(user_id_map),
+#     'course_id': user_behavior['course_id'].map(course_id_map),
+#     'rating': user_behavior.apply(calculate_rating, axis=1),
+#     'viewed': user_behavior['viewed'].astype(bool),
+#     'completed': user_behavior['certified'].astype(bool),
+#     'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
+# })
+
+# # Kiểm tra và đảm bảo có rating 5
+# if 5 not in user_interactions['rating'].values:
+#     print("No rating 5 found, forcing at least one rating to 5.")
+#     random_index = np.random.choice(user_interactions.index)
+#     user_interactions.loc[random_index, 'rating'] = 5.0
+
+# # Ép thêm 10% số hàng thành rating 5
+# force_5_percent = 0.1  # 10%
+# num_rows_to_force = int(len(user_interactions) * force_5_percent)
+# random_indices = np.random.choice(user_interactions.index, size=num_rows_to_force, replace=False)
+# user_interactions.loc[random_indices, 'rating'] = 5.0
+
+# # Kiểm tra rating
+# print("Unique ratings in 'user_interactions':", user_interactions['rating'].unique())
+
+# # Trích xuất đặc trưng người dùng
+# user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
+# user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
+# user_features['final_cc_cname_DI'].fillna('Unknown', inplace=True)
+# user_features['LoE_DI'].fillna('Unknown', inplace=True)
+# user_features['YoB'].fillna(user_features['YoB'].median(), inplace=True)
+
+# # Huấn luyện SVD
+# reader = Reader(rating_scale=(1, 5))
+# surprise_data = Dataset.load_from_df(user_interactions[['user_id', 'course_id', 'rating']], reader)
+# trainset = surprise_data.build_full_trainset()
+# svd = SVD(n_factors=100, n_epochs=20, random_state=42)
+# svd.fit(trainset)
+
+# # Kết nối SQLite và lưu dữ liệu
+# try:
+#     conn = sqlite3.connect('users.db')
+#     user_interactions.to_sql('interactions', conn, if_exists='replace', index=False)
+#     user_features.to_sql('user_features', conn, if_exists='replace', index=False)
+# except Exception as e:
+#     print(f"Error saving to SQLite: {e}")
+#     conn.close()
+#     exit(1)
+# finally:
+#     conn.close()
+
+# # Lưu trữ
+# try:
+#     pickle.dump(courses_list, open('models/courses.pkl', 'wb'))
+#     pickle.dump(similarity, open('models/similarity.pkl', 'wb'))
+#     pickle.dump(svd, open('models/svd.pkl', 'wb'))
+#     pickle.dump(user_interactions, open('models/user_interactions.pkl', 'wb'))
+#     pickle.dump(user_features, open('models/user_features.pkl', 'wb'))
+#     print("All files saved successfully.")
+# except Exception as e:
+#     print(f"Error saving pickle files: {e}")
+#     exit(1)
+
+
+# import pandas as pd
+# import numpy as np
+# from sentence_transformers import SentenceTransformer
+# from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.cluster import KMeans
+# from surprise import SVD, Dataset, Reader
+# import pickle
+# import os
+# from datetime import datetime
+
+
+# # Tạo thư mục models
+# if not os.path.exists('models'):
+#     os.makedirs('models')
+
+# # Hàm chuẩn hóa độ khó
+# def normalize_difficulty(difficulty):
+#     mapping = {'Beginner': 0.3, 'Intermediate': 0.6, 'Advanced': 0.9}
+#     return mapping.get(difficulty, 0.3)
+
+# # Hàm tính năng lực người dùng
+# def calculate_competency(user_interactions, quiz_results, enrollments):
+#     if user_interactions.empty:
+#         return 0.3
+#     avg_quiz_score = quiz_results['score'].mean() / 100 if not quiz_results.empty else 0
+#     completion_rate = len(enrollments[enrollments['status'] == 'completed']) / len(enrollments) if not enrollments.empty else 0
+#     avg_completion_time = (enrollments['completed_at'] - enrollments['enrolled_at']).mean().total_seconds() / 3600 if not enrollments.empty else 0
+#     avg_completion_time_score = max(0, 1 - avg_completion_time / 24)
+#     total_courses_completed = len(enrollments[enrollments['status'] == 'completed'])
+#     competency_score = (0.4 * avg_quiz_score) + (0.3 * completion_rate) + (0.2 * avg_completion_time_score) + (0.1 * min(total_courses_completed / 10, 1))
+#     return min(max(competency_score, 0.3), 0.9)
+
+# # Đọc dữ liệu
+# try:
+#     data = pd.read_csv('Data/Coursera_new.csv')
+#     user_behavior = pd.read_csv('Data/Courseuserbehavior_new.csv')
+# except FileNotFoundError as e:
+#     print(f"Error: {e}. Please ensure 'Coursera_new.csv' and 'Courseuserbehavior_new.csv' exist in the 'Data' folder.")
+#     exit(1)
+
+# # Kiểm tra cột
+# print("Columns in Coursera.csv:", data.columns.tolist())
+# print("Columns in Courseuserbehavior.csv:", user_behavior.columns.tolist())
+
+# # Tiền xử lý dữ liệu khóa học
+# data['Course Description'] = data['Course Description'].fillna('')
+# data['course_name'] = data['Course Name']
+# data['course_id'] = range(1, len(data) + 1)
+# data['instructor'] = data['University'].fillna('Unknown')
+# data['keywords'] = data['Skills'].str.split(',').apply(lambda x: ','.join([i.strip().lower() for i in x]) if isinstance(x, list) else '')
+# courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level', 'instructor', 'keywords']]
+
+# # Tạo ma trận tương đồng
+# model = SentenceTransformer('all-MiniLM-L6-v2')
+# course_texts = (courses_list['Course Description'] + ' ' + courses_list['instructor'] + ' ' + courses_list['keywords']).tolist()
+# print("Encoding texts...")
+# course_embeddings = model.encode(course_texts, show_progress_bar=True)
+# print("Computing cosine similarity...")
+# similarity = cosine_similarity(course_embeddings)
+# print("Similarity computed.")
+
+# # Tiền xử lý dữ liệu người dùng
+# if 'userid_DI' not in user_behavior.columns:
+#     print("Error: 'userid_DI' column not found in Courseuserbehavior.csv.")
+#     exit(1)
+
+# unique_course_ids = user_behavior['course_id'].unique()
+# unique_user_ids = user_behavior['userid_DI'].unique()
+# np.random.seed(42)
+# course_id_map = {cid: np.random.choice(courses_list['course_id']) for cid in unique_course_ids}
+# user_id_map = {uid: i+1 for i, uid in enumerate(unique_user_ids)}
+
+# # Tạo user_interactions
+# user_interactions = pd.DataFrame({
+#     'user_id': user_behavior['userid_DI'].map(user_id_map),
+#     'course_id': user_behavior['course_id'].map(course_id_map),
+#     'rating': np.random.choice([1, 2, 3, 4, 5], size=len(user_behavior), p=[0.1, 0.1, 0.2, 0.3, 0.3]),
+#     'viewed': user_behavior['viewed'].astype(bool),
+#     'completed': user_behavior['certified'].astype(bool),
+#     'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
+# })
+
+# # Giả lập quiz_results và enrollments
+# quiz_results = pd.DataFrame({
+#     'user_id': user_interactions['user_id'],
+#     'score': np.random.uniform(50, 100, size=len(user_interactions))
+# })
+# enrollments = pd.DataFrame({
+#     'user_id': user_interactions['user_id'],
+#     'course_id': user_interactions['course_id'],
+#     'enrolled_at': user_interactions['timestamp'],
+#     'completed_at': user_interactions['timestamp'] + pd.Timedelta(hours=np.random.randint(1, 48)),
+#     'status': np.random.choice(['active', 'completed'], size=len(user_interactions), p=[0.4, 0.6])
+# })
+
+# # Tính năng lực người dùng
+# user_competency = pd.DataFrame({
+#     'user_id': [user_id_map[uid] for uid in unique_user_ids],
+#     'competency_score': [calculate_competency(
+#         user_interactions[user_interactions['user_id'] == user_id_map[uid]],
+#         quiz_results[quiz_results['user_id'] == user_id_map[uid]],
+#         enrollments[enrollments['user_id'] == user_id_map[uid]]
+#     ) for uid in unique_user_ids]
+# })
+
+# # Phân cụm người dùng
+# kmeans = KMeans(n_clusters=5, random_state=42)
+# user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
+# user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
+# user_features['final_cc_cname_DI'] = user_features['final_cc_cname_DI'].fillna('Unknown')
+# user_features['LoE_DI'] = user_features['LoE_DI'].fillna('Unknown')
+# user_features['YoB'] = user_features['YoB'].fillna(user_features['YoB'].median())
+# user_features['cluster'] = kmeans.fit_predict(user_features[['YoB']].values)
+
+# # Huấn luyện SVD
+# reader = Reader(rating_scale=(1, 5))
+# surprise_data = Dataset.load_from_df(user_interactions[['user_id', 'course_id', 'rating']], reader)
+# trainset = surprise_data.build_full_trainset()
+# svd = SVD(n_factors=50, n_epochs=10, random_state=42)
+# svd.fit(trainset)
+
+# # Hàm đề xuất
+# def recommend(user_id=None, course_name=None, alpha=0.5):
+#     if user_id is None and course_name is None:
+#         return ["Please provide user_id or course_name."]
+
+#     recommended_courses = []
+#     competency_score = user_competency[user_competency['user_id'] == user_id]['competency_score'].iloc[0] if user_id in user_competency['user_id'].values else 0.3
+
+#     if user_id is not None:
+#         user_cluster = user_features[user_features['user_id'] == user_id]['cluster'].iloc[0] if user_id in user_features['user_id'].values else 0
+#         cluster_users = user_features[user_features['cluster'] == user_cluster]['user_id']
+#         cluster_interactions = user_interactions[user_interactions['user_id'].isin(cluster_users)]
+#         course_ids = courses_list['course_id'].unique()
+#         cf_predictions = [svd.predict(user_id, course_id) for course_id in course_ids]
+#         cf_scores = {pred.iid: pred.est for pred in cf_predictions}
+
+#         if course_name is None:
+#             valid_courses = [
+#                 cid for cid in course_ids
+#                 if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score
+#             ]
+#             top_courses = sorted(
+#                 [(cid, cf_scores[cid]) for cid in valid_courses],
+#                 key=lambda x: x[1], reverse=True
+#             )[:5]
+#             for course_id, _ in top_courses:
+#                 course_name = courses_list[courses_list['course_id'] == course_id]['course_name'].iloc[0]
+#                 recommended_courses.append(course_name)
+#         else:
+#             try:
+#                 course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+#                 course_id = courses_list.iloc[course_index]['course_id']
+#                 distances = similarity[course_index]
+#                 content_scores = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:10]
+#                 content_scores = {courses_list.iloc[idx]['course_id']: score for idx, score in content_scores}
+
+#                 hybrid_scores = {}
+#                 for cid in content_scores:
+#                     if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score:
+#                         hybrid_scores[cid] = alpha * content_scores[cid] + (1 - alpha) * cf_scores.get(cid, 0)
+
+#                 top_courses = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:5]
+#                 for course_id, _ in top_courses:
+#                     course_row = courses_list[courses_list['course_id'] == course_id]
+#                     if not course_row.empty:
+#                         course = course_row.iloc[0]
+#                         recommended_courses.append({
+#                             'course_id': int(course['course_id']),
+#                             'course_name': course.get('course_name', ''),
+#                             'difficulty_level': course.get('Difficulty Level', ''),
+#                             'university': course.get('University', ''),
+#                             'skills': course.get('Skills', ''),
+#                             'description': course.get('Course Description', ''),
+#                             'price': course.get('Price', ''),
+#                             'rating': float(course.get('Course Rating', 0))
+#                         })
+ 
+#             except IndexError:
+#                 return [f"Course '{course_name}' not found."]
+#     else:
+#         try:
+#             course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+#             distances = sorted(list(enumerate(similarity[course_index])), reverse=True, key=lambda x: x[1])
+#             for i in distances[1:6]:
+#                 if normalize_difficulty(courses_list.iloc[i[0]]['Difficulty Level']) >= competency_score:
+#                     course_name = courses_list.iloc[i[0]]['course_name']
+#                     recommended_courses.append(course_name)
+#         except IndexError:
+#             return [f"Course '{course_name}' not found."]
+
+#     return recommended_courses
+
+# # Lưu trữ
+# try:
+#     pickle.dump(courses_list, open('models/courses.pkl', 'wb'))
+#     pickle.dump(similarity, open('models/similarity.pkl', 'wb'))
+#     pickle.dump(svd, open('models/svd.pkl', 'wb'))
+#     pickle.dump(user_interactions, open('models/user_interactions.pkl', 'wb'))
+#     pickle.dump(user_competency, open('models/user_competency.pkl', 'wb'))
+#     pickle.dump(user_features, open('models/user_features.pkl', 'wb'))
+#     print("All files saved successfully.")
+# except Exception as e:
+#     print(f"Error saving pickle files: {e}")
+#     exit(1)
+
+# # Ví dụ sử dụng
+# print("Recommendations for user_id=1:")
+# print(recommend(user_id=1))
+# print("\nHybrid recommendations for user_id=1 and course 'Business Strategy Business Model Canvas Analysis with Miro':")
+# print(recommend(user_id=1, course_name='Business Strategy Business Model Canvas Analysis with Miro'))
+# print("✅ Processing completed.")
+
 import pandas as pd
 import numpy as np
-try:
-    from sentence_transformers import SentenceTransformer
-except ImportError:
-    print("Error: 'sentence_transformers' not installed. Run 'pip install sentence-transformers'.")
-    exit(1)
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
 from surprise import SVD, Dataset, Reader
 import pickle
 import os
-import sqlite3
+import logging
+from datetime import datetime
 
-# Tạo thư mục models nếu chưa tồn tại
-if not os.path.exists('models'):
-    os.makedirs('models')
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Đọc dữ liệu
-try:
-    data = pd.read_csv('Data/Coursera.csv')
-    user_behavior = pd.read_csv('Data/Courseuserbehavior.csv')
-except FileNotFoundError as e:
-    print(f"Error: {e}. Please ensure 'Coursera.csv' and 'Courseuserbehavior.csv' exist in the 'Data' folder.")
-    exit(1)
+def normalize_difficulty(difficulty):
+    """Normalize course difficulty levels to a score."""
+    mapping = {'Beginner': 0.3, 'Intermediate': 0.6, 'Advanced': 0.9}
+    return mapping.get(difficulty, 0.3)
 
-# Tiền xử lý dữ liệu khóa học
-data['Course Description'].fillna('', inplace=True)
-data['course_name'] = data['Course Name']
-data['course_id'] = range(1, len(data) + 1)
-courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level']]
+def calculate_competency(user_interactions, quiz_results, enrollments):
+    """Calculate user competency score."""
+    if user_interactions.empty:
+        return 0.3
+    avg_quiz_score = quiz_results['score'].mean() / 100 if not quiz_results.empty else 0
+    completion_rate = len(enrollments[enrollments['status'] == 'completed']) / len(enrollments) if not enrollments.empty else 0
+    avg_completion_time = (enrollments['completed_at'] - enrollments['enrolled_at']).mean().total_seconds() / 3600 if not enrollments.empty else 0
+    avg_completion_time_score = max(0, 1 - avg_completion_time / 24)
+    total_courses_completed = len(enrollments[enrollments['status'] == 'completed'])
+    competency_score = (0.4 * avg_quiz_score) + (0.3 * completion_rate) + (0.2 * avg_completion_time_score) + (0.1 * min(total_courses_completed / 10, 1))
+    return min(max(competency_score, 0.3), 0.9)
 
-# Tạo ma trận tương đồng bằng BERT
-try:
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    course_embeddings = model.encode(courses_list['Course Description'].tolist(), show_progress_bar=True)
-    similarity = cosine_similarity(course_embeddings)
-except Exception as e:
-    print(f"Error generating BERT embeddings: {e}")
-    exit(1)
+def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, similarity=None, svd=None, user_interactions=None, user_competency=None, user_features=None):
+    """
+    Generate course recommendations based on user_id, course_name, or both.
+    Returns a list of dictionaries with complete course details.
+    """
+    if user_id is None and course_name is None:
+        return ["Please provide user_id or course_name."]
 
-# Tiền xử lý dữ liệu người dùng
-unique_course_ids = user_behavior['course_id'].unique()
-unique_user_ids = user_behavior['userid_DI'].unique()
+    recommended_courses = []
+    competency_score = user_competency[user_competency['user_id'] == user_id]['competency_score'].iloc[0] if user_id in user_competency['user_id'].values else 0.3
 
-# Cải thiện ánh xạ course_id bằng cách ánh xạ ngẫu nhiên tới course_id trong courses_list
-np.random.seed(42)
-course_id_map = {cid: np.random.choice(courses_list['course_id']) for cid in unique_course_ids}
-user_id_map = {uid: i+1 for i, uid in enumerate(unique_user_ids)}
+    def get_course_details(course_id):
+        """Helper function to extract complete course details."""
+        course_row = courses_list[courses_list['course_id'] == course_id]
+        if not course_row.empty:
+            course = course_row.iloc[0]
+            return {
+                'course_id': int(course['course_id']),
+                'course_name': course.get('course_name', ''),
+                'difficulty_level': course.get('Difficulty Level', ''),
+                'university': course.get('University', 'Unknown'),
+                'skills': course.get('Skills', ''),
+                'description': course.get('Course Description', ''),
+                'price': str(course.get('Price', 'Unknown')),
+                'rating': float(course.get('Course Rating', 0)),
+                'course_url': course.get('Course URL', 'Unknown'),
+                'status': course.get('Status', 'Unknown'),
+                'categories': course.get('Categories', 'Unknown')
+            }
+        return None
 
-# Kiểm tra dữ liệu
-print("Columns in user_behavior:", user_behavior.columns.tolist())
-print("Unique values in 'grade':", user_behavior['grade'].unique())
-print("Number of NaN in 'grade':", user_behavior['grade'].isna().sum())
-if 'explored' in user_behavior.columns:
-    print("Unique values in 'explored':", user_behavior['explored'].unique())
-if 'nchapters' in user_behavior.columns:
-    print("Unique values in 'nchapters':", user_behavior['nchapters'].unique())
+    if user_id is not None:
+        user_cluster = user_features[user_features['user_id'] == user_id]['cluster'].iloc[0] if user_id in user_features['user_id'].values else 0
+        cluster_users = user_features[user_features['cluster'] == user_cluster]['user_id']
+        cluster_interactions = user_interactions[user_interactions['user_id'].isin(cluster_users)]
+        course_ids = courses_list['course_id'].unique()
+        cf_predictions = [svd.predict(user_id, course_id) for course_id in course_ids]
+        cf_scores = {pred.iid: pred.est for pred in cf_predictions}
 
-# Hàm tính rating mới (ngẫu nhiên với xác suất cao cho rating 4 và 5)
-def calculate_rating(row):
-    ratings = [1.0, 2.0, 3.0, 4.0, 5.0]
-    probabilities = [0.1, 0.1, 0.2, 0.3, 0.3]  # Ưu tiên rating 4 và 5
-    return np.random.choice(ratings, p=probabilities)
+        if course_name is None:
+            valid_courses = [
+                cid for cid in course_ids
+                if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score
+            ]
+            top_courses = sorted(
+                [(cid, cf_scores[cid]) for cid in valid_courses],
+                key=lambda x: x[1], reverse=True
+            )[:5]
+            for course_id, _ in top_courses:
+                course_details = get_course_details(course_id)
+                if course_details:
+                    recommended_courses.append(course_details)
+        else:
+            try:
+                course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+                course_id = courses_list.iloc[course_index]['course_id']
+                distances = similarity[course_index]
+                content_scores = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:10]
+                content_scores = {courses_list.iloc[idx]['course_id']: score for idx, score in content_scores}
 
-# Tạo user_interactions
-user_interactions = pd.DataFrame({
-    'user_id': user_behavior['userid_DI'].map(user_id_map),
-    'course_id': user_behavior['course_id'].map(course_id_map),
-    'rating': user_behavior.apply(calculate_rating, axis=1),
-    'viewed': user_behavior['viewed'].astype(bool),
-    'completed': user_behavior['certified'].astype(bool),
-    'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
-})
+                hybrid_scores = {}
+                for cid in content_scores:
+                    if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score:
+                        hybrid_scores[cid] = alpha * content_scores[cid] + (1 - alpha) * cf_scores.get(cid, 0)
 
-# Kiểm tra và đảm bảo có rating 5
-if 5 not in user_interactions['rating'].values:
-    print("No rating 5 found, forcing at least one rating to 5.")
-    random_index = np.random.choice(user_interactions.index)
-    user_interactions.loc[random_index, 'rating'] = 5.0
+                top_courses = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:5]
+                for course_id, _ in top_courses:
+                    course_details = get_course_details(course_id)
+                    if course_details:
+                        recommended_courses.append(course_details)
+            except IndexError:
+                return [f"Course '{course_name}' not found."]
+    else:
+        try:
+            course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+            distances = sorted(list(enumerate(similarity[course_index])), reverse=True, key=lambda x: x[1])
+            for i in distances[1:6]:
+                course_id = courses_list.iloc[i[0]]['course_id']
+                if normalize_difficulty(courses_list.iloc[i[0]]['Difficulty Level']) >= competency_score:
+                    course_details = get_course_details(course_id)
+                    if course_details:
+                        recommended_courses.append(course_details)
+        except IndexError:
+            return [f"Course '{course_name}' not found."]
 
-# Ép thêm 10% số hàng thành rating 5
-force_5_percent = 0.1  # 10%
-num_rows_to_force = int(len(user_interactions) * force_5_percent)
-random_indices = np.random.choice(user_interactions.index, size=num_rows_to_force, replace=False)
-user_interactions.loc[random_indices, 'rating'] = 5.0
+    return recommended_courses
 
-# Kiểm tra rating
-print("Unique ratings in 'user_interactions':", user_interactions['rating'].unique())
+def update_model():
+    """
+    Train the model and save the artifacts to the models/ directory.
+    """
+    logger.info("Starting model update")
+    if not os.path.exists('models'):
+        os.makedirs('models')
 
-# Trích xuất đặc trưng người dùng
-user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
-user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
-user_features['final_cc_cname_DI'].fillna('Unknown', inplace=True)
-user_features['LoE_DI'].fillna('Unknown', inplace=True)
-user_features['YoB'].fillna(user_features['YoB'].median(), inplace=True)
+    try:
+        data = pd.read_csv('Data/Coursera_new.csv')
+        user_behavior = pd.read_csv('Data/Courseuserbehavior_new.csv')
+    except FileNotFoundError as e:
+        logger.error(f"Data file missing: {e}")
+        raise Exception(f"Data file missing: {e}")
 
-# Huấn luyện SVD
-reader = Reader(rating_scale=(1, 5))
-surprise_data = Dataset.load_from_df(user_interactions[['user_id', 'course_id', 'rating']], reader)
-trainset = surprise_data.build_full_trainset()
-svd = SVD(n_factors=100, n_epochs=20, random_state=42)
-svd.fit(trainset)
+    required_columns = ['Course Name', 'University', 'Difficulty Level', 'Course Rating', 'Course URL', 'Course Description', 'Skills', 'Price', 'Status', 'Categories']
+    missing_columns = [col for col in required_columns if col not in data.columns]
+    if missing_columns:
+        logger.error(f"Missing columns in Coursera_new.csv: {missing_columns}")
+        raise Exception(f"Missing columns in Coursera_new.csv: {missing_columns}")
 
-# Kết nối SQLite và lưu dữ liệu
-try:
-    conn = sqlite3.connect('users.db')
-    user_interactions.to_sql('interactions', conn, if_exists='replace', index=False)
-    user_features.to_sql('user_features', conn, if_exists='replace', index=False)
-except Exception as e:
-    print(f"Error saving to SQLite: {e}")
-    conn.close()
-    exit(1)
-finally:
-    conn.close()
+    data['Course Description'] = data['Course Description'].fillna('')
+    data['course_name'] = data['Course Name']
+    data['course_id'] = range(1, len(data) + 1)
+    courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level', 'University', 'Skills', 'Price', 'Course Rating', 'Course URL', 'Status', 'Categories']]
 
-# Lưu trữ
-try:
-    pickle.dump(courses_list, open('models/courses.pkl', 'wb'))
-    pickle.dump(similarity, open('models/similarity.pkl', 'wb'))
-    pickle.dump(svd, open('models/svd.pkl', 'wb'))
-    pickle.dump(user_interactions, open('models/user_interactions.pkl', 'wb'))
-    pickle.dump(user_features, open('models/user_features.pkl', 'wb'))
-    print("All files saved successfully.")
-except Exception as e:
-    print(f"Error saving pickle files: {e}")
-    exit(1)
+    try:
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        course_texts = (courses_list['Course Description'] + ' ' + courses_list['University'] + ' ' + courses_list['Skills']).tolist()
+        logger.info("Encoding texts...")
+        course_embeddings = model.encode(course_texts, show_progress_bar=True)
+        logger.info("Computing cosine similarity...")
+        similarity = cosine_similarity(course_embeddings)
+        logger.info("Similarity computed")
+    except Exception as e:
+        logger.error(f"Error generating BERT embeddings: {e}")
+        raise Exception(f"Error generating BERT embeddings: {e}")
+
+    if 'userid_DI' not in user_behavior.columns:
+        logger.error("'userid_DI' column not found in Courseuserbehavior.csv")
+        raise Exception("'userid_DI' column not found in Courseuserbehavior.csv")
+    
+    unique_course_ids = user_behavior['course_id'].unique()
+    unique_user_ids = user_behavior['userid_DI'].unique()
+    np.random.seed(42)
+    course_id_map = {cid: np.random.choice(courses_list['course_id']) for cid in unique_course_ids}
+    user_id_map = {uid: i+1 for i, uid in enumerate(unique_user_ids)}
+
+    user_interactions = pd.DataFrame({
+        'user_id': user_behavior['userid_DI'].map(user_id_map),
+        'course_id': user_behavior['course_id'].map(course_id_map),
+        'rating': np.random.choice([1, 2, 3, 4, 5], size=len(user_behavior), p=[0.1, 0.1, 0.2, 0.3, 0.3]),
+        'viewed': user_behavior['viewed'].astype(bool),
+        'completed': user_behavior['certified'].astype(bool),
+        'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
+    })
+
+    quiz_results = pd.DataFrame({
+        'user_id': user_interactions['user_id'],
+        'score': np.random.uniform(50, 100, size=len(user_interactions))
+    })
+    enrollments = pd.DataFrame({
+        'user_id': user_interactions['user_id'],
+        'course_id': user_interactions['course_id'],
+        'enrolled_at': user_interactions['timestamp'],
+        'completed_at': user_interactions['timestamp'] + pd.Timedelta(hours=np.random.randint(1, 48)),
+        'status': np.random.choice(['active', 'completed'], size=len(user_interactions), p=[0.4, 0.6])
+    })
+
+    user_competency = pd.DataFrame({
+        'user_id': [user_id_map[uid] for uid in unique_user_ids],
+        'competency_score': [calculate_competency(
+            user_interactions[user_interactions['user_id'] == user_id_map[uid]],
+            quiz_results[quiz_results['user_id'] == user_id_map[uid]],
+            enrollments[enrollments['user_id'] == user_id_map[uid]]
+        ) for uid in unique_user_ids]
+    })
+
+    kmeans = KMeans(n_clusters=5, random_state=42)
+    user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
+    user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
+    user_features['final_cc_cname_DI'] = user_features['final_cc_cname_DI'].fillna('Unknown')
+    user_features['LoE_DI'] = user_features['LoE_DI'].fillna('Unknown')
+    user_features['YoB'] = user_features['YoB'].fillna(user_features['YoB'].median())
+    user_features['cluster'] = kmeans.fit_predict(user_features[['YoB']].values)
+
+    reader = Reader(rating_scale=(1, 5))
+    surprise_data = Dataset.load_from_df(user_interactions[['user_id', 'course_id', 'rating']], reader)
+    trainset = surprise_data.build_full_trainset()
+    svd = SVD(n_factors=50, n_epochs=10, random_state=42)
+    svd.fit(trainset)
+
+    try:
+        with open('models/courses.pkl', 'wb') as f:
+            pickle.dump(courses_list, f)
+        with open('models/similarity.pkl', 'wb') as f:
+            pickle.dump(similarity, f)
+        with open('models/svd.pkl', 'wb') as f:
+            pickle.dump(svd, f)
+        with open('models/user_interactions.pkl', 'wb') as f:
+            pickle.dump(user_interactions, f)
+        with open('models/user_competency.pkl', 'wb') as f:
+            pickle.dump(user_competency, f)
+        with open('models/user_features.pkl', 'wb') as f:
+            pickle.dump(user_features, f)
+        logger.info("All files saved successfully")
+    except Exception as e:
+        logger.error(f"Error saving pickle files: {e}")
+        raise Exception(f"Error saving pickle files: {e}")

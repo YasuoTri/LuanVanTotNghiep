@@ -27,7 +27,7 @@ class AuthController extends Controller
         $this->cloudinaryService = $cloudinaryService;
     }
 
-    public function register(Request $request)
+   public function register(Request $request)
     {
         // Validation rules
         $validatedData = $request->validate([
@@ -39,7 +39,8 @@ class AuthController extends Controller
             'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
             'gender' => 'nullable|string|in:Male,Female,other',
             'learning_goals' => 'nullable|string',
-            'interests' => 'nullable|string',
+            'category_ids' => 'nullable|array', // Array of category IDs
+            'category_ids.*' => 'exists:categories,id', // Validate each category ID
         ]);
 
         // Create a unique userid_DI
@@ -49,15 +50,16 @@ class AuthController extends Controller
         // Upload avatar to Cloudinary if provided
         $avatarUrl = null;
         if ($request->hasFile('avatar')) {
-           try {
-        Log::info('Uploading avatar to Cloudinary');
-        $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'));
-        Log::info('Avatar URL: ' . $avatarUrl);
-    } catch (\Exception $e) {
-        Log::error('Avatar upload error: ' . $e->getMessage());
+            try {
+                Log::info('Uploading avatar to Cloudinary');
+                $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'), 'user_avatars');
+                Log::info('Avatar URL: ' . $avatarUrl);
+            } catch (\Exception $e) {
+                Log::error('Avatar upload error: ' . $e->getMessage());
+            }
         }
 
-        // Tạo user với role mặc định là student
+        // Create user with default role as student
         $user = User::create([
             'email' => $validatedData['email'],
             'password' => $validatedData['password'],
@@ -70,13 +72,17 @@ class AuthController extends Controller
             'avatar' => $avatarUrl, // Save Cloudinary URL
         ]);
 
-        // Tạo bản ghi trong bảng students
-        Student::create([
+        // Create record in students table
+        $student = Student::create([
             'user_id' => $user->id,
             'learning_goals' => $validatedData['learning_goals'],
-            'interests' => $validatedData['interests'],
             'total_courses_completed' => 0,
         ]);
+
+        // Sync categories if provided
+        if (isset($validatedData['category_ids']) && !empty($validatedData['category_ids'])) {
+            $student->categories()->sync($validatedData['category_ids']);
+        }
 
         // Generate JWT token
         $token = JWTAuth::fromUser($user);
@@ -127,7 +133,6 @@ class AuthController extends Controller
             ], 201)->withCookie($cookie);
         }
     }
-}
 
 
     public function login(Request $request)
@@ -250,7 +255,7 @@ class AuthController extends Controller
         }
     }
 
-     protected function handleSocialLogin($socialUser, $provider)
+ protected function handleSocialLogin($socialUser, $provider)
     {
         // Find or create the user
         $user = User::where('provider_id', $socialUser->getId())
@@ -266,15 +271,15 @@ class AuthController extends Controller
                 ], 400);
             }
 
-            // Lưu avatar từ social provider vào Cloudinary
+            // Save avatar from social provider to Cloudinary
             $avatarUrl = null;
             if ($socialUser->getAvatar()) {
                 try {
-                    // Tải avatar từ URL của social provider
+                    // Download avatar from social provider URL
                     $tempImage = tempnam(sys_get_temp_dir(), 'avatar');
                     file_put_contents($tempImage, file_get_contents($socialUser->getAvatar()));
-                    
-                    // Tạo UploadedFile từ file tạm
+
+                    // Create UploadedFile from temp file
                     $uploadedFile = new \Illuminate\Http\UploadedFile(
                         $tempImage,
                         'avatar.jpg',
@@ -282,14 +287,14 @@ class AuthController extends Controller
                         null,
                         true
                     );
-                    
-                    // Upload lên Cloudinary
+
+                    // Upload to Cloudinary
                     $avatarUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'user_avatars');
-                    
-                    // Xóa file tạm
+
+                    // Delete temp file
                     @unlink($tempImage);
                 } catch (\Exception $e) {
-                    // Nếu có lỗi, sử dụng URL gốc từ social provider
+                    // Fallback to social provider's avatar URL
                     $avatarUrl = $socialUser->getAvatar();
                 }
             }
@@ -297,22 +302,24 @@ class AuthController extends Controller
             // Create new user
             $user = User::create([
                 'userid_DI' => 'user_' . Str::random(10),
-                'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@gmail.com',
-                'password' => Hash::make('password'), // Random password
+                'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.com',
+                'password' => Hash::make(Str::random(16)), // Random password
                 'avatar' => $avatarUrl,
                 'final_cc_cname_DI' => $socialUser->getName() ?? 'Unknown',
-                'role' => 'student', // Default to student
+                'role' => 'student',
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
             ]);
 
             // Create student record
-            Student::create([
+            $student = Student::create([
                 'user_id' => $user->id,
                 'learning_goals' => null,
-                'interests' => null,
                 'total_courses_completed' => 0,
             ]);
+
+            // Optionally sync categories (e.g., if social provider provides interest data)
+            // This can be extended if socialUser provides interest data
         }
 
         // Generate JWT token
@@ -597,50 +604,40 @@ public function getCurrentUser()
         ], 500);
     }
 }
-/**
- * Update the authenticated user's profile information.
- *
- * @param  \Illuminate\Http\Request  $request
- * @return \Illuminate\Http\JsonResponse
- */
 public function updateProfile(Request $request)
 {
     try {
-        // Lấy ID của user hiện tại từ Auth
         $userId = Auth::id();
-        
         if (!$userId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized or user not found',
             ], 401);
         }
-        
-        // Tìm user bằng model User
+
         $user = User::findOrFail($userId);
-        Log::info('User found: ' .$request->all);
-        // Validate dữ liệu đầu vào
+
+        // Validate input
         $validatedData = $request->validate([
             'final_cc_cname_DI' => 'nullable|string|max:100',
             'LoE_DI' => 'nullable|string|max:50',
             'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
             'gender' => 'nullable|string|in:Male,Female,other',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            // Thông tin cho student
+            // For student
             'learning_goals' => 'nullable|string',
-            'interests' => 'nullable|string',
-            // Thông tin cho instructor
+            'category_ids' => 'nullable|array', // Array of category IDs
+            'category_ids.*' => 'exists:categories,id', // Validate each ID
+            // For instructor
             'bio' => 'nullable|string|max:1000',
             'organization' => 'nullable|string|max:100',
             'name' => 'nullable|string|max:100',
         ]);
-        Log::info('Validated data: ' . json_encode($validatedData));
-        // Upload avatar mới nếu có
+
+        // Handle avatar upload (unchanged)
         if ($request->hasFile('avatar')) {
             try {
                 Log::info('Uploading avatar to Cloudinary');
-                
-                // Xóa avatar cũ nếu có
                 if ($user->avatar && strpos($user->avatar, 'cloudinary.com') !== false) {
                     try {
                         $this->cloudinaryService->deleteByUrl($user->avatar);
@@ -648,10 +645,7 @@ public function updateProfile(Request $request)
                         Log::error('Error deleting old avatar: ' . $e->getMessage());
                     }
                 }
-                
                 $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'), 'user_avatars');
-                Log::info('Avatar URL: ' . $avatarUrl);
-                
                 $validatedData['avatar'] = $avatarUrl;
             } catch (\Exception $e) {
                 Log::error('Avatar upload error: ' . $e->getMessage());
@@ -662,59 +656,57 @@ public function updateProfile(Request $request)
                 ], 500);
             }
         }
-        
-        // Cập nhật thông tin cơ bản của user
+
+        // Update user data
         $userDataToUpdate = array_intersect_key($validatedData, array_flip([
             'final_cc_cname_DI', 'LoE_DI', 'YoB', 'gender', 'avatar'
         ]));
-        
         if (!empty($userDataToUpdate)) {
             $user->update($userDataToUpdate);
         }
-        
-        // Cập nhật thông tin bổ sung dựa trên vai trò
+
+        // Update role-based data
         if ($user->role === 'student') {
             $studentDataToUpdate = array_intersect_key($validatedData, array_flip([
-                'learning_goals', 'interests'
+                'learning_goals'
             ]));
-            
             if (!empty($studentDataToUpdate)) {
-                // Sử dụng relationship student để cập nhật
                 $student = $user->student;
                 if ($student) {
                     $student->update($studentDataToUpdate);
+                }
+            }
+            // Update student categories
+            if (isset($validatedData['category_ids'])) {
+                $student = $user->student;
+                if ($student) {
+                    $student->categories()->sync($validatedData['category_ids']);
                 }
             }
         } elseif ($user->role === 'instructor') {
             $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
                 'bio', 'organization', 'name'
             ]));
-            
             if (!empty($instructorDataToUpdate)) {
-                // Sử dụng relationship instructor để cập nhật
                 $instructor = $user->instructor;
                 if ($instructor) {
                     $instructor->update($instructorDataToUpdate);
                 }
             }
         }
-        
-        // Refresh user model để lấy dữ liệu mới nhất
+
         $user = $user->fresh();
-        
-        // Thêm thông tin bổ sung dựa trên vai trò
         if ($user->role === 'instructor') {
             $user->load('instructor');
         } elseif ($user->role === 'student') {
-            $user->load('student');
+            $user->load('student', 'student.categories');
         }
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
             'user' => $user
         ]);
-        
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
         return response()->json([
             'success' => false,

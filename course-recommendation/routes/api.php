@@ -48,6 +48,7 @@ Route::get('/courses/{slug}', [CourseController::class, 'showSlug']);
 Route::get('/courses/course_id/{id}', [CourseController::class, 'show']);
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
+    Route::get('/student/currentStudent', [AuthController::class, 'getCurrentUser']);
     Route::get('/courses', [CourseController::class, 'index']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
@@ -99,7 +100,7 @@ Route::middleware(['jwt_cookie', 'student'])->group(function () {
 
 // Instructor Routes
 Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
-  
+    Route::get('/instructor/currentInstructor', [AuthController::class, 'getCurrentUser']);
     // View Lesson Content (Preview Own Courses)
     Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'getCourseLessonsInstructor'])->name('lessons.getCourseLessonsInstructor');//xong
     Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');//xong
@@ -167,6 +168,7 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
 
 // Admin Routes
 Route::middleware(['jwt_cookie', 'admin'])->group(function () {
+    Route::get('/admin/currentAdmin', [AuthController::class, 'getCurrentUser']);
     // Existing Routes
     Route::post('/admin/courses', [CourseController::class, 'store']);
     Route::put('/admin/courses/{id}', [CourseController::class, 'update']);

@@ -506,4 +506,41 @@ class AuthController extends Controller
 //         'urls' => $urls,
 //     ], 200);
 // }
+public function getCurrentUser()
+{
+    try {
+        // Lấy user hiện tại đã xác thực
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized or user not found',
+            ], 401);
+        }
+        if ($user->role === 'instructor') {
+            $instructor = Instructors::where('user_id', $user->id)->first();
+            if (!$instructor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Instructor not found',
+                ], 404);
+            }
+            $user->instructor = $instructor;
+        }
+        // Tải thêm các quan hệ cần thiết (nếu có)
+        // Ví dụ: $user->load(['profile', 'roles', 'permissions']);
+        
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error retrieving user information',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }

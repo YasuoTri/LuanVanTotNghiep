@@ -227,4 +227,14 @@ class VNPayGateway implements PaymentGateway
         ksort($data);
         return $data;
     }
+    public function transfer($sessionId)
+    {
+        // Chuyển tiền cho instructors qua API thanh toán
+        // ...
+        return [
+            'success' => true,
+            'message' => 'Transfer successful',
+            'transaction_code' => Str::random(10), // Mã giao dịch giả lập
+        ];
+    }
 }

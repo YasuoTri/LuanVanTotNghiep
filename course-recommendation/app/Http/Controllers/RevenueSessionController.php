@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Instructor;
 use App\Models\InstructorAccount;
 use App\Models\AdminAccount;
+use App\Services\PaymentGateways\VNPayGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;

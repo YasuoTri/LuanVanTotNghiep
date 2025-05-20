@@ -11,6 +11,8 @@ use App\Http\Middleware\CheckStudentRole;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Session\Middleware\StartSession;
 use App\Console\Kernel as ConsoleKernel;
+use App\Http\Middleware\Cors;
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -33,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'instructor_or_admin' => InstructorOrAdmin::class,
             'student_or_admin' => StudentOrAdmin::class,
             'jwt_cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
+            'cors' => Cors::class,
         ]);
 
         // (Tùy chọn) Áp dụng middleware cho các route hoặc group
@@ -41,8 +44,9 @@ return Application::configure(basePath: dirname(__DIR__))
             StartSession::class,
         ]);
 
-        $middleware->api(append: [
+        $middleware->api(prepend: [
             // Thêm middleware mặc định cho route API nếu cần
+            Cors::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

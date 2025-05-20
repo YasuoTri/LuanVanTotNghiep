@@ -96,7 +96,7 @@ class AnalyticsController extends Controller
             ->withCount(['enrollments as completed_enrollments' => function ($q) {
                 $q->where('status', 'completed');
             }])
-            ->get();
+            ->paginate(10);
 
         $analytics = $courses->map(function ($course) {
             $completionRate = $course->enrollments_count > 0
@@ -150,7 +150,7 @@ class AnalyticsController extends Controller
             ->withCount(['enrollments as completed_enrollments' => function ($q) {
                 $q->where('status', 'completed');
             }])
-            ->get();
+            ->paginate(10);
 
         $analytics = $users->map(function ($user) {
             $interactions = Interaction::where('user_id', $user->id)

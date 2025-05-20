@@ -74,7 +74,11 @@ Route::middleware(['jwt_cookie', 'student'])->group(function () {
     // Track Learning Progress
     Route::get('/lesson-progress', [LessonProgressController::class, 'indexForStudent'])->name('lessonProgress.indexForStudent');//xong
     Route::get('/lesson-progress/{id}', [LessonProgressController::class, 'showForStudent'])->name('lessonProgress.showForStudent');//xong
+    Route::post('/lessons/{lesson_id}/progress', [LessonProgressController::class, 'updateProgress']);
+    Route::get('/courses/{course_id}/lesson-progress', [LessonProgressController::class, 'getProgressForCourse']);
+    Route::get('/courses/{course_id}/progress', [LessonProgressController::class, 'getCourseCompletion']);
 
+    Route::post('/courses/{course_id}/reviewForStudent', [ReviewController::class, 'storeStudent']);
     // Ask Questions, Discuss (Forum Posts)
     Route::get('/courses/{course_id}/forum-posts', [ForumPostController::class, 'indexForStudent'])->name('forumPosts.indexForStudent');//xong
     Route::post('/courses/{course_id}/forum-posts', [ForumPostController::class, 'storeForStudent'])->name('forumPosts.storeForStudent');//xong
@@ -94,7 +98,8 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
     Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'getCourseLessonsInstructor'])->name('lessons.getCourseLessonsInstructor');//xong
     Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');//xong
    
-    Route::get('/instructor/courses', [CourseController::class, 'indexCourseInstructor']);//xong
+    Route::get('/instructor/allcourses', [CourseController::class, 'indexCourseInstructor']);//xong
+    Route::get('/instructor/courses-except-unavailable', [CourseController::class, 'indexAvailableCourseInstructor']);//xong
     Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);//xong
     Route::put('instructor/courses/{id}', [CourseController::class, 'updateCourseInstructor']);//xong
     Route::delete('/instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);//xong

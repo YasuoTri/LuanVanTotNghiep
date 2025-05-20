@@ -12,7 +12,7 @@ class StudentController extends Controller
 {
     public function index(){
         // Fetch all students
-        $students = Student::all();
+        $students = Student::paginate(10);
         return response()->json($students);
     }
     public function show($id){
@@ -51,7 +51,7 @@ class StudentController extends Controller
      */
     public function trashed(): JsonResponse
     {
-        $enrollments =Student::onlyTrashed()->get();
+        $enrollments =Student::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 
@@ -87,7 +87,7 @@ class StudentController extends Controller
         $query->where('learning_goals', 'like', '%' . $request->learning_goals . '%');
     }
 
-    return response()->json($query->get());
+    return response()->json($query->paginate(10));
 }
 
 }

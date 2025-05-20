@@ -16,7 +16,7 @@ class ForumPostController extends Controller
 {
     public function index(): JsonResponse
     {
-        $forumPosts = ForumPost::all();
+        $forumPosts = ForumPost::paginate(10);
         return response()->json(['data' => $forumPosts]);
     }
 
@@ -57,7 +57,7 @@ class ForumPostController extends Controller
             return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
-        $posts = ForumPost::where('course_id', $course_id)->with('user')->get();
+        $posts = ForumPost::where('course_id', $course_id)->with('user')->paginate(10);
         return response()->json($posts, 200);
     }
 
@@ -101,7 +101,7 @@ class ForumPostController extends Controller
             return response()->json(['message' => 'You are not an instructor for this course'], 403);
         }
 
-        $posts = ForumPost::where('course_id', $course_id)->with('user')->get();
+        $posts = ForumPost::where('course_id', $course_id)->with('user')->paginate(10);
         return response()->json($posts, 200);
     }
 
@@ -162,7 +162,7 @@ class ForumPostController extends Controller
      */
     public function trashed(): JsonResponse
     {
-        $enrollments = ForumPost::onlyTrashed()->get();
+        $enrollments = ForumPost::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 
@@ -192,6 +192,6 @@ function search(Request $request) {
         ->when($request->filled('title'), fn($q) => $q->where('title', 'like', "%{$request->input('title')}%"))
         ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
         ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
-        ->get();
+        ->paginate(10);
     }
 }

@@ -31,7 +31,7 @@ class LessonController extends Controller
 
     public function index(): JsonResponse
     {
-        $lessons = Lesson::all();
+        $lessons = Lesson::paginate(10);
         return response()->json(['data' => $lessons]);
     }
 
@@ -294,7 +294,7 @@ class LessonController extends Controller
                 return response()->json(['message' => 'You are not an instructor for this course'], 403);
             }
 
-            $lessons = Lesson::where('course_id', $course_id)->get();
+            $lessons = Lesson::where('course_id', $course_id)->paginate(10);
             return response()->json($lessons);
         } catch (Exception $e) {
             Log::error('Index lessons for instructor error:', ['message' => $e->getMessage()]);
@@ -775,7 +775,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 );
     }
 
-    return response()->json($query->get());
+    return response()->json($query->paginate(10));
 }
 
 }

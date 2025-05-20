@@ -12,7 +12,7 @@ class InstructorController extends Controller
 {
     public function index()
     {
-        $instructors = Instructors::all();
+        $instructors = Instructors::paginate(10);
         return response()->json($instructors);
     }
     public function show($id)
@@ -52,7 +52,7 @@ class InstructorController extends Controller
      */
     public function trashed(): JsonResponse
     {
-        $enrollments = Instructors::onlyTrashed()->get();
+        $enrollments = Instructors::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 
@@ -88,7 +88,7 @@ class InstructorController extends Controller
         $query->where('organization', 'like', '%' . $request->organization . '%');
     }
 
-    return response()->json($query->get());
+    return response()->json($query->paginate(10));
 }
 
 }

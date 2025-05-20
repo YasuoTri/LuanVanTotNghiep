@@ -31,7 +31,7 @@ class CourseController extends Controller
             // Fetch all courses, including soft-deleted ones
             $courses = Course::with(['instructors', 'reviews'])
                 ->withTrashed() // Include soft-deleted courses
-                ->get(); // No pagination for admin view, or use paginate(10) if preferred
+                ->paginate(10); // No pagination for admin view, or use paginate(10) if preferred
             return response()->json($courses, 200);
         } catch (\Exception $e) {
             Log::error("Failed to fetch all courses for admin: {$e->getMessage()}");
@@ -124,7 +124,7 @@ public function show($id)
     {
         try {
             $instructor = Auth::user()->instructor;
-            $courses = $instructor->courses()->get();
+            $courses = $instructor->courses()->paginate(10);
 
             return response()->json($courses, 200);
         } catch (\Exception $e) {
@@ -132,6 +132,18 @@ public function show($id)
             return response()->json(['message' => 'Failed to fetch courses'], 500);
         }
     }
+    public function indexAvailableCourseInstructor()
+{
+    try {
+        $instructor = Auth::user()->instructor;
+        $courses = $instructor->courses()->where('status', '!=', 'unavailable')->paginate(10);
+
+        return response()->json($courses, 200);
+    } catch (\Exception $e) {
+        Log::error("Failed to fetch available instructor courses: {$e->getMessage()}");
+        return response()->json(['message' => 'Failed to fetch available courses'], 500);
+    }
+}
    
 
 public function storeCourseInstructor(CreateCourseRequest $request)
@@ -277,7 +289,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             $query->where('instructor_id', $instructor->id);
         })
         ->where('status', 'unavailable')
-        ->get();
+        ->paginate(10);
 
         return response()->json([
             'message' => 'Unavailable courses retrieved successfully.',
@@ -346,7 +358,7 @@ public function rejectCourse(Request $request, $id)
 
 public function getPendingCourses()
 {
-    $courses = Course::where('status', 'pending')->get();
+    $courses = Course::where('status', 'pending')->paginate(10);
     return response()->json($courses);
 }
      public function restoreCourse($id)

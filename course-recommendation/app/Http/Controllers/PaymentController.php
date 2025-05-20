@@ -134,7 +134,7 @@ class PaymentController extends Controller
 
         $payments = Payment::where('user_id', $user->id)
                           ->with(['course', 'coupon'])
-                          ->get();
+                          ->paginate(10);
 
         return response()->json([
             'message' => 'Payments retrieved successfully',
@@ -528,7 +528,7 @@ public function handleVNPayIPN(Request $request): JsonResponse
      */
     public function trashed(): JsonResponse
     {
-        $enrollments =Payment::onlyTrashed()->get();
+        $enrollments =Payment::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 
@@ -572,7 +572,7 @@ public function handleVNPayIPN(Request $request): JsonResponse
         $query->where('amount', '<=', $request->max_amount);
     }
 
-    return response()->json($query->get());
+    return response()->json($query->paginate(10));
 }
 
 }

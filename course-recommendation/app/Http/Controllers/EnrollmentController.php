@@ -318,7 +318,7 @@ class EnrollmentController extends Controller
             }])
             ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'expires_at', 'status')
             ->orderBy('enrolled_at', 'desc')
-            ->get();
+            ->paginate(10);
 
         return response()->json(['data' => $enrollments]);
     }
@@ -558,7 +558,7 @@ class EnrollmentController extends Controller
      */
     public function trashed(): JsonResponse
     {
-        $enrollments = Enrollment::onlyTrashed()->get();
+        $enrollments = Enrollment::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 
@@ -591,6 +591,6 @@ class EnrollmentController extends Controller
         ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
         ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
         ->when($request->filled('status'), fn($q) => $q->where('status', $request->input('status')))
-        ->get();
+        ->paginate(10);
 }
 }

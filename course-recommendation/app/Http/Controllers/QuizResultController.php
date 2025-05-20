@@ -15,7 +15,7 @@ class QuizResultController extends Controller
 {
     public function index(): JsonResponse
     {
-        $quizResults = QuizResult::all();
+        $quizResults = QuizResult::paginate(10);
         return response()->json(['data' => $quizResults]);
     }
 

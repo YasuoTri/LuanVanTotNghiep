@@ -10,7 +10,7 @@ class CategoryController extends Controller
     public function index()
     {
         // Fetch all categories
-        $categories = Category::all();
+        $categories = Category::all()->paginate(10);
         return response()->json($categories);
     }
     public function show($id)

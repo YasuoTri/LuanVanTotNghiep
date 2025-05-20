@@ -19,7 +19,7 @@ class CertificateController extends Controller
     }
     public function index(): JsonResponse
     {
-        $certificates = Certificate::all();
+        $certificates = Certificate::paginate(10);
         return response()->json(['data' => $certificates]);
     }
 
@@ -109,7 +109,7 @@ public function destroy($id): JsonResponse
      */
     public function trashed(): JsonResponse
     {
-        $enrollments = Certificate::onlyTrashed()->get();
+        $enrollments = Certificate::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 

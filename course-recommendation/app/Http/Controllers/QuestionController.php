@@ -16,7 +16,7 @@ class QuestionController extends Controller
 {
     public function index()
     {
-        $questions = Question::with('quiz')->get();
+        $questions = Question::with('quiz')->paginate(10);
         return response()->json($questions);
     }
 
@@ -112,6 +112,6 @@ public function getChoicesByQuestionId($question_id)
         ->when($request->filled('quiz_id'), fn($q) => $q->where('quiz_id', $request->input('quiz_id')))
         ->when($request->filled('title'), fn($q) => $q->where('title', 'like', "%{$request->input('title')}%"))
         ->when($request->filled('question_type'), fn($q) => $q->where('question_type', $request->input('question_type')))
-        ->get();
+        ->paginate(10);
 }
 }

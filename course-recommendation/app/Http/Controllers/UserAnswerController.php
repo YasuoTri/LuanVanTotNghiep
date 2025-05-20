@@ -12,7 +12,7 @@ class UserAnswerController extends Controller
 {
     public function index()
     {
-        $answers = UserAnswer::with(['user', 'question', 'choice'])->get();
+        $answers = UserAnswer::with(['user', 'question', 'choice'])->paginate(10);
         return response()->json($answers);
     }
 

@@ -25,7 +25,7 @@ class QuizController extends Controller
      */
     public function index(): JsonResponse
     {
-        $quizzes = Quiz::all();
+        $quizzes = Quiz::paginate(10);
         return response()->json(['data' => $quizzes]);
     }
 
@@ -357,7 +357,7 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
             $query->where('course_id', $course_id);
         })->with(['lesson' => function ($query) {
             $query->select('id', 'course_id', 'title');
-        }])->get();
+        }])->paginate(10);
 
         return response()->json(['data' => $quizzes], 200);
     }
@@ -1650,7 +1650,7 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
         $query->where('is_visible', $request->is_visible);
     }
 
-    return response()->json($query->get());
+    return response()->json($query->paginate(10));
 }
 
 }

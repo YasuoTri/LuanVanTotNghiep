@@ -10,7 +10,7 @@ class CouponController extends Controller
     public function index()
     {
         // Fetch all coupons
-        $coupons = Coupon::all();
+        $coupons = Coupon::paginate(10);
         return response()->json($coupons);
     }
     public function show($id)

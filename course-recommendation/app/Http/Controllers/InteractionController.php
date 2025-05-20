@@ -11,7 +11,7 @@ class InteractionController extends Controller
 {
     public function index(): JsonResponse
     {
-        $interactions = Interaction::all();
+        $interactions = Interaction::paginate(10);
         return response()->json(['data' => $interactions]);
     }
 
@@ -45,7 +45,7 @@ class InteractionController extends Controller
      */
     public function trashed(): JsonResponse
     {
-        $enrollments = Interaction::onlyTrashed()->get();
+        $enrollments = Interaction::onlyTrashed()->paginate(10);
         return response()->json(['data' => $enrollments], 200);
     }
 

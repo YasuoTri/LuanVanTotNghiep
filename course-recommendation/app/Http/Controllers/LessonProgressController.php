@@ -8,13 +8,15 @@ use App\Models\LessonProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Course_Instructors;
+use App\Models\Enrollment;
 use App\Models\Lesson;
+use Illuminate\Http\Request;
 
 class LessonProgressController extends Controller
 {
     public function index(): JsonResponse
     {
-        $lessonProgresses = LessonProgress::all();
+        $lessonProgresses = LessonProgress::paginate(10);
         return response()->json(['data' => $lessonProgresses]);
     }
 
@@ -47,7 +49,7 @@ class LessonProgressController extends Controller
       public function indexForStudent()
     {
         $user = Auth::user();
-        $progress = LessonProgress::where('user_id', $user->id)->with('lesson')->get();
+        $progress = LessonProgress::where('user_id', $user->id)->with('lesson')->paginate(10);
         return response()->json($progress, 200);
     }
 
@@ -81,8 +83,83 @@ class LessonProgressController extends Controller
 
         $progress = LessonProgress::whereHas('lesson', function ($query) use ($course_id) {
             $query->where('course_id', $course_id);
-        })->with(['lesson', 'user'])->get();
+        })->with(['lesson', 'user'])->paginate(10);
 
         return response()->json($progress, 200);
+    }
+
+      public function updateProgress(Request $request, $lesson_id)
+    {
+        $request->validate([
+            'status' => 'required|in:not_started,in_progress,completed',
+        ]);
+
+        $user_id = Auth::id();
+
+        $progress = LessonProgress::updateOrCreate(
+            ['user_id' => $user_id, 'lesson_id' => $lesson_id],
+            [
+                'status' => $request->status,
+                'completed_at' => $request->status === 'completed' ? now() : null,
+            ]
+        );
+        // Kiểm tra nếu tất cả bài học đã completed thì cập nhật enrollments
+        $lesson = Lesson::findOrFail($lesson_id);
+        $course_id = $lesson->course_id;
+
+        $total = Lesson::where('course_id', $course_id)->count();
+        $completed = LessonProgress::whereHas('lesson', function ($q) use ($course_id) {
+        $q->where('course_id', $course_id);
+        })->where('user_id', $user_id)->where('status', 'completed')->count();
+
+        if ($total > 0 && $completed === $total) {
+            Enrollment::where('user_id', $user_id)
+            ->where('course_id', $course_id)
+            ->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+        }
+        return response()->json(['message' => 'Progress updated', 'progress' => $progress]);
+    }
+
+    public function getProgressForCourse($course_id)
+    {
+        $user_id = Auth::id();
+
+        $lessons = Lesson::where('course_id', $course_id)->get();
+
+        $progressData = $lessons->map(function ($lesson) use ($user_id) {
+            $progress = LessonProgress::where('lesson_id', $lesson->id)
+                ->where('user_id', $user_id)->first();
+
+            return [
+                'lesson_id' => $lesson->id,
+                'title' => $lesson->title,
+                'status' => $progress->status ?? 'not_started',
+                'completed_at' => $progress->completed_at,
+            ];
+        });
+
+        return response()->json($progressData);
+    }
+
+    public function getCourseCompletion($course_id)
+    {
+        $user_id = Auth::id();
+
+        $total = Lesson::where('course_id', $course_id)->count();
+
+        $completed = LessonProgress::whereHas('lesson', function ($q) use ($course_id) {
+            $q->where('course_id', $course_id);
+        })->where('user_id', $user_id)->where('status', 'completed')->count();
+
+        $percent = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
+
+        return response()->json([
+            'completed_lessons' => $completed,
+            'total_lessons' => $total,
+            'progress_percent' => $percent
+        ]);
     }
 }

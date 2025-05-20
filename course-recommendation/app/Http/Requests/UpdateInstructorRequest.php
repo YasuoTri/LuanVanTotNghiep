@@ -28,7 +28,6 @@ class UpdateInstructorRequest extends FormRequest
             ],
             'name' => ['sometimes', 'string', 'max:100'],
             'bio' => ['nullable', 'string'],
-            'avatar' => ['nullable', 'string', 'max:255'],
             'organization' => ['nullable', 'string', 'max:100'],
         ];
     }
@@ -41,7 +40,6 @@ class UpdateInstructorRequest extends FormRequest
         return [
             'user_id.exists' => 'The selected user must exist and have the role "instructor".',
             'name.max' => 'The instructor name cannot exceed 100 characters.',
-            'avatar.max' => 'The avatar URL cannot exceed 255 characters.',
             'organization.max' => 'The organization name cannot exceed 100 characters.',
         ];
     }

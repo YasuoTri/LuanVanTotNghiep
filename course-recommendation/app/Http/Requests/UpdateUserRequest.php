@@ -43,6 +43,7 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($userId)
             ],
             'password' => 'sometimes|string|min:8|max:255',
+            'avatar' => ['nullable', 'string', 'max:255'],
             'final_cc_cname_DI' => 'sometimes|string|max:100',
             'LoE_DI' => 'sometimes|string|max:50',
             'YoB' => 'sometimes|integer|min:1900|max:' . date('Y'),
@@ -66,6 +67,7 @@ class UpdateUserRequest extends FormRequest
             'userid_DI.unique' => 'The user ID is already taken.',
             'email.unique' => 'The email address is already registered.',
             'password.min' => 'The password must be at least 8 characters.',
+            'avatar.max' => 'The avatar URL cannot exceed 255 characters.',
             'YoB.min' => 'The year of birth must be at least 1900.',
             'YoB.max' => 'The year of birth cannot be in the future.',
             'admin_level.required_if' => 'The admin level is required when role is admin.'

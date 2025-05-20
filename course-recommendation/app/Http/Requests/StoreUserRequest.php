@@ -29,6 +29,7 @@ class StoreUserRequest extends FormRequest
             'userid_DI' => 'required|string|max:255|unique:users,userid_DI',
             'email' => 'nullable|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|max:255',
+            'avatar' => ['nullable', 'string', 'max:255'],
             'final_cc_cname_DI' => 'required|string|max:100',
             'LoE_DI' => 'required|string|max:50',
             'YoB' => 'nullable|integer|min:1900|max:' . date('Y'),
@@ -55,6 +56,7 @@ class StoreUserRequest extends FormRequest
             'userid_DI.unique' => 'The user ID is already taken.',
             'email.unique' => 'The email address is already registered.',
             'password.min' => 'The password must be at least 8 characters.',
+            'avatar.max' => 'The avatar URL cannot exceed 255 characters.',
             'YoB.min' => 'The year of birth must be at least 1900.',
             'YoB.max' => 'The year of birth cannot be in the future.',
             'admin_level.required_if' => 'The admin level is required when role is admin.'

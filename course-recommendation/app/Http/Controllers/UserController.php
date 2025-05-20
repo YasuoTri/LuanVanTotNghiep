@@ -30,6 +30,7 @@ class UserController extends Controller
             'id',
             'userid_DI',
             'email',
+            'avatar',
             'final_cc_cname_DI',
             'LoE_DI',
             'YoB',
@@ -112,6 +113,7 @@ class UserController extends Controller
             'id',
             'userid_DI',
             'email',
+            'avatar',
             'final_cc_cname_DI',
             'LoE_DI',
             'YoB',
@@ -187,6 +189,7 @@ class UserController extends Controller
             'id',
             'userid_DI',
             'email',
+            'avatar',
             'final_cc_cname_DI',
             'LoE_DI',
             'YoB',
@@ -286,6 +289,8 @@ class UserController extends Controller
                 'email',
                 Rule::unique('users', 'email')->ignore($user->id)
             ],
+            'password' => 'sometimes|string|min:8|max:255',
+            'avatar' => 'sometimes|string|max:255',
             'final_cc_cname_DI' => 'sometimes|string|max:100',
             'LoE_DI' => 'sometimes|string|max:50',
             'YoB' => 'sometimes|integer|min:1900|max:' . date('Y'),
@@ -300,6 +305,8 @@ class UserController extends Controller
             // Cập nhật user
             $user->update(array_filter([
                 'email' => $validated['email'] ?? $user->email,
+                'password' => isset($validated['password']) ? bcrypt($validated['password']) : $user->password,
+                'avatar' => $validated['avatar'] ?? $user->avatar,
                 'final_cc_cname_DI' => $validated['final_cc_cname_DI'] ?? $user->final_cc_cname_DI,
                 'LoE_DI' => $validated['LoE_DI'] ?? $user->LoE_DI,
                 'YoB' => $validated['YoB'] ?? $user->YoB,

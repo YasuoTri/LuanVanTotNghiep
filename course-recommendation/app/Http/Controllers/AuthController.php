@@ -15,15 +15,25 @@ use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
+use App\Services\CloudinaryService;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
+      protected $cloudinaryService;
+
+    public function __construct(CloudinaryService $cloudinaryService)
+    {
+        $this->cloudinaryService = $cloudinaryService;
+    }
+
     public function register(Request $request)
     {
         // Validation rules
         $validatedData = $request->validate([
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'final_cc_cname_DI' => 'nullable|string|max:100',
             'LoE_DI' => 'nullable|string|max:50',
             'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
@@ -36,6 +46,17 @@ class AuthController extends Controller
         $validatedData['userid_DI'] = 'user_' . Str::random(10);
         $validatedData['password'] = Hash::make($validatedData['password']);
 
+        // Upload avatar to Cloudinary if provided
+        $avatarUrl = null;
+        if ($request->hasFile('avatar')) {
+           try {
+        Log::info('Uploading avatar to Cloudinary');
+        $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'));
+        Log::info('Avatar URL: ' . $avatarUrl);
+    } catch (\Exception $e) {
+        Log::error('Avatar upload error: ' . $e->getMessage());
+        }
+
         // Tạo user với role mặc định là student
         $user = User::create([
             'email' => $validatedData['email'],
@@ -46,6 +67,7 @@ class AuthController extends Controller
             'YoB' => $validatedData['YoB'],
             'gender' => $validatedData['gender'],
             'role' => 'student',
+            'avatar' => $avatarUrl, // Save Cloudinary URL
         ]);
 
         // Tạo bản ghi trong bảng students
@@ -105,6 +127,8 @@ class AuthController extends Controller
             ], 201)->withCookie($cookie);
         }
     }
+}
+
 
     public function login(Request $request)
     {
@@ -226,7 +250,7 @@ class AuthController extends Controller
         }
     }
 
-    protected function handleSocialLogin($socialUser, $provider)
+     protected function handleSocialLogin($socialUser, $provider)
     {
         // Find or create the user
         $user = User::where('provider_id', $socialUser->getId())
@@ -242,13 +266,42 @@ class AuthController extends Controller
                 ], 400);
             }
 
+            // Lưu avatar từ social provider vào Cloudinary
+            $avatarUrl = null;
+            if ($socialUser->getAvatar()) {
+                try {
+                    // Tải avatar từ URL của social provider
+                    $tempImage = tempnam(sys_get_temp_dir(), 'avatar');
+                    file_put_contents($tempImage, file_get_contents($socialUser->getAvatar()));
+                    
+                    // Tạo UploadedFile từ file tạm
+                    $uploadedFile = new \Illuminate\Http\UploadedFile(
+                        $tempImage,
+                        'avatar.jpg',
+                        'image/jpeg',
+                        null,
+                        true
+                    );
+                    
+                    // Upload lên Cloudinary
+                    $avatarUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'user_avatars');
+                    
+                    // Xóa file tạm
+                    @unlink($tempImage);
+                } catch (\Exception $e) {
+                    // Nếu có lỗi, sử dụng URL gốc từ social provider
+                    $avatarUrl = $socialUser->getAvatar();
+                }
+            }
+
             // Create new user
             $user = User::create([
                 'userid_DI' => 'user_' . Str::random(10),
                 'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@gmail.com',
+                'password' => Hash::make('password'), // Random password
+                'avatar' => $avatarUrl,
                 'final_cc_cname_DI' => $socialUser->getName() ?? 'Unknown',
                 'role' => 'student', // Default to student
-                'password' => "password", // Random password
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
             ]);
@@ -306,6 +359,7 @@ class AuthController extends Controller
             ])->withCookie($cookie);
         }
     }
+
 
     public function sendResetLinkEmail(Request $request)
     {
@@ -543,4 +597,138 @@ public function getCurrentUser()
         ], 500);
     }
 }
+/**
+ * Update the authenticated user's profile information.
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function updateProfile(Request $request)
+{
+    try {
+        // Lấy ID của user hiện tại từ Auth
+        $userId = Auth::id();
+        
+        if (!$userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized or user not found',
+            ], 401);
+        }
+        
+        // Tìm user bằng model User
+        $user = User::findOrFail($userId);
+        Log::info('User found: ' .$request->all);
+        // Validate dữ liệu đầu vào
+        $validatedData = $request->validate([
+            'final_cc_cname_DI' => 'nullable|string|max:100',
+            'LoE_DI' => 'nullable|string|max:50',
+            'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
+            'gender' => 'nullable|string|in:Male,Female,other',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            // Thông tin cho student
+            'learning_goals' => 'nullable|string',
+            'interests' => 'nullable|string',
+            // Thông tin cho instructor
+            'bio' => 'nullable|string|max:1000',
+            'organization' => 'nullable|string|max:100',
+            'name' => 'nullable|string|max:100',
+        ]);
+        Log::info('Validated data: ' . json_encode($validatedData));
+        // Upload avatar mới nếu có
+        if ($request->hasFile('avatar')) {
+            try {
+                Log::info('Uploading avatar to Cloudinary');
+                
+                // Xóa avatar cũ nếu có
+                if ($user->avatar && strpos($user->avatar, 'cloudinary.com') !== false) {
+                    try {
+                        $this->cloudinaryService->deleteByUrl($user->avatar);
+                    } catch (\Exception $e) {
+                        Log::error('Error deleting old avatar: ' . $e->getMessage());
+                    }
+                }
+                
+                $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'), 'user_avatars');
+                Log::info('Avatar URL: ' . $avatarUrl);
+                
+                $validatedData['avatar'] = $avatarUrl;
+            } catch (\Exception $e) {
+                Log::error('Avatar upload error: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to upload avatar',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
+        
+        // Cập nhật thông tin cơ bản của user
+        $userDataToUpdate = array_intersect_key($validatedData, array_flip([
+            'final_cc_cname_DI', 'LoE_DI', 'YoB', 'gender', 'avatar'
+        ]));
+        
+        if (!empty($userDataToUpdate)) {
+            $user->update($userDataToUpdate);
+        }
+        
+        // Cập nhật thông tin bổ sung dựa trên vai trò
+        if ($user->role === 'student') {
+            $studentDataToUpdate = array_intersect_key($validatedData, array_flip([
+                'learning_goals', 'interests'
+            ]));
+            
+            if (!empty($studentDataToUpdate)) {
+                // Sử dụng relationship student để cập nhật
+                $student = $user->student;
+                if ($student) {
+                    $student->update($studentDataToUpdate);
+                }
+            }
+        } elseif ($user->role === 'instructor') {
+            $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
+                'bio', 'organization', 'name'
+            ]));
+            
+            if (!empty($instructorDataToUpdate)) {
+                // Sử dụng relationship instructor để cập nhật
+                $instructor = $user->instructor;
+                if ($instructor) {
+                    $instructor->update($instructorDataToUpdate);
+                }
+            }
+        }
+        
+        // Refresh user model để lấy dữ liệu mới nhất
+        $user = $user->fresh();
+        
+        // Thêm thông tin bổ sung dựa trên vai trò
+        if ($user->role === 'instructor') {
+            $user->load('instructor');
+        } elseif ($user->role === 'student') {
+            $user->load('student');
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+        
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User not found',
+            'error' => $e->getMessage()
+        ], 404);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error updating profile',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
 }

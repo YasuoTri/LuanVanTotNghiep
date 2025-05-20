@@ -46,6 +46,9 @@ Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:ap
 Route::get('/courses/search', [SearchController::class, 'search'])->name('courses.search');
 Route::get('/courses/{slug}', [CourseController::class, 'showSlug']);
 Route::get('/courses/course_id/{id}', [CourseController::class, 'show']);
+Route::middleware('jwt_cookie')->group(function () {
+    Route::put('/user/profile/update', [AuthController::class, 'updateProfile'])->name('user.profile.update');
+});
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::get('/student/currentStudent', [AuthController::class, 'getCurrentUser']);

@@ -107,6 +107,7 @@ class DatabaseSeeder extends Seeder
             
             User::create([
                 'userid_DI' => 'user_' . Str::uuid(),
+                'username' => 'user_' . ($i + 1),
                 'email' => 'user' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
                 'final_cc_cname_DI' => $countries[array_rand($countries)],
@@ -123,6 +124,7 @@ class DatabaseSeeder extends Seeder
         for ($i = 0; $i < 2; $i++) {
             User::create([
                 'userid_DI' => 'admin_' . ($i + 1),
+                'username' => 'admin_' . ($i + 1),
                 'email' => 'admin' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
                 'final_cc_cname_DI' => 'United States',
@@ -139,6 +141,7 @@ class DatabaseSeeder extends Seeder
         for ($i = 0; $i < 3; $i++) {
             User::create([
                 'userid_DI' => 'instructor_' . ($i + 1),
+                'username' => 'instructor_' . ($i + 1),
                 'email' => 'instructor' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
                 'final_cc_cname_DI' => $countries[array_rand($countries)],

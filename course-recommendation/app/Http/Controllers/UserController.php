@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\RevenueDistribution;
 use App\Models\User;
 use App\Models\Admins;
+use App\Models\Lesson;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +30,7 @@ class UserController extends Controller
         // Lấy query cơ bản
         $query = User::query()->select([
             'id',
+            'username',
             'userid_DI',
             'email',
             'avatar',
@@ -51,6 +54,9 @@ class UserController extends Controller
             }
         }
 
+        if ($request->has('username')) {
+            $query->where('username', $request->input('username'));
+        }
         // Lọc theo role
         if ($request->has('role')) {
             $query->where('role', $request->input('role'));
@@ -111,6 +117,7 @@ class UserController extends Controller
         // Lấy query cơ bản cho users đã soft delete
         $query = User::onlyTrashed()->select([
             'id',
+            'username',
             'userid_DI',
             'email',
             'avatar',
@@ -123,7 +130,10 @@ class UserController extends Controller
             'updated_at',
             'deleted_at'
         ]);
-
+                // Lọc theo role
+        if ($request->has('username')) {
+            $query->where('username', $request->input('username'));
+        }
         // Lọc theo role
         if ($request->has('role')) {
             $query->where('role', $request->input('role'));
@@ -168,60 +178,173 @@ class UserController extends Controller
         ], 200);
     }
 
-    /**
-     * Display the specified user for admin.
-     *
-     * @param int $id
-     * @return JsonResponse
-     */
-    public function show($id): JsonResponse
-    {
-        // Kiểm tra vai trò admin
-        $admin = Auth::user();
-        if (!$admin || $admin->role !== 'admin') {
-            return response()->json([
-                'message' => 'Unauthorized: Only admins can view user details'
-            ], 403);
-        }
-
-        // Tìm user (chỉ lấy users chưa bị soft delete)
-        $user = User::select([
-            'id',
-            'userid_DI',
-            'email',
-            'avatar',
-            'final_cc_cname_DI',
-            'LoE_DI',
-            'YoB',
-            'gender',
-            'role',
-            'created_at',
-            'updated_at'
-        ])->find($id);
-
-        if (!$user) {
-            return response()->json([
-                'message' => 'User not found'
-            ], 404);
-        }
-
-        // Lấy thông tin admin nếu user là admin
-        $adminData = null;
-        if ($user->role === 'admin') {
-            $adminData = Admins::where('user_id', $user->id)
-                ->select('id', 'admin_level', 'activity_log')
-                ->first();
-        }
-
+  /**
+ * Display the specified user for admin with analytics.
+ *
+ * @param int $id
+ * @return JsonResponse
+ */
+public function show($id): JsonResponse
+{
+    // Check admin role
+    $admin = Auth::user();
+    if (!$admin || $admin->role !== 'admin') {
         return response()->json([
-            'message' => 'User retrieved successfully',
-            'data' => [
-                'user' => $user,
-                'admin_data' => $adminData
-            ]
-        ], 200);
+            'message' => 'Unauthorized: Only admins can view user details'
+        ], 403);
     }
 
+    // Find user with relevant relationships
+    $user = User::with([
+        'enrollments' => function ($query) {
+            $query->select('id', 'user_id', 'course_id', 'status', 'enrolled_at', 'completed_at');
+        },
+        'certificates' => function ($query) {
+            $query->select('id', 'user_id', 'course_id', 'certificate_code', 'issued_at');
+        },
+        'forumPosts' => function ($query) {
+            $query->select('id', 'user_id', 'course_id', 'title', 'flagged', 'created_at');
+        },
+        'payments' => function ($query) {
+            $query->select('id', 'user_id', 'course_id', 'amount', 'status', 'payment_date');
+        },
+        'lessonProgress' => function ($query) {
+            $query->select('id', 'user_id', 'lesson_id', 'status', 'completed_at');
+        },
+        'reviews' => function ($query) {
+            $query->select('id', 'user_id', 'course_id', 'rating');
+        },
+        'quizResults' => function ($query) {
+            $query->select('id', 'user_id', 'quiz_id', 'score', 'attempt_number');
+        },
+        'interactions' => function ($query) {
+            $query->select(
+                'id',
+                'user_id',
+                'course_id',
+                'rating',
+                'nevents',
+                'ndays_act',
+                'nplay_video',
+                'nchapters',
+                'nforum_posts'
+            );
+        },
+        'student.categories' => function ($query) {
+            $query->select('categories.id', 'categories.name');
+        },
+        'instructor.courses' => function ($query) {
+            $query->select('courses.id', 'course_name', 'course_rating');
+        }
+    ])->select([
+        'id',
+        'username',
+        'userid_DI',
+        'email',
+        'avatar',
+        'final_cc_cname_DI',
+        'LoE_DI',
+        'YoB',
+        'gender',
+        'role',
+        'created_at',
+        'updated_at'
+    ])->find($id);
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'User not found'
+        ], 404);
+    }
+
+    // Admin data if user is an admin
+    $adminData = null;
+    if ($user->role === 'admin') {
+        $adminData = Admins::where('user_id', $user->id)
+            ->select('id', 'admin_level', 'activity_log')
+            ->first();
+    }
+
+    // Instructor revenue data if user is an instructor
+    $instructorRevenue = null;
+    if ($user->role === 'instructor') {
+        $instructorRevenue = RevenueDistribution::where('instructor_id', $user->instructor->id)
+            ->where('status', 'completed')
+            ->sum('instructor_share');
+    }
+
+    // Analytics calculations
+    $analytics = [
+        'total_courses_enrolled' => $user->enrollments->count(),
+        'courses_completed' => $user->enrollments->where('status', 'completed')->count(),
+        'certificates_earned' => $user->certificates->count(),
+        'total_payments_made' => $user->payments->where('status', 'completed')->sum('amount'),
+        'average_rating_given' => $user->reviews->count() > 0
+            ? round($user->reviews->avg('rating'), 2)
+            : null,
+        'forum_engagement' => [
+            'total_posts' => $user->forumPosts->count(),
+            'flagged_posts' => $user->forumPosts->where('flagged', 1)->count(),
+        ],
+        'lesson_completion_rate' => $this->calculateLessonCompletionRate($user),
+        'average_quiz_score' => $user->quizResults->count() > 0
+            ? round($user->quizResults->avg('score'), 2)
+            : null,
+        'interaction_metrics' => $user->interactions->map(function ($interaction) {
+            return [
+                'course_id' => $interaction->course_id,
+                'rating' => $interaction->rating,
+                'total_events' => $interaction->nevents,
+                'active_days' => $interaction->ndays_act,
+                'video_plays' => $interaction->nplay_video,
+                'chapters_completed' => $interaction->nchapters,
+                'forum_posts' => $interaction->nforum_posts,
+            ];
+        })->toArray(),
+        'categories_of_interest' => $user->role === 'student'
+            ? $user->student->categories->pluck('name')->toArray()
+            : [],
+        'instructor_metrics' => $user->role === 'instructor' && $user->instructor
+            ? [
+                'courses_taught' => $user->instructor->courses->count(),
+                'total_revenue_earned' => (float) $instructorRevenue,
+            ]
+            : null,
+    ];
+
+    return response()->json([
+        'message' => 'User retrieved successfully',
+        'data' => [
+            'user' => $user,
+            'admin_data' => $adminData,
+            'analytics' => $analytics,
+        ]
+    ], 200);
+}
+
+/**
+ * Calculate the lesson completion rate for a user.
+ *
+ * @param User $user
+ * @return float|null
+ */
+protected function calculateLessonCompletionRate($user)
+{
+    // Get all enrolled course IDs
+    $courseIds = $user->enrollments->pluck('course_id')->toArray();
+    if (empty($courseIds)) {
+        return null;
+    }
+
+    // Count total lessons in enrolled courses
+    $totalLessons = Lesson::whereIn('course_id', $courseIds)->count();
+
+    // Count completed lessons
+    $completedLessons = $user->lessonProgress->where('status', 'completed')->count();
+
+    // Calculate completion rate
+    return $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100, 2) : null;
+}
     /**
      * Store a newly created user in storage.
      *

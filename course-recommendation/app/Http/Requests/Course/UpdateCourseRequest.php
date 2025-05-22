@@ -15,13 +15,13 @@ class UpdateCourseRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_name' => 'sometimes|string|max:255|unique:courses,course_name',
+            'course_name' => 'required|string|max:255',
             'university' => 'nullable|string|max:255',
             'difficulty_level' => 'nullable|string|max:50',
-            'course_rating' => 'nullable|numeric|min:0|max:5',
-            'course_url' => 'nullable|url',
             'course_description' => 'nullable|string',
+            'price' => 'required|integer|min:0',
             'skills' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ];
     }
 }

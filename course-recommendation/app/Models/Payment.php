@@ -13,7 +13,7 @@ class Payment extends Model
     public $timestamps = false;
     protected $fillable = [
         'user_id', 'course_id', 'amount', 'method', 'transaction_code',
-        'coupon_id', 'status', 'payment_date', 'revenue_session_id'
+        'coupon_id', 'status', 'payment_date', 'revenue_session_id', 'created_at', 'updated_at', 'deleted_at'
     ];
     protected $dates = ['deleted_at'];
     protected $casts = [

@@ -13,9 +13,16 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\CloudinaryService;
 
 class CourseController extends Controller
 {
+    protected $cloudinaryService;
+
+    public function __construct(CloudinaryService $cloudinaryService)
+    {
+        $this->cloudinaryService = $cloudinaryService;
+    }
       public function index()
     {
         // Fetch only non-deleted, approved courses (SoftDeletes ensures deleted_at is null)
@@ -79,28 +86,59 @@ public function show($id)
     }
 
 
-    public function store(CreateCourseRequest $request)
+  public function store(CreateCourseRequest $request)
     {
-        $validated = $request->validated();
-        $validated['course_url'] = Str::slug($validated['course_name']);
-        $course = Course::create($validated);
-        return response()->json($course, 201);
+        try {
+            $validated = $request->validated();
+            $validated['course_url'] = Str::slug($validated['course_name']);
+
+            if ($request->hasFile('image')) {
+                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+            }
+
+            $course = Course::create($validated);
+            return response()->json($course, 201);
+        } catch (\Exception $e) {
+            Log::error("Failed to create course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to create course'], 500);
+        }
     }
 
     public function update(UpdateCourseRequest $request, $id)
     {
-        $course = Course::findOrFail($id);
-        $validated = $request->validated();
-        $validated['course_url'] = Str::slug($validated['course_name']);
-        $course->update($validated);
-        return response()->json($course, 200);
-    }
+        try {
+            $course = Course::findOrFail($id);
+            $validated = $request->validated();
+            $validated['course_url'] = Str::slug($validated['course_name']);
 
-   public function destroy($id)
+            if ($request->hasFile('image')) {
+                // Xóa hình ảnh cũ trên Cloudinary nếu có
+                if ($course->image) {
+                    $this->cloudinaryService->deleteByUrl($course->image);
+                }
+                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+            }
+
+            $course->update($validated);
+            return response()->json($course, 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course'], 500);
+        }
+    }
+public function destroy($id)
     {
-        $course = Course::findOrFail($id);
-        $course->delete(); // Soft delete
-        return response()->json(['message' => 'Course soft deleted'], 200);
+        try {
+            $course = Course::findOrFail($id);
+            if ($course->image) {
+                $this->cloudinaryService->deleteByUrl($course->image);
+            }
+            $course->delete();
+            return response()->json(['message' => 'Course soft deleted'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to delete course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to delete course'], 500);
+        }
     }
 
     // Admin-specific APIs
@@ -146,40 +184,70 @@ public function show($id)
 }
    
 
+// public function storeCourseInstructor(CreateCourseRequest $request)
+// {
+//     try {
+//         $validated = $request->validated();
+
+//         // Kiểm tra từ khóa cấm
+//         $bannedWords = ['inappropriate', 'offensive'];
+//         if (isset($validated['course_description']) &&
+//             preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
+//             return response()->json(['message' => 'Course description contains banned words'], 422);
+//         }
+
+//         $instructor = Auth::user()->instructor;
+
+//         $course = Course::create($validated);
+
+//         Course_Instructors::create([
+//             'course_id' => $course->id,
+//             'instructor_id' => $instructor->id,
+//         ]);
+
+//         return response()->json($course, 201);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to create course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to create course'], 500);
+//     }
+// }
+
 public function storeCourseInstructor(CreateCourseRequest $request)
-{
-    try {
-        $validated = $request->validated();
+    {
+        try {
+            $validated = $request->validated();
 
-        // Kiểm tra từ khóa cấm
-        $bannedWords = ['inappropriate', 'offensive'];
-        if (isset($validated['course_description']) &&
-            preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
-            return response()->json(['message' => 'Course description contains banned words'], 422);
+            $bannedWords = ['inappropriate', 'offensive'];
+            if (isset($validated['course_description']) &&
+                preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
+                return response()->json(['message' => 'Course description contains banned words'], 422);
+            }
+
+            $instructor = Auth::user()->instructor;
+            $validated['course_url'] = Str::slug($validated['course_name']);
+
+            if ($request->hasFile('image')) {
+                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+            }
+
+            $course = Course::create($validated);
+
+            Course_Instructors::create([
+                'course_id' => $course->id,
+                'instructor_id' => $instructor->id,
+            ]);
+
+            return response()->json($course, 201);
+        } catch (\Exception $e) {
+            Log::error("Failed to create course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to create course'], 500);
         }
-
-        $instructor = Auth::user()->instructor;
-
-        $course = Course::create($validated);
-
-        Course_Instructors::create([
-            'course_id' => $course->id,
-            'instructor_id' => $instructor->id,
-        ]);
-
-        return response()->json($course, 201);
-    } catch (\Exception $e) {
-        Log::error("Failed to create course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to create course'], 500);
     }
-}
 
 
     public function updateCourseInstructor(UpdateCourseRequest $request, $id)
     {
         try {
-           
-
             $course = Course::find($id);
             if (!$course) {
                 return response()->json(['message' => 'Course not found'], 404);
@@ -187,16 +255,24 @@ public function storeCourseInstructor(CreateCourseRequest $request)
 
             $instructor = Auth::user()->instructor;
             $courseInstructor = Course_Instructors::where('course_id', $id)
-                                                ->where('instructor_id', $instructor->id)
-                                                ->first();
+                ->where('instructor_id', $instructor->id)
+                ->first();
             if (!$courseInstructor) {
                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
             }
 
-          $validatedData = $request->validated();
-        $validatedData['status'] = 'pending';
-        $course->update($validatedData);
+            $validated = $request->validated();
+            $validated['course_url'] = Str::slug($validated['course_name']);
+            $validated['status'] = 'pending';
 
+            if ($request->hasFile('image')) {
+                if ($course->image) {
+                    $this->cloudinaryService->deleteByUrl($course->image);
+                }
+                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+            }
+
+            $course->update($validated);
             return response()->json($course, 200);
         } catch (\Exception $e) {
             Log::error("Failed to update course: {$e->getMessage()}");
@@ -204,6 +280,29 @@ public function storeCourseInstructor(CreateCourseRequest $request)
         }
     }
 
+    // public function destroyCourseInstructor($id)
+    // {
+    //     try {
+    //         $course = Course::find($id);
+    //         if (!$course) {
+    //             return response()->json(['message' => 'Course not found'], 404);
+    //         }
+
+    //         $instructor = Auth::user()->instructor;
+    //         $courseInstructor = Course_Instructors::where('course_id', $id)
+    //                                             ->where('instructor_id', $instructor->id)
+    //                                             ->first();
+    //         if (!$courseInstructor) {
+    //             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+    //         }
+
+    //         $course->delete();
+    //         return response()->json(['message' => 'Course deleted successfully'], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error("Failed to delete course: {$e->getMessage()}");
+    //         return response()->json(['message' => 'Failed to delete course'], 500);
+    //     }
+    // }
     public function destroyCourseInstructor($id)
     {
         try {
@@ -214,10 +313,14 @@ public function storeCourseInstructor(CreateCourseRequest $request)
 
             $instructor = Auth::user()->instructor;
             $courseInstructor = Course_Instructors::where('course_id', $id)
-                                                ->where('instructor_id', $instructor->id)
-                                                ->first();
+                ->where('instructor_id', $instructor->id)
+                ->first();
             if (!$courseInstructor) {
                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
+
+            if ($course->image) {
+                $this->cloudinaryService->deleteByUrl($course->image);
             }
 
             $course->delete();
@@ -381,15 +484,29 @@ public function getPendingCourses()
     /**
      * Permanently delete a soft-deleted enrollment.
      */
+    // public function forceDelete($id): JsonResponse
+    // {
+    //     try{
+    //     $enrollment = Course::onlyTrashed()->findOrFail($id);
+    //     $enrollment->forceDelete();
+    //     } catch (\Exception $e) {
+    //         Log::error("Failed to permanently delete course: {$e->getMessage()}");
+    //         return response()->json(['message' => 'Failed to permanently delete course'], 500);
+    //     }
+    //     return response()->json(['message' => 'Course permanently deleted'], 200);
+    // }
     public function forceDelete($id): JsonResponse
     {
-        try{
-        $enrollment = Course::onlyTrashed()->findOrFail($id);
-        $enrollment->forceDelete();
+        try {
+            $course = Course::onlyTrashed()->findOrFail($id);
+            if ($course->image) {
+                $this->cloudinaryService->deleteByUrl($course->image);
+            }
+            $course->forceDelete();
+            return response()->json(['message' => 'Course permanently deleted'], 200);
         } catch (\Exception $e) {
             Log::error("Failed to permanently delete course: {$e->getMessage()}");
             return response()->json(['message' => 'Failed to permanently delete course'], 500);
         }
-        return response()->json(['message' => 'Course permanently deleted'], 200);
     }
 }

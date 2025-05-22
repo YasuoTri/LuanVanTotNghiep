@@ -8,9 +8,12 @@ class LessonProgress extends Model
 {
     protected $table = 'lesson_progress';
     protected $primaryKey = 'id';
-    protected $fillable = ['user_id', 'lesson_id', 'status', 'completed_at'];
-    protected $casts = [
+    protected $fillable = ['user_id', 'lesson_id', 'status', 'completed_at','created_at', 'updated_at'];
+protected $casts = [
         'status' => 'string',
+        'completed_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function user()

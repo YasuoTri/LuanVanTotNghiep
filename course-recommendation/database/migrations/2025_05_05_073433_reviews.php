@@ -16,7 +16,7 @@ return new class extends Migration
             $table->tinyInteger('rating')->comment('1-5 sao');
             $table->text('comment')->nullable();
             $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-
+            
             $table->unique(['user_id', 'course_id'], 'reviews_user_course_unique');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');

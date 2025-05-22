@@ -49,10 +49,11 @@ Route::get('/courses/course_id/{id}', [CourseController::class, 'show']);
 Route::middleware('jwt_cookie')->group(function () {
     Route::put('/user/profile/update', [AuthController::class, 'updateProfile'])->name('user.profile.update');
 });
+Route::get('/courses', [CourseController::class, 'index']);
+Route::apiResource('/admin/category', CategoryController::class);
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::get('/student/currentStudent', [AuthController::class, 'getCurrentUser']);
-    Route::get('/courses', [CourseController::class, 'index']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
     Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);//xong
@@ -305,7 +306,6 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
 
     Route::put('/instructor/request/{requestId}/review', [AuthController::class, 'reviewInstructorRequest']);
 
-    Route::apiResource('/admin/category', CategoryController::class);
     Route::apiResource('/admin/coupons', CouponController::class);
 });
     // Advanced Search Routes (one per table)

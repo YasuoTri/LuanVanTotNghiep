@@ -13,7 +13,7 @@ class Course extends Model
     protected $primaryKey = 'id';
     protected $fillable = [
         'course_name', 'university', 'difficulty_level', 'course_rating',
-        'course_url', 'course_description', 'price','skills','status',
+        'course_url','image', 'course_description', 'price','skills','status',
     ];
     
     protected $dates = ['deleted_at'];

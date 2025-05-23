@@ -102,8 +102,8 @@ class VNPayGateway implements PaymentGateway
     $vnp_TmnCode = "JOEYIIOK";//Mã website tại VNPAY 
     $vnp_HashSecret = "4GJIAZXBR13JLKFJ6WCS8ZCX7DC352SK"; //Chuỗi bí mật 
     $vnp_TxnRef = date("YmdHis"); //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
-    $vnp_OrderInfo = "Thanh toán đơn hàng test";
-    $vnp_OrderType ="BarBer Shop";
+    $vnp_OrderInfo = "thanhtoantest";
+    $vnp_OrderType ="BarBerShop";
     $vnp_Amount = 20000 * 100;
     $vnp_Locale = 'VN';
     $vnp_BankCode = 'NCB';
@@ -166,28 +166,45 @@ class VNPayGateway implements PaymentGateway
         // vui lòng tham khảo thêm tại code demo
 }
 
-    public function verifyCallback(array $data): array
+   public function verifyCallback(array $data): array
     {
         try {
             // Log dữ liệu callback
-            Log::info('VNPay callback received', ['data' => $data]);
+            Log::debug('VNPay callback received', ['data' => $data]);
 
             // Kiểm tra chữ ký
             $vnp_SecureHash = $data['vnp_SecureHash'] ?? '';
             unset($data['vnp_SecureHash']);
 
-            $vnpayData = $this->sortData($data);
-            $queryString = http_build_query($vnpayData, '', '&', PHP_QUERY_RFC3986);
-            $expectedHash = hash_hmac('sha512', $queryString, $this->getHashSecret());
+            // Sắp xếp dữ liệu và tạo chuỗi hash
+            ksort($data);
+            $hashData = '';
+            $i = 0;
+            foreach ($data as $key => $value) {
+                if (str_starts_with($key, 'vnp_')) { // Chỉ lấy các tham số bắt đầu bằng vnp_
+                    if ($i == 0) {
+                        $hashData .= $key . '=' . $value;
+                    } else {
+                        $hashData .= '&' . $key . '=' . $value;
+                    }
+                    $i++;
+                }
+            }
+
+            $expectedHash = hash_hmac('sha512', $hashData, $this->getHashSecret());
 
             Log::info('VNPay callback checksum', [
-                'query_string' => $queryString,
+                'hash_data' => $hashData,
                 'expected_hash' => $expectedHash,
                 'received_hash' => $vnp_SecureHash,
             ]);
 
             if (!hash_equals($expectedHash, $vnp_SecureHash)) {
-                Log::error('VNPay callback: Invalid signature', ['data' => $data]);
+                Log::error('VNPay callback: Invalid signature', [
+                    'hash_data' => $hashData,
+                    'expected_hash' => $expectedHash,
+                    'received_hash' => $vnp_SecureHash,
+                ]);
                 return [
                     'success' => false,
                     'message' => 'Invalid signature',

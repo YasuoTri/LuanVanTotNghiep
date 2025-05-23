@@ -35,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'instructor_or_admin' => InstructorOrAdmin::class,
             'student_or_admin' => StudentOrAdmin::class,
             'jwt_cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
-            // 'cors' => Cors::class,
+            'cors' => Cors::class,
         ]);
 
         // (Tùy chọn) Áp dụng middleware cho các route hoặc group
@@ -44,10 +44,10 @@ return Application::configure(basePath: dirname(__DIR__))
             StartSession::class,
         ]);
 
-        // $middleware->api(prepend: [
-        //     // Thêm middleware mặc định cho route API nếu cần
-        //     Cors::class,
-        // ]);
+        $middleware->api(prepend: [
+            // Thêm middleware mặc định cho route API nếu cần
+            Cors::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

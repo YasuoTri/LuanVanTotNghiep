@@ -28,13 +28,6 @@ use App\Services\PaymentGateways\PaymentGateway;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 
-Route::options('/{any}', function() {
-    return response()->json('OK', 200)
-        ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN');
-})->where('any', '.*');
-
 // Existing General Routes
 Route::post('/recommend', [RecommendationController::class, 'recommend']);
 Route::post('/rate', [RecommendationController::class, 'rate']);

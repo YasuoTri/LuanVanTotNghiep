@@ -49,64 +49,16 @@ class VNPayGateway implements PaymentGateway
 
     public function createOrder(array $data): array
 {
-    // $vnp_TmnCode = "JOEYIIOK"; //Mã website tại VNPAY 
-    //     $vnp_HashSecret = "4GJIAZXBR13JLKFJ6WCS8ZCX7DC352SK"; //Chuỗi bí mật
-    //     $vnp_Url = "http://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    //     $vnp_Returnurl = "http://localhost:8000/return-vnpay";
-    //     $vnp_TxnRef = date("YmdHis"); //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
-    //     $vnp_OrderInfo = "Thanh toán hóa đơn phí dich vụ";
-    //     $vnp_OrderType = 'other';
-    //     $vnp_Amount =100000* 100;
-    //     $vnp_Locale = 'locale';
-    //     $vnp_IpAddr = '1.55.200.158';
-
-    //     $inputData = array(
-    //         "vnp_Version" => "2.1.0",
-    //         "vnp_TmnCode" => $vnp_TmnCode,
-    //         "vnp_Amount" => $vnp_Amount,
-    //         "vnp_Command" => "pay",
-    //         "vnp_CreateDate" => date('YmdHis'),
-    //         "vnp_CurrCode" => "VND",
-    //         "vnp_IpAddr" => $vnp_IpAddr,
-    //         "vnp_Locale" => $vnp_Locale,
-    //         "vnp_OrderInfo" => $vnp_OrderInfo,
-    //         "vnp_OrderType" => $vnp_OrderType,
-    //         "vnp_ReturnUrl" => $vnp_Returnurl,
-    //         "vnp_TxnRef" => $vnp_TxnRef,
-    //         "vnp_BankCode" => "NCB",
-    //     );
-
-    //     ksort($inputData);
-    //     $query = "";
-    //     $i = 0;
-    //     $hashdata = "";
-    //       foreach ($inputData as $key => $value) {
-    //     if ($i == 1) {
-    //         $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
-    //     } else {
-    //         $hashdata .= urlencode($key) . "=" . urlencode($value);
-    //         $i = 1;
-    //     }
-    //     $query .= urlencode($key) . "=" . urlencode($value) . '&';
-    // }
-
-    //     $vnp_Url = $vnp_Url . "?" . $query;
-    //     if (isset($vnp_HashSecret)) {
-    //           $vnpSecureHash =   hash_hmac('sha512', $hashdata, $vnp_HashSecret);//  
-    //          $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
-    //     }
-    //     $inputData['vnp_Url'] = $vnp_Url;
-    //     return [$vnp_Url,'success' => true,'transaction_code' => $vnp_TxnRef,'data' => $inputData];
       $vnp_Url = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    $vnp_Returnurl = "http://127.0.0.1:8000/payments/vnpay/callback";
+    $vnp_Returnurl = "http://127.0.0.1:8000/api/payments/vnpay/callback";
     $vnp_TmnCode = "JOEYIIOK";//Mã website tại VNPAY 
-    $vnp_HashSecret = "4GJIAZXBR13JLKFJ6WCS8ZCX7DC352SK"; //Chuỗi bí mật 
+    $vnp_HashSecret = "VANJ6I46GG3B3X7NDHJ8I7LA2JZBDDAS"; //Chuỗi bí mật 
     $vnp_TxnRef = date("YmdHis"); //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
     $vnp_OrderInfo = "thanhtoantest";
     $vnp_OrderType ="BarBerShop";
-    $vnp_Amount = 20000 * 100;
+    $vnp_Amount = $data['amount'] * 100;
     $vnp_Locale = 'VN';
-    $vnp_BankCode = 'NCB';
+  
     $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];
     //Add Params of 2.0.1 Version
     // $vnp_ExpireDate = $_POST['txtexpire'];
@@ -123,13 +75,10 @@ class VNPayGateway implements PaymentGateway
         "vnp_OrderInfo" => $vnp_OrderInfo,
         "vnp_OrderType" => $vnp_OrderType,
         "vnp_ReturnUrl" => $vnp_Returnurl,
-        "vnp_TxnRef" => $vnp_TxnRef
+        "vnp_TxnRef" => $vnp_TxnRef,
+        'vnp_BankCode' => "NCB",
       
     );
-    
-    if (isset($vnp_BankCode) && $vnp_BankCode != "") {
-        $inputData['vnp_BankCode'] = $vnp_BankCode;
-    }
     if (isset($vnp_Bill_State) && $vnp_Bill_State != "") {
         $inputData['vnp_Bill_State'] = $vnp_Bill_State;
     }

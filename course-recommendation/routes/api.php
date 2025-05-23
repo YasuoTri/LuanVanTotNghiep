@@ -23,6 +23,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserAnswerController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VNPay;
 use App\Http\Controllers\ZaloPayController;
 use App\Services\PaymentGateways\PaymentGateway;
 use Illuminate\Support\Facades\Route;
@@ -323,10 +324,15 @@ Route::get('/search/forum-posts', [ForumPostController::class, 'search']);
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)
-Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);
-Route::post('/payments/callback', [PaymentController::class, 'handleZaloPayCallback']);
-Route::post('/payments/vnpay/callback', [PaymentController::class, 'handleVNPayCallback']);
+// Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);
+Route::get('/vnpay_payment', [VNPay::class, 'createPayment']);
+Route::get('/vnpay_payment_return', [VNPay::class, 'vnpayReturn']);
+Route::get('/payments/callback', [PaymentController::class, 'handleZaloPayCallback']);
+Route::get('/payments/vnpay/callback', [PaymentController::class, 'handleVNPayCallback']);
 Route::get('/vnpay/ipn', [PaymentController::class, 'handleVNPayIPN'])->name('vnpay.ipn');
 Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::post('/password/reset', [AuthController::class, 'reset'])->name('password.reset');
 Route::post('/courses/{id}/restore', [CourseController::class, 'restoreCourse']);
+Route::get('/cors-test', function () {
+    return response()->json(['message' => 'CORS is working!']);
+});

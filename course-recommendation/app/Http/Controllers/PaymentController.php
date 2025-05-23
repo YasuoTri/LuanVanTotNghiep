@@ -344,7 +344,30 @@ class PaymentController extends Controller
 
 public function handleVNPayCallback(Request $request): JsonResponse
 {
-    $result = $request->all();
+    // Lấy tất cả tham số từ query string
+    $data = $request->query();
+
+    // Log dữ liệu nhận được
+    Log::debug('VNPay callback received', ['data' => $data]);
+
+    // Khởi tạo VNPayGateway để xác minh
+    // $gateway = new VNPayGateway();
+    // $result = $gateway->verifyCallback($data);
+    $data['success'] = true; // Giả lập kết quả thành công
+    $data['transaction_code'] = $data['vnp_TxnRef'] ?? null; // Giả lập mã giao dịch
+    $data['message'] = 'Transaction successful'; // Giả lập thông báo thành công
+    $data['data'] = $data; // Giả lập dữ liệu trả về
+    $result = $data;
+
+    if (!$result['success']) {
+        Log::error('VNPay callback verification failed', [
+            'message' => $result['message'],
+            'data' => $data
+        ]);
+        return response()->json(['message' => $result['message']], 400);
+    }
+
+    // Lấy transaction_code từ kết quả xác minh
     $txnRef = $result['transaction_code'];
     $payment = Payment::where('transaction_code', $txnRef)->first();
 
@@ -353,61 +376,81 @@ public function handleVNPayCallback(Request $request): JsonResponse
         return response()->json(['message' => 'Payment not found'], 404);
     }
 
-    $status = $result['transaction_code'] ? 'completed' : 'failed';
-
+    // Kiểm tra trạng thái thanh toán đã hoàn tất chưa
     if ($payment->status === 'completed') {
         Log::info('VNPay callback: Payment already completed', ['txnRef' => $txnRef]);
-        return response()->json(['message' => 'Payment already completed']);
+        return response()->json(['message' => 'Payment already completed'], 200);
     }
 
-    // Start transaction
+    // Kiểm tra số tiền
+    $expectedAmount = $payment->amount * 100; // VNPay sử dụng đơn vị là cent (VND * 100)
+    if ($result['data']['vnp_Amount'] != $expectedAmount) {
+        Log::error('VNPay callback: Invalid amount', [
+            'expected' => $expectedAmount,
+            'received' => $result['data']['vnp_Amount'],
+            'txnRef' => $txnRef
+        ]);
+        $payment->update(['status' => 'failed']);
+        return response()->json(['message' => 'Invalid amount'], 400);
+    }
+
+    // Xác định trạng thái thanh toán
+    $status = ($result['data']['vnp_ResponseCode'] === '00') ? 'completed' : 'failed';
+try{
+    // Bắt đầu giao dịch cơ sở dữ liệu
     DB::beginTransaction();
-    try {
+        // Cập nhật trạng thái thanh toán
         $payment->update([
             'status' => $status,
             'payment_date' => now(),
         ]);
 
-        if ($status === 'completed' && $payment->status === 'completed') {
-            $courseId = $payment->course_id;
-
-            // Create enrollment
+        if ($status === 'completed') {
+            // Tạo enrollment
             Enrollment::firstOrCreate(
                 [
                     'user_id' => $payment->user_id,
-                    'course_id' => $courseId,
+                    'course_id' => $payment->course_id,
                 ],
                 [
                     'enrolled_at' => now(),
+                    'expires_at' => now()->addMonths(3), // Hết hạn sau 3 tháng
                     'status' => 'active',
                 ]
             );
 
-            // Update coupon
+            // Cập nhật mã giảm giá
             if ($payment->coupon_id) {
                 $coupon = Coupon::find($payment->coupon_id);
                 $coupon?->increment('used_count');
             }
 
-            // Update revenue session
+            // Cập nhật doanh thu
             $revenueSession = RevenueSession::find($payment->revenue_session_id);
             if ($revenueSession) {
                 $revenueSession->increment('total_revenue', $payment->amount);
             }
 
-            // Update admin account balance (if not already updated)
+            // Cập nhật số dư admin
             $adminAccount = AdminAccount::first();
-            if ($adminAccount) {
+            if ($adminAccount && $payment->amount > 0) {
                 $adminAccount->increment('balance', $payment->amount);
             }
         }
 
         DB::commit();
-        Log::info('VNPay callback processed', ['payment_id' => $payment->id, 'status' => $status]);
-        return response()->json(['message' => 'Payment status updated']);
-    } catch (\Exception $e) {
+        Log::info('VNPay callback processed', [
+            'payment_id' => $payment->id,
+            'status' => $status,
+            'txnRef' => $txnRef
+        ]);
+        return response()->json(['message' => 'Payment status updated'], 200);
+    }catch (\Exception $e) {
         DB::rollBack();
-        Log::error('VNPay callback processing failed', ['error' => $e->getMessage()]);
+        Log::error('VNPay callback processing failed', [
+            'error' => $e->getMessage(),
+            'txnRef' => $txnRef
+        ]);
         return response()->json(['message' => 'Failed to process callback'], 500);
     }
 }

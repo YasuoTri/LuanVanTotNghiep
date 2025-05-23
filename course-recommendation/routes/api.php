@@ -35,7 +35,7 @@ Route::post('/rate', [RecommendationController::class, 'rate']);
 Route::post('/users', [RecommendationController::class, 'createUser']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt_cookie');
 Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
 Route::get('/courses/search', [SearchController::class, 'search'])->name('courses.search');
 Route::get('/courses/{slug}', [CourseController::class, 'showSlug']);

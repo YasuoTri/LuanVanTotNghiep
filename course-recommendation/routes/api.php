@@ -236,7 +236,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/users', [UserController::class, 'store'])->name('users.store');
     Route::delete('/admin/users/{id}/force', [UserController::class, 'forceDelete']);
     Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::patch('/admin/users/{id}/restore', [UserController::class, 'restore']);
+    Route::put('/admin/users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
 
     //Analytics
     Route::get('/admin/analytics/courses', [AnalyticsController::class, 'adminCourseAnalytics'])

@@ -136,21 +136,14 @@ class AuthController extends Controller
         }
     }
 
-    public function login(Request $request)
+     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'login' => 'required|string',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        // Determine if login is username or email
-        $loginField = filter_var($credentials['login'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
-        $authCredentials = [
-            $loginField => $credentials['login'],
-            'password' => $credentials['password'],
-        ];
-
-        if (Auth::attempt($authCredentials)) {
+        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
             $user = Auth::user();
             $token = JWTAuth::fromUser($user);
 
@@ -303,7 +296,7 @@ class AuthController extends Controller
                 'username' => $username,
                 'userid_DI' => 'user_' . Str::random(10),
                 'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.com',
-                'password' => Hash::make(Str::random(16)),
+                'password' => Hash::make('password'), // Placeholder password
                 'avatar' => $avatarUrl,
                 'final_cc_cname_DI' => $socialUser->getName() ?? 'Unknown',
                 'role' => 'student',

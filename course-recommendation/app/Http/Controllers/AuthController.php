@@ -31,7 +31,7 @@ class AuthController extends Controller
     {
         // Validation rules
         $validatedData = $request->validate([
-            'username' => 'required|string|max:50|unique:users,username|regex:/^[a-zA-Z0-9_]+$/',
+            'username' => 'required|string|max:50',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -542,7 +542,7 @@ class AuthController extends Controller
 
             // Validate input
             $validatedData = $request->validate([
-                'username' => 'nullable|string|max:50|unique:users,username,' . $user->id . '|regex:/^[a-zA-Z0-9_]+$/',
+                'username' =>'required|string|max:50',
                 'final_cc_cname_DI' => 'nullable|string|max:100',
                 'LoE_DI' => 'nullable|string|max:50',
                 'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),

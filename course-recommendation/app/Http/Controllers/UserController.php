@@ -95,9 +95,9 @@ class UserController extends Controller
         if ($request->has('with_trashed')) {
             $logMessage .= $withTrashed === 'only' ? ' (only trashed)' : ' (including trashed)';
         }
-        Admins::where('user_id', $admin->id)->update([
-            'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', '{$logMessage} at ', NOW())")
-        ]);
+        // Admins::where('user_id', $admin->id)->update([
+        //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', '{$logMessage} at ', NOW())")
+        // ]);
 
         return response()->json([
             'message' => 'Users retrieved successfully',
@@ -165,12 +165,12 @@ class UserController extends Controller
         }
 
         // Phân trang (20 user/trang)
-        $users = $query->orderBy('deleted_at', 'desc')->paginate(20);
-
-        // Ghi log hoạt động admin
-        Admins::where('user_id', $admin->id)->update([
-            'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Viewed trashed users list at ', NOW())")
-        ]);
+        $users = $query->orderBy('deleted_at', 'desc')->paginate(10);
+        
+        // // Ghi log hoạt động admin
+        // Admins::where('user_id', $admin->id)->update([
+        //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Viewed trashed users list at ', NOW())")
+        // ]);
 
         return response()->json([
             'message' => 'Trashed users retrieved successfully',
@@ -453,9 +453,9 @@ protected function calculateLessonCompletionRate($user)
             }
 
             // Ghi log hoạt động admin
-            Admins::where('user_id', $admin->id)->update([
-                'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Updated user ID {$id} at ', NOW())")
-            ]);
+            // Admins::where('user_id', $admin->id)->update([
+            //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Updated user ID {$id} at ', NOW())")
+            // ]);
 
             DB::commit();
 
@@ -513,9 +513,9 @@ protected function calculateLessonCompletionRate($user)
             Admins::where('user_id', $user->id)->delete();
 
             // Ghi log hoạt động admin
-            Admins::where('user_id', $admin->id)->update([
-                'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Soft deleted user ID {$id} at ', NOW())")
-            ]);
+            // Admins::where('user_id', $admin->id)->update([
+            //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Soft deleted user ID {$id} at ', NOW())")
+            // ]);
 
             DB::commit();
 
@@ -562,9 +562,9 @@ protected function calculateLessonCompletionRate($user)
             $user->restore();
 
             // Ghi log hoạt động admin
-            Admins::where('user_id', $admin->id)->update([
-                'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Restored user ID {$id} at ', NOW())")
-            ]);
+            // Admins::where('user_id', $admin->id)->update([
+            //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Restored user ID {$id} at ', NOW())")
+            // ]);
 
             DB::commit();
 
@@ -619,9 +619,9 @@ protected function calculateLessonCompletionRate($user)
             $user->forceDelete();
 
             // Ghi log hoạt động admin
-            Admins::where('user_id', $admin->id)->update([
-                'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Permanently deleted user ID {$id} at ', NOW())")
-            ]);
+            // Admins::where('user_id', $admin->id)->update([
+            //     'activity_log' => DB::raw("CONCAT(COALESCE(activity_log, ''), '\n', 'Permanently deleted user ID {$id} at ', NOW())")
+            // ]);
 
             DB::commit();
 

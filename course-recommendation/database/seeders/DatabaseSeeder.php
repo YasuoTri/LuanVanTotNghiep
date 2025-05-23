@@ -2,16 +2,24 @@
 
 namespace Database\Seeders;
 
+use App\Models\AdminAccount;
 use App\Models\Course_Instructors;
-use App\Models\Instructors;
-use App\Models\User;
+use App\Models\CourseCategory;
+use App\Models\CourseReview;
+use App\Models\InstructorAccount;
+use App\Models\InstructorRequest;
+use App\Models\Media;
+use App\Models\Question;
+use App\Models\QuestionChoice;
+use App\Models\RevenueDistribution;
+use App\Models\RevenueSession;
+use App\Models\StudentCategory;
+use App\Models\UserAnswer;
+use App\Models\Course;
 use App\Models\Category;
 use App\Models\Student;
-use App\Models\Admin;
 use App\Models\Admins;
-use App\Models\Instructor;
-use App\Models\Course;
-use App\Models\CourseInstructor;
+use App\Models\Instructors;
 use App\Models\Interaction;
 use App\Models\Enrollment;
 use App\Models\Certificate;
@@ -24,6 +32,7 @@ use App\Models\QuizResult;
 use App\Models\Review;
 use App\Models\ForumPost;
 use App\Models\SimilarityMatrix;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -41,17 +50,35 @@ class DatabaseSeeder extends Seeder
         // Seed Courses - Create 100 courses
         $this->seedCourses();
         
+        // Seed Course Categories
+        $this->seedCourseCategories();
+        
         // Seed Students
         $this->seedStudents();
+        
+        // Seed Student Categories
+        $this->seedStudentCategories();
         
         // Seed Admins
         $this->seedAdmins();
         
+        // Seed Admin Accounts
+        $this->seedAdminAccounts();
+        
         // Seed Instructors
         $this->seedInstructors();
         
+        // Seed Instructor Accounts
+        $this->seedInstructorAccounts();
+        
+        // Seed Instructor Requests
+        $this->seedInstructorRequests();
+        
         // Seed Course Instructors
         $this->seedCourseInstructors();
+        
+        // Seed Course Reviews
+        $this->seedCourseReviews();
         
         // Seed Interactions
         $this->seedInteractions();
@@ -68,6 +95,12 @@ class DatabaseSeeder extends Seeder
         // Seed Payments
         $this->seedPayments();
         
+        // Seed Revenue Sessions
+        $this->seedRevenueSessions();
+        
+        // Seed Revenue Distributions
+        $this->seedRevenueDistributions();
+        
         // Seed Lessons
         $this->seedLessons();
         
@@ -77,14 +110,26 @@ class DatabaseSeeder extends Seeder
         // Seed Quizzes
         $this->seedQuizzes();
         
+        // Seed Questions
+        $this->seedQuestions();
+        
+        // Seed Question Choices
+        $this->seedQuestionChoices();
+        
         // Seed Quiz Results
         $this->seedQuizResults();
+        
+        // Seed User Answers
+        $this->seedUserAnswers();
         
         // Seed Reviews
         $this->seedReviews();
         
         // Seed Forum Posts
         $this->seedForumPosts();
+        
+        // Seed Media
+        // $this->seedMedia();
         
         // Seed Similarity Matrix
         $this->seedSimilarityMatrix();
@@ -205,6 +250,35 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Courses seeded successfully!');
     }
 
+    private function seedCourseCategories()
+    {
+        $this->command->info('Seeding CourseCategory...');
+        
+        $courses = Course::all();
+        $categories = Category::all();
+        
+        if ($courses->isEmpty() || $categories->isEmpty()) {
+            $this->command->warn('No courses or categories found. Skipping CourseCategory seeding.');
+            return;
+        }
+        
+        foreach ($courses as $course) {
+            // Assign 1-3 categories per course
+            $selectedCategories = $categories->random(rand(1, 3));
+            
+            foreach ($selectedCategories as $category) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $category->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('Course categories seeded successfully!');
+    }
+
     private function seedStudents()
     {
         $this->command->info('Seeding students...');
@@ -227,6 +301,35 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Students seeded successfully!');
     }
 
+    private function seedStudentCategories()
+    {
+        $this->command->info('Seeding student_category...');
+        
+        $students = Student::all();
+        $categories = Category::all();
+        
+        if ($students->isEmpty() || $categories->isEmpty()) {
+            $this->command->warn('No students or categories found. Skipping student_category seeding.');
+            return;
+        }
+        
+        foreach ($students as $student) {
+            // Assign 1-3 categories per student
+            $selectedCategories = $categories->random(rand(1, 3));
+            
+            foreach ($selectedCategories as $category) {
+                StudentCategory::create([
+                    'student_id' => $student->id,
+                    'category_id' => $category->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('Student categories seeded successfully!');
+    }
+
     private function seedAdmins()
     {
         $this->command->info('Seeding admins...');
@@ -244,6 +347,27 @@ class DatabaseSeeder extends Seeder
         }
         
         $this->command->info('Admins seeded successfully!');
+    }
+
+    private function seedAdminAccounts()
+    {
+        $this->command->info('Seeding admin_accounts...');
+        
+        $admins = Admins::all();
+        $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
+        
+        foreach ($admins as $admin) {
+            AdminAccount::create([
+                'admin_id' => $admin->id,
+                'balance' => rand(1000000, 5000000),
+                'bank_name' => $banks[array_rand($banks)],
+                'bank_account_number' => 'ACC' . rand(1000000, 9999999),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Admin accounts seeded successfully!');
     }
 
     private function seedInstructors()
@@ -264,6 +388,64 @@ class DatabaseSeeder extends Seeder
         }
         
         $this->command->info('Instructors seeded successfully!');
+    }
+
+    private function seedInstructorAccounts()
+    {
+        $this->command->info('Seeding instructor_accounts...');
+        
+        $instructors = Instructors::all();
+        $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
+        
+        foreach ($instructors as $instructor) {
+            InstructorAccount::create([
+                'instructor_id' => $instructor->id,
+                'balance' => rand(500000, 2000000),
+                'bank_name' => $banks[array_rand($banks)],
+                'bank_account_number' => 'ACC' . rand(1000000, 9999999),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Instructor accounts seeded successfully!');
+    }
+
+    private function seedInstructorRequests()
+    {
+        $this->command->info('Seeding instructor_requests...');
+        
+        $students = User::where('role', 'student')->inRandomOrder()->take(5)->get();
+        $admins = Admins::all();
+        $statuses = ['pending', 'approved', 'rejected'];
+        
+        foreach ($students as $student) {
+            $status = $statuses[array_rand($statuses)];
+            $admin = $admins->isNotEmpty() && $status !== 'pending' ? $admins->random() : null;
+            
+            InstructorRequest::create([
+                'user_id' => $student->id,
+                'name' => 'Instructor Applicant ' . $student->id,
+                'phone_number' => '+1' . rand(1000000000, 9999999999),
+                'professional_links' => 'https://linkedin.com/in/user' . $student->id,
+                'bio' => 'Professional with expertise in teaching.',
+                'organization' => 'Freelance Educator',
+                'qualifications' => 'PhD in Education, 5 years teaching experience.',
+                'teaching_experience' => 'Taught at various online platforms.',
+                'expertise' => 'Programming, Data Science',
+                'course_proposal' => 'Propose a course on Python for Beginners.',
+                'motivation' => 'Passionate about sharing knowledge.',
+                'document_urls' => 'https://example.com/documents/user' . $student->id,
+                'status' => $status,
+                'admin_notes' => $status === 'rejected' ? 'Insufficient experience.' : null,
+                'reviewed_at' => $status !== 'pending' ? now()->subDays(rand(1, 30)) : null,
+                'admin_id' => $admin ? $admin->id : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Instructor requests seeded successfully!');
     }
 
     private function seedCourseInstructors()
@@ -291,6 +473,34 @@ class DatabaseSeeder extends Seeder
         }
         
         $this->command->info('Course instructors seeded successfully!');
+    }
+
+    private function seedCourseReviews()
+    {
+        $this->command->info('Seeding course_reviews...');
+        
+        $courses = Course::where('status', 'pending')->inRandomOrder()->take(20)->get();
+        $admins = Admins::all();
+        $statuses = ['approved', 'rejected'];
+        
+        if ($admins->isEmpty()) {
+            $this->command->warn('No admins found. Skipping course_reviews seeding.');
+            return;
+        }
+        
+        foreach ($courses as $course) {
+            CourseReview::create([
+                'course_id' => $course->id,
+                'admin_id' => $admins->random()->id,
+                'status' => $statuses[array_rand($statuses)],
+                'notes' => 'Review notes for course ' . $course->id,
+                'reviewed_at' => now()->subDays(rand(1, 30)),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Course reviews seeded successfully!');
     }
 
     private function seedInteractions()
@@ -450,6 +660,58 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Payments seeded successfully!');
     }
 
+    private function seedRevenueSessions()
+    {
+        $this->command->info('Seeding revenue_sessions...');
+        
+        $months = [1, 2, 3]; // Seed for first 3 months of 2025
+        $year = 2025;
+        $statuses = ['open', 'closed', 'distributed'];
+        
+        foreach ($months as $month) {
+            RevenueSession::create([
+                'month' => $month,
+                'year' => $year,
+                'total_revenue' => rand(10000000, 50000000),
+                'admin_share' => rand(3000000, 15000000),
+                'instructor_share' => rand(7000000, 35000000),
+                'status' => $statuses[array_rand($statuses)],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Revenue sessions seeded successfully!');
+    }
+
+    private function seedRevenueDistributions()
+    {
+        $this->command->info('Seeding revenue_distributions...');
+        
+        $revenueSessions = RevenueSession::all();
+        $courseInstructors = Course_Instructors::inRandomOrder()->take(20)->get();
+        $statuses = ['pending', 'completed', 'failed'];
+        
+        foreach ($courseInstructors as $courseInstructor) {
+            $revenueSession = $revenueSessions->random();
+            
+            RevenueDistribution::create([
+                'revenue_session_id' => $revenueSession->id,
+                'instructor_id' => $courseInstructor->instructor_id,
+                'course_id' => $courseInstructor->course_id,
+                'revenue_amount' => rand(500000, 5000000),
+                'instructor_share' => rand(350000, 3500000),
+                'status' => $statuses[array_rand($statuses)],
+                'transaction_code' => 'TXN-' . Str::random(10),
+                'distributed_at' => now()->subDays(rand(1, 30)),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Revenue distributions seeded successfully!');
+    }
+
     private function seedLessons()
     {
         $this->command->info('Seeding lessons...');
@@ -478,32 +740,32 @@ class DatabaseSeeder extends Seeder
     }
 
     private function seedLessonProgress()
-{
-    $this->command->info('Seeding lesson progress...');
-    
-    $enrollments = Enrollment::all();
-    $statuses = ['not_started', 'in_progress', 'completed'];
-    
-    foreach ($enrollments as $enrollment) {
-        $lessons = Lesson::where('course_id', $enrollment->course_id)->get();
+    {
+        $this->command->info('Seeding lesson_progress...');
         
-        foreach ($lessons as $lesson) {
-            $status = $enrollment->status == 'completed' ? 'completed' : $statuses[array_rand($statuses)];
-            $completedAt = $status == 'completed' ? now()->subDays(rand(1, 60)) : null;
+        $enrollments = Enrollment::all();
+        $statuses = ['not_started', 'in_progress', 'completed'];
+        
+        foreach ($enrollments as $enrollment) {
+            $lessons = Lesson::where('course_id', $enrollment->course_id)->get();
             
-            LessonProgress::create([
-                'user_id' => $enrollment->user_id,
-                'lesson_id' => $lesson->id,
-                'status' => $status,
-                'completed_at' => $completedAt,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            foreach ($lessons as $lesson) {
+                $status = $enrollment->status == 'completed' ? 'completed' : $statuses[array_rand($statuses)];
+                $completedAt = $status == 'completed' ? now()->subDays(rand(1, 60)) : null;
+                
+                LessonProgress::create([
+                    'user_id' => $enrollment->user_id,
+                    'lesson_id' => $lesson->id,
+                    'status' => $status,
+                    'completed_at' => $completedAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
+        
+        $this->command->info('Lesson progress seeded successfully!');
     }
-    
-    $this->command->info('Lesson progress seeded successfully!');
-}
 
     private function seedQuizzes()
     {
@@ -512,12 +774,12 @@ class DatabaseSeeder extends Seeder
         $lessons = Lesson::all();
         
         foreach ($lessons as $lesson) {
-            $quizCount = rand(0, 1); // 0 or 1 quiz per lesson
+            $quizCount = rand(0, 2); // 0-2 quizzes per lesson
             
             for ($i = 1; $i <= $quizCount; $i++) {
                 Quiz::create([
                     'lesson_id' => $lesson->id,
-                    'title' => "Quiz for Lesson {$lesson->id}",
+                    'title' => "Quiz $i for Lesson {$lesson->id}",
                     'max_attempts' => 3,
                     'time_limit' => rand(10, 30),
                     'is_visible' => true,
@@ -530,36 +792,133 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Quizzes seeded successfully!');
     }
 
-   private function seedQuizResults()
-{
-    $this->command->info('Seeding quiz results...');
-    
-    $lessonProgresses = LessonProgress::where('status', 'completed')->get();
-    
-    foreach ($lessonProgresses as $progress) {
-        $quizzes = Quiz::where('lesson_id', $progress->lesson_id)->get();
+    private function seedQuestions()
+    {
+        $this->command->info('Seeding questions...');
+        
+        $quizzes = Quiz::all();
+        $questionTypes = ['multiple_choice', 'true_false', 'open_ended'];
         
         foreach ($quizzes as $quiz) {
-            // Ensure completed_at is a Carbon instance and not null
-            $completedAt = $progress->completed_at 
-                ? \Carbon\Carbon::parse($progress->completed_at)
-                : now()->subDays(rand(1, 60));
+            $questionCount = rand(3, 5); // 3-5 questions per quiz
             
-            QuizResult::create([
-                'user_id' => $progress->user_id,
-                'quiz_id' => $quiz->id,
-                'attempt_number' => rand(1, 3),
-                'score' => rand(60, 100),
-                'started_at' => $completedAt->subMinutes(rand(10, 60)),
-                'completed_at' => $completedAt,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            for ($i = 1; $i <= $questionCount; $i++) {
+                Question::create([
+                    'quiz_id' => $quiz->id,
+                    'title' => "Question $i for Quiz {$quiz->id}",
+                    'question_type' => $questionTypes[array_rand($questionTypes)],
+                    'points' => rand(1, 5),
+                    'sort_order' => $i,
+                    'is_visible' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
+        
+        $this->command->info('Questions seeded successfully!');
     }
-    
-    $this->command->info('Quiz results seeded successfully!');
-}
+
+    private function seedQuestionChoices()
+    {
+        $this->command->info('Seeding question_choices...');
+        
+        $questions = Question::whereIn('question_type', ['multiple_choice', 'true_false'])->get();
+        
+        foreach ($questions as $question) {
+            $choiceCount = $question->question_type === 'multiple_choice' ? 4 : 2;
+            
+            for ($i = 1; $i <= $choiceCount; $i++) {
+                $isCorrect = $i === 1; // First choice is correct for simplicity
+                
+                QuestionChoice::create([
+                    'question_id' => $question->id,
+                    'content' => $question->question_type === 'true_false' 
+                        ? ($i === 1 ? 'True' : 'False') 
+                        : "Choice $i for Question {$question->id}",
+                    'is_correct' => $isCorrect,
+                    'sort_order' => $i,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('Question choices seeded successfully!');
+    }
+
+    private function seedQuizResults()
+    {
+        $this->command->info('Seeding quiz_results...');
+        
+        $lessonProgresses = LessonProgress::where('status', 'completed')->get();
+        
+        foreach ($lessonProgresses as $progress) {
+            $quizzes = Quiz::where('lesson_id', $progress->lesson_id)->get();
+            
+            foreach ($quizzes as $quiz) {
+                $completedAt = $progress->completed_at 
+                    ? \Carbon\Carbon::parse($progress->completed_at)
+                    : now()->subDays(rand(1, 60));
+                
+                QuizResult::create([
+                    'user_id' => $progress->user_id,
+                    'quiz_id' => $quiz->id,
+                    'attempt_number' => rand(1, 3),
+                    'score' => rand(60, 100),
+                    'started_at' => $completedAt->subMinutes(rand(10, 60)),
+                    'completed_at' => $completedAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('Quiz results seeded successfully!');
+    }
+
+    private function seedUserAnswers()
+    {
+        $this->command->info('Seeding user_answers...');
+        
+        $quizResults = QuizResult::all();
+        
+        foreach ($quizResults as $quizResult) {
+            $questions = Question::where('quiz_id', $quizResult->quiz_id)->get();
+            
+            foreach ($questions as $question) {
+                $choice = null;
+                $answerText = null;
+                $isCorrect = null;
+                $pointsEarned = null;
+                
+                if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
+                    $choices = QuestionChoice::where('question_id', $question->id)->get();
+                    $choice = $choices->random();
+                    $isCorrect = $choice->is_correct;
+                    $pointsEarned = $isCorrect ? $question->points : 0;
+                } else {
+                    $answerText = 'Sample answer for open-ended question';
+                    $isCorrect = rand(0, 1);
+                    $pointsEarned = $isCorrect ? $question->points : 0;
+                }
+                
+                UserAnswer::create([
+                    'user_id' => $quizResult->user_id,
+                    'quiz_result_id' => $quizResult->id,
+                    'question_id' => $question->id,
+                    'choice_id' => $choice ? $choice->id : null,
+                    'answer_text' => $answerText,
+                    'is_correct' => $isCorrect,
+                    'points_earned' => $pointsEarned,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('User answers seeded successfully!');
+    }
 
     private function seedReviews()
     {
@@ -587,7 +946,7 @@ class DatabaseSeeder extends Seeder
 
     private function seedForumPosts()
     {
-        $this->command->info('Seeding forum posts...');
+        $this->command->info('Seeding forum_posts...');
         
         $interactions = Interaction::where('nforum_posts', '>', 0)->get();
         
@@ -610,9 +969,45 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Forum posts seeded successfully!');
     }
 
+    // private function seedMedia()
+    // {
+    //     $this->command->info('Seeding media...');
+        
+    //     $courses = Course::inRandomOrder()->take(50)->get();
+    //     $lessons = Lesson::inRandomOrder()->take(50)->get();
+        
+    //     foreach ($courses as $course) {
+    //         Media::create([
+    //             'medially_type' => Course::class,
+    //             'medially_id' => $course->id,
+    //             'file_url' => $course->image,
+    //             'file_name' => basename($course->image),
+    //             'file_type' => 'image/jpeg',
+    //             'size' => rand(100000, 500000),
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]);
+    //     }
+        
+    //     foreach ($lessons as $lesson) {
+    //         Media::create([
+    //             'medially_type' => Lesson::class,
+    //             'medially_id' => $lesson->id,
+    //             'file_url' => $lesson->video_url,
+    //             'file_name' => basename($lesson->video_url),
+    //             'file_type' => 'video/mp4',
+    //             'size' => rand(1000000, 5000000),
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]);
+    //     }
+        
+    //     $this->command->info('Media seeded successfully!');
+    // }
+
     private function seedSimilarityMatrix()
     {
-        $this->command->info('Seeding similarity matrix...');
+        $this->command->info('Seeding similarity_matrix...');
         
         $courses = Course::inRandomOrder()->take(20)->get();
         

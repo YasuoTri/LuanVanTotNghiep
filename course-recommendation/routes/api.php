@@ -55,6 +55,7 @@ Route::apiResource('/admin/category', CategoryController::class);
 
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
+    Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
     Route::delete('/enrollments/{id}', [EnrollmentController::class, 'destroy']);//xong

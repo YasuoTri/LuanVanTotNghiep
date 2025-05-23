@@ -6,8 +6,10 @@ use App\Http\Requests\Course\CreateCourseRequest;
 use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Course_Instructors;
+use App\Models\CourseCategory;
 use App\Models\CourseReview;
 use App\Models\Instructors;
+use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -217,35 +219,70 @@ public function storeCourseInstructor(CreateCourseRequest $request)
         try {
             $validated = $request->validated();
 
+            // Kiểm tra từ khóa cấm
             $bannedWords = ['inappropriate', 'offensive'];
             if (isset($validated['course_description']) &&
                 preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
                 return response()->json(['message' => 'Course description contains banned words'], 422);
             }
 
+            // Kiểm tra category_ids
+            if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
+                return response()->json(['message' => 'At least one category must be selected'], 422);
+            }
+
             $instructor = Auth::user()->instructor;
             $validated['course_url'] = Str::slug($validated['course_name']);
+            $validated['status'] = 'pending'; // Khóa học mới tạo ở trạng thái pending
 
+            // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
             }
 
-            $course = Course::create($validated);
+            // Tạo khóa học
+            $course = Course::create([
+                'course_name' => $validated['course_name'],
+                'university' => $validated['university'] ?? null,
+                'difficulty_level' => $validated['difficulty_level'] ?? null,
+                'course_rating' => 0,
+                'course_url' => $validated['course_url'],
+                'image' => $validated['image'] ?? null,
+                'course_description' => $validated['course_description'] ?? null,
+                'price' => $validated['price'] ?? 0,
+                'skills' => $validated['skills'] ?? null,
+                'status' => $validated['status'],
+            ]);
 
+            // Gán danh mục cho khóa học
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Gán instructor cho khóa học
             Course_Instructors::create([
                 'course_id' => $course->id,
                 'instructor_id' => $instructor->id,
             ]);
 
-            return response()->json($course, 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Course created successfully, pending review.',
+                'course' => $course->load('categories'),
+            ], 201);
         } catch (\Exception $e) {
             Log::error("Failed to create course: {$e->getMessage()}");
-            return response()->json(['message' => 'Failed to create course'], 500);
+            return response()->json(['message' => 'Failed to create course', 'error' => $e->getMessage()], 500);
         }
     }
 
 
-    public function updateCourseInstructor(UpdateCourseRequest $request, $id)
+   public function updateCourseInstructor(UpdateCourseRequest $request, $id)
     {
         try {
             $course = Course::find($id);
@@ -263,8 +300,14 @@ public function storeCourseInstructor(CreateCourseRequest $request)
 
             $validated = $request->validated();
             $validated['course_url'] = Str::slug($validated['course_name']);
-            $validated['status'] = 'pending';
+            $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
 
+            // Kiểm tra category_ids
+            if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
+                return response()->json(['message' => 'At least one category must be selected'], 422);
+            }
+
+            // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
                 if ($course->image) {
                     $this->cloudinaryService->deleteByUrl($course->image);
@@ -272,11 +315,38 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
             }
 
-            $course->update($validated);
-            return response()->json($course, 200);
+            // Cập nhật khóa học
+            $course->update([
+                'course_name' => $validated['course_name'],
+                'university' => $validated['university'] ?? $course->university,
+                'difficulty_level' => $validated['difficulty_level'] ?? $course->difficulty_level,
+                'course_url' => $validated['course_url'],
+                'image' => $validated['image'] ?? $course->image,
+                'course_description' => $validated['course_description'] ?? $course->course_description,
+                'price' => $validated['price'] ?? $course->price,
+                'skills' => $validated['skills'] ?? $course->skills,
+                'status' => $validated['status'],
+            ]);
+
+            // Cập nhật danh mục
+            CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Course updated successfully, pending review.',
+                'course' => $course->load('categories'),
+            ], 200);
         } catch (\Exception $e) {
             Log::error("Failed to update course: {$e->getMessage()}");
-            return response()->json(['message' => 'Failed to update course'], 500);
+            return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -507,6 +577,83 @@ public function getPendingCourses()
         } catch (\Exception $e) {
             Log::error("Failed to permanently delete course: {$e->getMessage()}");
             return response()->json(['message' => 'Failed to permanently delete course'], 500);
+        }
+    }
+
+      public function getCoursesByStudentCategories(Request $request)
+    {
+        try {
+            // Lấy thông tin người dùng đã xác thực
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized or user not found',
+                ], 401);
+            }
+
+            // Kiểm tra vai trò người dùng
+            if ($user->role !== 'student') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only students can access this feature',
+                ], 403);
+            }
+
+            // Tìm học viên dựa trên user_id
+            $student = Student::where('user_id', $user->id)->first();
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student profile not found',
+                ], 404);
+            }
+
+            // Lấy danh sách category_id mà học viên đã chọn
+            $categoryIds = $student->categories()->pluck('categories.id')->toArray();
+            if (empty($categoryIds)) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No categories selected by the student',
+                    'courses' => [],
+                ], 200);
+            }
+
+            // Tìm các khóa học thuộc các danh mục đã chọn
+            $courses = Course::with('categories','instructors')->whereHas('categories', function ($query) use ($categoryIds) {
+                $query->whereIn('categories.id', $categoryIds);
+            })
+            ->where('status', 'approved') // Chỉ lấy khóa học đã được phê duyệt
+            ->select([
+                'id',
+                'course_name',
+                'university',
+                'difficulty_level',
+                'course_rating',
+                'course_url',
+                'image',
+                'course_description',
+                'price',
+                'skills',
+                'status',
+                'created_at',
+                'updated_at'
+            ])
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Courses retrieved successfully',
+                'courses' => $courses,
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error retrieving courses by student categories: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving courses',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

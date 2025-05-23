@@ -229,6 +229,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/forum-posts/{id}/remove', [ForumPostController::class, 'remove'])->name('forumPosts.remove');
 
     // Manage Users
+    Route::get('/admin/users/trashed', [UserController::class, 'trashed'])->name('users.trashed');
     Route::get('/admin/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/admin/users/{id}', [UserController::class, 'show'])->name('users.show');
     Route::put('/admin/users/{id}', [UserController::class, 'update'])->name('users.update');

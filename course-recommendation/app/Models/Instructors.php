@@ -18,8 +18,8 @@ class Instructors extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function courses()
+public function course()
     {
-        return $this->belongsToMany(Course::class, 'course_instructors', 'instructor_id', 'course_id');
+        return $this->hasOne(Course_Instructors::class, 'instructor_id')->with('course');
     }
 }

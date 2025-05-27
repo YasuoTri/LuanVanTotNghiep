@@ -8,6 +8,7 @@ use App\Models\CourseCategory;
 use App\Models\CourseReview;
 use App\Models\InstructorAccount;
 use App\Models\InstructorRequest;
+
 use App\Models\Media;
 use App\Models\Question;
 use App\Models\QuestionChoice;
@@ -35,6 +36,7 @@ use App\Models\SimilarityMatrix;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
@@ -448,33 +450,60 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Instructor requests seeded successfully!');
     }
 
-    private function seedCourseInstructors()
-    {
-        $this->command->info('Seeding course_instructors...');
-        
-        $instructors = Instructors::all();
-        $courses = Course::all();
-        
-        if ($instructors->isEmpty() || $courses->isEmpty()) {
-            $this->command->warn('No instructors or courses found. Skipping course_instructors seeding.');
-            return;
+private function seedCourseInstructors()
+{
+    $this->command->info('Seeding course_instructors...');
+
+    $instructors = Instructors::all();
+    $courses = Course::all();
+
+    if ($instructors->isEmpty() || $courses->isEmpty()) {
+        $this->command->warn('No instructors or courses found. Skipping course_instructors seeding.');
+        return;
+    }
+
+    $instructorCount = $instructors->count();
+    $seededCount = 0;
+    $skippedCourses = [];
+
+    // Shuffle courses to randomize instructor assignment
+    $courses = $courses->shuffle();
+
+    foreach ($courses as $index => $course) {
+        // Skip if course already has an instructor
+        if (Course_Instructors::where('course_id', $course->id)->exists()) {
+            $skippedCourses[] = $course->course_name;
+            continue;
         }
-        
-        foreach ($courses as $course) {
-            // Assign 1-2 instructors per course
-            $selectedInstructors = $instructors->random(rand(1, 2));
-            
-            foreach ($selectedInstructors as $instructor) {
+
+        // Assign instructor using modulo to cycle through instructors
+        $instructorIndex = $index % $instructorCount;
+        $instructor = $instructors[$instructorIndex];
+
+        try {
+            DB::transaction(function () use ($course, $instructor, &$seededCount) {
                 Course_Instructors::create([
                     'course_id' => $course->id,
                     'instructor_id' => $instructor->id,
                 ]);
-            }
+                $seededCount++;
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            $this->command->error("Failed to assign instructor ID {$instructor->id} to course ID {$course->id}: {$e->getMessage()}");
+            $skippedCourses[] = $course->course_name;
         }
-        
-        $this->command->info('Course instructors seeded successfully!');
     }
 
+    if ($seededCount > 0) {
+        $this->command->info("Successfully seeded {$seededCount} course-instructor relationships.");
+    } else {
+        $this->command->warn('No course-instructor relationships were seeded.');
+    }
+
+    if (!empty($skippedCourses)) {
+        $this->command->warn('The following courses were skipped: ' . implode(', ', $skippedCourses));
+    }
+}
     private function seedCourseReviews()
     {
         $this->command->info('Seeding course_reviews...');

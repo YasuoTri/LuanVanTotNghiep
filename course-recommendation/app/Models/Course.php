@@ -33,9 +33,16 @@ public function categories()
     {
         return $this->belongsToMany(Category::class, 'course_category', 'course_id', 'category_id');
     }
-    public function instructors()
+   public function instructor()
     {
-        return $this->belongsToMany(Instructors::class, 'course_instructors', 'course_id', 'instructor_id');
+        return $this->hasOneThrough(
+            Instructors::class,
+            Course_Instructors::class,
+            'course_id', // Foreign key on course_instructors
+            'id',        // Foreign key on instructors
+            'id',        // Local key on courses
+            'instructor_id' // Local key on course_instructors
+        );
     }
 
     public function enrollments()

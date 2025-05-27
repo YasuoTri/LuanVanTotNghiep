@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseCategory;
 use App\Models\CourseReview;
+use App\Models\Category;
 use App\Models\Instructors;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
@@ -25,14 +26,69 @@ class CourseController extends Controller
     {
         $this->cloudinaryService = $cloudinaryService;
     }
-      public function index()
-    {
-        // Fetch only non-deleted, approved courses (SoftDeletes ensures deleted_at is null)
-        $courses = Course::with(['instructors', 'reviews'])
-            ->where('status', 'approved')
-            ->paginate(10);
-        return response()->json($courses);
-    }
+    //   public function index()
+    // {
+    //     // Fetch only non-deleted, approved courses (SoftDeletes ensures deleted_at is null)
+    //     $courses = Course::with(['instructors', 'reviews'])
+    //         ->where('status', 'approved')
+    //         ->paginate(10);
+    //     return response()->json($courses);
+    // }
+    public function index()
+{
+    // Fetch approved courses with related instructors and reviews
+    $courses = Course::with(['instructor', 'reviews', 'lessons'])
+        ->where('status', 'approved')
+        ->get()
+        ->map(function ($course) {
+            return [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'university' => $course->university,
+                'difficulty_level' => $course->difficulty_level,
+                'course_rating' => $course->course_rating,
+                'course_url' => $course->course_url,
+                'image' => $course->image,
+                'course_description' => $course->course_description,
+                'price' => $course->price,
+                'skills' => $course->skills,
+                'status' => $course->status,
+                'instructor' =>$course->instructor,
+                'total_lessons' => $course->lessons->count(),
+                'total_time' => $course->lessons->sum('duration'), // Sum of lesson durations in minutes
+                'number_of_ratings' => $course->reviews->count(),
+                'created_at' => $course->created_at,
+                'updated_at' => $course->updated_at,
+            ];
+        });
+
+    // Fetch count of courses per category
+    $categoryCourseCounts = Category::withCount('courses')
+        ->get()
+        ->map(function ($category) {
+            return [
+                'category_id' => $category->id,
+                'category_name' => $category->name,
+                'course_count' => $category->courses_count,
+            ];
+        });
+
+    // Paginate the courses manually (since we used get() for mapping)
+    $perPage = 10;
+    $page = request()->get('page', 1);
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $courses->forPage($page, $perPage),
+        $courses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json([
+        'courses' => $paginatedCourses,
+        'category_course_counts' => $categoryCourseCounts,
+    ]);
+}
 
     public function getAllCoursesForAdmin()
     {

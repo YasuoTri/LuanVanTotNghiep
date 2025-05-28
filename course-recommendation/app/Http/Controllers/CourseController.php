@@ -37,7 +37,7 @@ class CourseController extends Controller
     public function index()
 {
     // Fetch approved courses with related instructors and reviews
-    $courses = Course::with(['instructor', 'reviews', 'lessons'])
+    $courses = Course::with(['instructors', 'reviews', 'lessons'])
         ->where('status', 'approved')
         ->get()
         ->map(function ($course) {

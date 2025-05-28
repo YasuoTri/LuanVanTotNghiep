@@ -18,7 +18,7 @@ class Instructors extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-public function course()
+    public function course()
     {
         return $this->hasOne(Course_Instructors::class, 'instructor_id')->with('course');
     }

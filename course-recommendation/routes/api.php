@@ -13,6 +13,7 @@ use App\Http\Controllers\QuizResultController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ForumPostController;
 use App\Http\Controllers\InstructorController;
+use App\Http\Controllers\InstructorRequestController;
 use App\Http\Controllers\InteractionController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LessonProgressController;
@@ -301,6 +302,14 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::put('/instructor/request/{requestId}/review', [AuthController::class, 'reviewInstructorRequest']);
 
     Route::apiResource('/admin/coupons', CouponController::class);
+
+    // Route để lấy danh sách pending requests
+Route::get('/admin/instructor-requests/pending', [InstructorRequestController::class, 'getLatestPendingRequests'])
+    ->name('api.instructor-requests.pending');
+
+// Route để tìm kiếm instructor requests
+Route::get('/admin/instructor-requests/search', [InstructorRequestController::class, 'searchRequests'])
+    ->name('api.instructor-requests.search');
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

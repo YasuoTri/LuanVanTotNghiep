@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Admins;
 use App\Models\Instructors;
 use App\Models\Student;
 use App\Models\InstructorRequest;
@@ -514,10 +515,31 @@ class AuthController extends Controller
                 }
                 $user->instructor = $instructor;
             }
+            if ($user->role === 'student') {
+                $student = Student::where('user_id', $user->id)->first();
+                if (!$student) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Student not found',
+                    ], 404);
+                }
+                $user->student = $student;
+            }
+              if ($user->role === 'admin') {
+                $admin = Admins::where('user_id', $user->id)->first();
+                if (!$admin) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Admin not found',
+                    ], 404);
+                }
+                $user->admin = $admin;
+            }
             return response()->json([
                 'success' => true,
                 'user' => $user,
             ]);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

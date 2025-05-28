@@ -20,6 +20,6 @@ class Instructors extends Model
 
     public function course()
     {
-        return $this->hasOne(Course_Instructors::class, 'instructor_id')->with('course');
+        return $this->hasMany(Course_Instructors::class, 'instructor_id')->with('course');
     }
 }

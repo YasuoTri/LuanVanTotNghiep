@@ -53,7 +53,7 @@ class CourseController extends Controller
                 'price' => $course->price,
                 'skills' => $course->skills,
                 'status' => $course->status,
-                'instructor' =>$course->instructor,
+                'instructor' =>$course->instructors,
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'), // Sum of lesson durations in minutes
                 'number_of_ratings' => $course->reviews->count(),

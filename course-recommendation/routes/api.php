@@ -44,7 +44,7 @@ Route::get('/courses/{slug}', [CourseController::class, 'showSlug']);
 Route::get('/courses/course_id/{id}', [CourseController::class, 'show']);
 Route::middleware('jwt_cookie')->group(function () {
     Route::get('/currentStudent', [AuthController::class, 'getCurrentUser']);
-    Route::put('/user/profile/update', [AuthController::class, 'updateProfile'])->name('user.profile.update');
+    Route::post('/user/profile/update', [AuthController::class, 'updateProfile'])->name('user.profile.update');
 });
 Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);

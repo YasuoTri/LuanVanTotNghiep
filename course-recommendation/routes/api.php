@@ -25,6 +25,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserAnswerController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VNPay;
+use App\Http\Controllers\RevenueSessionController;
 use App\Http\Controllers\ZaloPayController;
 use App\Services\PaymentGateways\PaymentGateway;
 use Illuminate\Support\Facades\Route;
@@ -310,6 +311,8 @@ Route::get('/admin/instructor-requests/pending', [InstructorRequestController::c
 // Route để tìm kiếm instructor requests
 Route::get('/admin/instructor-requests/search', [InstructorRequestController::class, 'searchRequests'])
     ->name('api.instructor-requests.search');
+    Route::post('/admin/revenue-sessions/{id}/distribute', [RevenueSessionController::class, 'distributeRevenue']);
+    Route::post('/admin/revenue-sessions', [RevenueSessionController::class, 'createMonthlySession']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

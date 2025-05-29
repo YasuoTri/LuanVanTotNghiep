@@ -16,7 +16,7 @@ conn = pymysql.connect(
     charset='utf8mb4'
 )
 
-# ✅ Xuất Coursera_new.csv từ bảng `courses`
+# ✅ Xuất Coursera_new.csv từ bảng `courses`, bao gồm instructor_id
 courses_query = """
 SELECT 
     c.id AS course_id,
@@ -29,13 +29,17 @@ SELECT
     c.skills AS 'Skills',
     c.price AS 'Price',
     c.status AS 'Status',
-    GROUP_CONCAT(cat.name) AS 'Categories'
+    GROUP_CONCAT(cat.name) AS 'Categories',
+    GROUP_CONCAT(ci.instructor_id) AS 'Instructor IDs'
 FROM courses c
 LEFT JOIN course_category cc ON c.id = cc.course_id
 LEFT JOIN categories cat ON cc.category_id = cat.id
+LEFT JOIN course_instructors ci ON c.id = ci.course_id
 GROUP BY c.id
 """
 courses_df = pd.read_sql(courses_query, conn)
+# Handle NULL instructor IDs
+courses_df['Instructor IDs'] = courses_df['Instructor IDs'].fillna('0')
 courses_df.to_csv('Data/Coursera_new.csv', index=False, encoding='utf-8-sig')
 print("✅ Exported Data/Coursera_new.csv")
 
@@ -63,7 +67,7 @@ JOIN users u ON i.user_id = u.id
 """
 user_behavior_df = pd.read_sql(user_behavior_query, conn)
 
-# ✅ Thêm các cột mô phỏng tương tự edX format
+# Thêm các cột mô phỏng tương tự edX format
 user_behavior_df['index'] = range(len(user_behavior_df))
 user_behavior_df['Random'] = np.random.randint(1, 1000, size=len(user_behavior_df))
 user_behavior_df['registered'] = 1
@@ -71,11 +75,11 @@ user_behavior_df['grade'] = np.random.uniform(0, 1, size=len(user_behavior_df)).
 user_behavior_df['roles'] = ''
 user_behavior_df['incomplete_flag'] = np.random.choice([0, 1], size=len(user_behavior_df), p=[0.8, 0.2])
 
-# ✅ Chuyển đổi datetime
+# Chuyển đổi datetime
 user_behavior_df['start_time_DI'] = pd.to_datetime(user_behavior_df['start_time_DI'], errors='coerce')
 user_behavior_df['last_event_DI'] = pd.to_datetime(user_behavior_df['last_event_DI'], errors='coerce')
 
-# ✅ Đảm bảo thứ tự cột
+# Đảm bảo thứ tự cột
 columns = [
     'index', 'Random', 'course_id', 'userid_DI', 'registered',
     'viewed', 'explored', 'certified',
@@ -86,9 +90,37 @@ columns = [
 ]
 user_behavior_df = user_behavior_df[columns]
 
-# ✅ Lưu ra CSV
+# Lưu ra CSV
 user_behavior_df.to_csv('Data/Courseuserbehavior_new.csv', index=False, encoding='utf-8-sig')
 print("✅ Exported Data/Courseuserbehavior_new.csv")
+
+# ✅ Xuất quiz_results.csv từ bảng `quiz_results`
+quiz_results_query = """
+SELECT 
+    user_id,
+    quiz_id,
+    score,
+    started_at,
+    completed_at
+FROM quiz_results
+"""
+quiz_results_df = pd.read_sql(quiz_results_query, conn)
+quiz_results_df.to_csv('Data/quiz_results.csv', index=False, encoding='utf-8-sig')
+print("✅ Exported Data/quiz_results.csv")
+
+# ✅ Xuất enrollments.csv từ bảng `enrollments`
+enrollments_query = """
+SELECT 
+    user_id,
+    course_id,
+    enrolled_at,
+    completed_at,
+    status
+FROM enrollments
+"""
+enrollments_df = pd.read_sql(enrollments_query, conn)
+enrollments_df.to_csv('Data/enrollments.csv', index=False, encoding='utf-8-sig')
+print("✅ Exported Data/enrollments.csv")
 
 # ✅ Đóng kết nối
 conn.close()

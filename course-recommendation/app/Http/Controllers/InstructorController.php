@@ -60,7 +60,7 @@ class InstructorController extends Controller
         }
        $user = User::find($instructor->user_id);
         if ($user) {
-            return response()->json(['message' => 'Cannot delete instructor with associated user'], 400);
+            $user->delete();
         }
         $instructor->delete();
         return response()->json(['message' => 'Instructor deleted successfully']);
@@ -81,6 +81,13 @@ class InstructorController extends Controller
     public function restore($id): JsonResponse
     {
         $enrollment = Instructors::onlyTrashed()->findOrFail($id);
+        if (!$enrollment) {
+            return response()->json(['message' => 'Instructor not found'], 404);
+        }
+        $user = User::withTrashed()->find($enrollment->user_id);
+        if ($user) {
+            $user->restore();
+        }
         $enrollment->restore();
         return response()->json(['message' => 'Instructor restored successfully'], 200);
     }

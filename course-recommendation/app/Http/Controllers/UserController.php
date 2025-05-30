@@ -508,6 +508,13 @@ protected function calculateLessonCompletionRate($user)
         try {
             // Soft delete user
             $user->delete();
+            if ($user->role === 'instructor') {
+                // Xóa bản ghi instructor nếu user là instructor
+                $user->instructor()->delete();
+            } elseif ($user->role === 'student') {
+                // Xóa bản ghi student nếu user là student
+                $user->student()->delete();
+            }
 
             // Xóa bản ghi admin nếu user là admin (vì admins không có soft delete)
             Admins::where('user_id', $user->id)->delete();
@@ -560,6 +567,13 @@ protected function calculateLessonCompletionRate($user)
         try {
             // Khôi phục user
             $user->restore();
+            if ($user->role === 'instructor') {
+                // Khôi phục bản ghi instructor nếu user là instructor
+                $user->instructor()->restore();
+            } elseif ($user->role === 'student') {
+                // Khôi phục bản ghi student nếu user là student
+                $user->student()->restore();
+            }
 
             // Ghi log hoạt động admin
             // Admins::where('user_id', $admin->id)->update([
@@ -617,6 +631,13 @@ protected function calculateLessonCompletionRate($user)
         try {
             // Xóa vĩnh viễn user (các bảng liên quan sẽ tự động xóa do ON DELETE CASCADE)
             $user->forceDelete();
+            if ($user->role === 'instructor') {
+                // Xóa bản ghi instructor nếu user là instructor
+                $user->instructor()->forceDelete();
+            } elseif ($user->role === 'student') {
+                // Xóa bản ghi student nếu user là student
+                $user->student()->forceDelete();
+            }
 
             // Ghi log hoạt động admin
             // Admins::where('user_id', $admin->id)->update([

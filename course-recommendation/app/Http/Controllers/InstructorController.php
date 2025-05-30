@@ -54,6 +54,14 @@ class InstructorController extends Controller
         if (!$instructor) {
             return response()->json(['message' => 'Instructor not found'], 404);
         }
+        // Check if the instructor has any associated courses
+        if ($instructor->courses()->exists()) {
+            return response()->json(['message' => 'Cannot delete instructor with associated courses'], 400);
+        }
+       $user = User::find($instructor->user_id);
+        if ($user) {
+            return response()->json(['message' => 'Cannot delete instructor with associated user'], 400);
+        }
         $instructor->delete();
         return response()->json(['message' => 'Instructor deleted successfully']);
     }

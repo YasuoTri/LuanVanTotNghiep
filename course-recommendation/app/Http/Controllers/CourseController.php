@@ -227,7 +227,6 @@ public function destroy($id)
         try {
             $instructor = Auth::user()->instructor;
             $courses = $instructor->courses()->paginate(10);
-
             return response()->json($courses, 200);
         } catch (\Exception $e) {
             Log::error("Failed to fetch instructor courses: {$e->getMessage()}");

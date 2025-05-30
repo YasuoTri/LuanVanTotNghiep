@@ -342,7 +342,7 @@ class PaymentController extends Controller
         return response()->json(['message' => 'Payment status updated']);
     }
 
-public function handleVNPayCallback(Request $request): JsonResponse
+public function handleVNPayCallback(Request $request)
 {
     // Lấy tất cả tham số từ query string
     $data = $request->query();
@@ -444,14 +444,16 @@ try{
             'status' => $status,
             'txnRef' => $txnRef
         ]);
-        return response()->json(['message' => 'Payment status updated'], 200);
+        return redirect()->away('http://localhost:4200');
     }catch (\Exception $e) {
         DB::rollBack();
         Log::error('VNPay callback processing failed', [
             'error' => $e->getMessage(),
             'txnRef' => $txnRef
         ]);
-        return response()->json(['message' => 'Failed to process callback'], 500);
+        // return response()->json(['message' => 'Failed to process callback'], 500);
+       return redirect()->away('http://localhost:4200');
+
     }
 }
 

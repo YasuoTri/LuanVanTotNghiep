@@ -124,7 +124,7 @@ class CourseController extends Controller
 
 public function show($id)
 {
-    $course = Course::with(['instructors', 'reviews', 'lessons'])
+    $course = Course::with(['instructors', 'reviews', 'lessons', 'categories'])
         ->where('status', 'approved')
         ->findOrFail($id);
     return response()->json($course);
@@ -132,10 +132,16 @@ public function show($id)
  public function showSlug($slug)
     {
         try {
-            $course = Course::with(['instructors', 'reviews', 'lessons'])
+            $course = Course::with(['instructors', 'reviews', 'lessons', 'categories','enrollments', 'certificates', 'forumPosts'])
                 ->where('status', 'approved')
                 ->where('course_url', $slug)
                 ->firstOrFail();
+            // Kiểm tra xem khóa học có tồn tại không
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
+            // Trả về thông tin khóa học
+            $course->loadCount(['enrollments', 'certificates', 'forumPosts']);
             return response()->json($course);
         } catch (\Exception $e) {
             Log::error("Failed to fetch course with slug {$slug}: {$e->getMessage()}");

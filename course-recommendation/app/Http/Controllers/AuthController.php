@@ -572,7 +572,7 @@ class AuthController extends Controller
                 'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'learning_goals' => 'nullable|string',
                 'category_ids' => 'nullable|array',
-                'category_ids.*' => 'exists:categories,id',
+                'category_ids.*' => 'nullable|exists:categories,id',
                 'bio' => 'nullable|string|max:1000',
                 'organization' => 'nullable|string|max:100',
                 'name' => 'nullable|string|max:100',

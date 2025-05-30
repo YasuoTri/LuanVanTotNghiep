@@ -6,6 +6,8 @@ use App\Http\Requests\Interaction\UpdateInteractionRequest;
 use App\Http\Requests\StoreInstructorRequest;
 use Illuminate\Http\Request;
 use App\Models\Instructors;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
 
 class InstructorController extends Controller
@@ -15,6 +17,15 @@ class InstructorController extends Controller
         $instructors = Instructors::paginate(10);
         return response()->json($instructors);
     }
+      public function indexWithoutAuthentication()
+    {
+        $users=User::with('instructor')->where('role', 'instructor')->paginate(10);
+        if ($users->isEmpty()) {
+            return response()->json(['message' => 'No instructors found'], 404);
+        }
+        return response()->json($users);
+    }
+    
     public function show($id)
     {
         $instructor = Instructors::find($id);

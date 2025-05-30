@@ -33,8 +33,8 @@ use Illuminate\Http\Request;
 
 // Existing General Routes
 Route::post('/recommend', [RecommendationController::class, 'recommend']);
-Route::post('/rate', [RecommendationController::class, 'rate']);
-Route::post('/users', [RecommendationController::class, 'createUser']);
+// Route::post('/rate', [RecommendationController::class, 'rate']);
+// Route::post('/users', [RecommendationController::class, 'createUser']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt_cookie');
@@ -48,7 +48,7 @@ Route::middleware('jwt_cookie')->group(function () {
 });
 Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
-
+Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);

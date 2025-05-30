@@ -238,7 +238,7 @@ class DatabaseSeeder extends Seeder
                 'university' => $universities[array_rand($universities)],
                 'difficulty_level' => $difficulties[array_rand($difficulties)],
                 'course_rating' => 0,
-                'course_url' => 'courses/course_' . ($i + 1),
+                'course_url' => 'courses_course_' . ($i + 1),
                 'image' => 'images/course_' . ($i + 1) . '.jpg',
                 'course_description' => 'Description for course ' . ($i + 1),
                 'price' => rand(0, 1000000),

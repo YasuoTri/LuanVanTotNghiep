@@ -1,0 +1,86 @@
+﻿student_id,user_id,category_id,category_name
+6,6,3,Business
+7,7,3,Business
+12,12,3,Business
+13,13,3,Business
+16,16,3,Business
+27,27,3,Business
+28,28,3,Business
+30,30,3,Business
+38,38,3,Business
+39,39,3,Business
+2,2,3,Business
+1,1,3,Business
+19,19,2,Data Science
+20,20,2,Data Science
+21,21,2,Data Science
+41,41,2,Data Science
+42,42,2,Data Science
+43,43,2,Data Science
+44,44,2,Data Science
+21,21,4,Design
+23,23,4,Design
+24,24,4,Design
+29,29,4,Design
+35,35,4,Design
+40,40,4,Design
+3,3,7,Health & Fitness
+10,10,7,Health & Fitness
+15,15,7,Health & Fitness
+18,18,7,Health & Fitness
+31,31,7,Health & Fitness
+33,33,7,Health & Fitness
+37,37,7,Health & Fitness
+38,38,7,Health & Fitness
+43,43,7,Health & Fitness
+4,4,10,Language
+11,11,10,Language
+14,14,10,Language
+16,16,10,Language
+22,22,10,Language
+29,29,10,Language
+40,40,10,Language
+45,45,10,Language
+4,4,5,Marketing
+12,12,5,Marketing
+17,17,5,Marketing
+19,19,5,Marketing
+32,32,5,Marketing
+33,33,5,Marketing
+36,36,5,Marketing
+38,38,5,Marketing
+42,42,5,Marketing
+6,6,8,Music
+15,15,8,Music
+16,16,8,Music
+19,19,8,Music
+22,22,8,Music
+24,24,8,Music
+28,28,8,Music
+3,3,6,Personal Development
+5,5,6,Personal Development
+7,7,6,Personal Development
+9,9,6,Personal Development
+15,15,6,Personal Development
+20,20,6,Personal Development
+23,23,6,Personal Development
+39,39,6,Personal Development
+40,40,6,Personal Development
+7,7,9,Photography
+12,12,9,Photography
+13,13,9,Photography
+17,17,9,Photography
+20,20,9,Photography
+21,21,9,Photography
+26,26,9,Photography
+27,27,9,Photography
+5,5,1,Programming
+8,8,1,Programming
+17,17,1,Programming
+22,22,1,Programming
+23,23,1,Programming
+25,25,1,Programming
+32,32,1,Programming
+34,34,1,Programming
+2,2,1,Programming
+1,1,1,Programming

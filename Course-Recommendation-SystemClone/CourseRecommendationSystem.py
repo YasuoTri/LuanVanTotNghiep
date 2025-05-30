@@ -1472,16 +1472,52 @@ def normalize_difficulty(difficulty):
     mapping = {'Beginner': 0.3, 'Intermediate': 0.6, 'Advanced': 0.9}
     return mapping.get(difficulty, 0.3)
 
-def calculate_competency(user_interactions, quiz_results, enrollments):
-    """Calculate user competency score."""
-    if user_interactions.empty:
-        return 0.3
+# def calculate_competency(user_interactions, quiz_results, enrollments):
+#     """Calculate user competency score."""
+#     if user_interactions.empty:
+#         return 0.3
+#     avg_quiz_score = quiz_results['score'].mean() / 100 if not quiz_results.empty else 0
+#     completion_rate = len(enrollments[enrollments['status'] == 'completed']) / len(enrollments) if not enrollments.empty else 0
+#     avg_completion_time = (enrollments['completed_at'] - enrollments['enrolled_at']).mean().total_seconds() / 3600 if not enrollments.empty and enrollments['completed_at'].notnull().any() else 0
+#     avg_completion_time_score = max(0, 1 - avg_completion_time / 24)
+#     total_courses_completed = len(enrollments[enrollments['status'] == 'completed'])
+#     competency_score = (0.4 * avg_quiz_score) + (0.3 * completion_rate) + (0.2 * avg_completion_time_score) + (0.1 * min(total_courses_completed / 10, 1))
+#     return min(max(competency_score, 0.3), 0.9)
+
+def calculate_competency(user_interactions, quiz_results, enrollments, loe_di='Unknown'):
+    """Calculate user competency score, incorporating LoE_DI."""
+    # Map LoE_DI to a baseline competency score
+    loe_mapping = {
+        'Less than Secondary': 0.2,
+        'Secondary': 0.3,
+        'High School': 0.3,
+        'Bachelor\'s': 0.5,
+        'Master\'s': 0.7,
+        'Doctorate': 0.9,
+        'Unknown': 0.3
+    }
+    loe_score = loe_mapping.get(loe_di, 0.3)
+
+    if user_interactions.empty and quiz_results.empty and enrollments.empty:
+        return loe_score  # Rely on LoE_DI for new users
+
+    # Performance-based competency
     avg_quiz_score = quiz_results['score'].mean() / 100 if not quiz_results.empty else 0
     completion_rate = len(enrollments[enrollments['status'] == 'completed']) / len(enrollments) if not enrollments.empty else 0
     avg_completion_time = (enrollments['completed_at'] - enrollments['enrolled_at']).mean().total_seconds() / 3600 if not enrollments.empty and enrollments['completed_at'].notnull().any() else 0
     avg_completion_time_score = max(0, 1 - avg_completion_time / 24)
     total_courses_completed = len(enrollments[enrollments['status'] == 'completed'])
-    competency_score = (0.4 * avg_quiz_score) + (0.3 * completion_rate) + (0.2 * avg_completion_time_score) + (0.1 * min(total_courses_completed / 10, 1))
+
+    # Performance-based score (70% weight)
+    performance_score = (
+        0.4 * avg_quiz_score +
+        0.3 * completion_rate +
+        0.2 * avg_completion_time_score +
+        0.1 * min(total_courses_completed / 10, 1)
+    )
+
+    # Blend performance (70%) and LoE_DI (30%)
+    competency_score = 0.7 * performance_score + 0.3 * loe_score
     return min(max(competency_score, 0.3), 0.9)
 
 def get_popular_courses(courses_list, user_interactions, limit=5):
@@ -1492,15 +1528,48 @@ def get_popular_courses(courses_list, user_interactions, limit=5):
     popular_courses = approved_courses.sort_values(['enrollment_count', 'Course Rating'], ascending=[False, False]).head(limit)
     return [get_course_details(row['course_id'], courses_list) for _, row in popular_courses.iterrows()]
 
+# def build_learning_pathways(courses_list, similarity):
+#     """Construct learning pathways using course similarity and difficulty."""
+#     G = nx.DiGraph()
+#     for i, row_i in courses_list.iterrows():
+#         G.add_node(row_i['course_id'], difficulty=normalize_difficulty(row_i['Difficulty Level']))
+#         for j, row_j in courses_list.iterrows():
+#             if i != j and normalize_difficulty(row_j['Difficulty Level']) > normalize_difficulty(row_i['Difficulty Level']):
+#                 weight = 1 - similarity[i][j]
+#                 G.add_edge(row_i['course_id'], row_j['course_id'], weight=weight)
+    
+#     pathways = {}
+#     for course_id in courses_list['course_id']:
+#         successors = nx.single_source_dijkstra_path(G, course_id)
+#         pathways[course_id] = successors
+#     return pathways
 def build_learning_pathways(courses_list, similarity):
-    """Construct learning pathways using course similarity and difficulty."""
+    """Construct learning pathways using course similarity, difficulty, and topic progression."""
     G = nx.DiGraph()
     for i, row_i in courses_list.iterrows():
         G.add_node(row_i['course_id'], difficulty=normalize_difficulty(row_i['Difficulty Level']))
+        topics_i = extract_topic_sequence(row_i)
+        
         for j, row_j in courses_list.iterrows():
-            if i != j and normalize_difficulty(row_j['Difficulty Level']) > normalize_difficulty(row_i['Difficulty Level']):
-                weight = 1 - similarity[i][j]
-                G.add_edge(row_i['course_id'], row_j['course_id'], weight=weight)
+            if i != j:
+                topics_j = extract_topic_sequence(row_j)
+                # Check if j builds on i's topics (e.g., j contains next topics)
+                topic_overlap = len(set(topics_i) & set(topics_j))
+                is_progression = False
+                
+                # j is a progression if it includes next topics or has higher difficulty
+                if topics_j and topics_i:
+                    last_topic_i = topics_i[-1]
+                    if last_topic_i in topics_j and topics_j.index(last_topic_i) < len(topics_j) - 1:
+                        is_progression = True
+                    elif topic_overlap > 0 and normalize_difficulty(row_j['Difficulty Level']) > normalize_difficulty(row_i['Difficulty Level']):
+                        is_progression = True
+                
+                if is_progression:
+                    weight = 1 - similarity[i][j]  # Lower similarity means higher weight
+                    # Reduce weight if high topic overlap (encourage progression)
+                    weight *= (1 - topic_overlap / max(len(topics_i), len(topics_j), 1))
+                    G.add_edge(row_i['course_id'], row_j['course_id'], weight=weight)
     
     pathways = {}
     for course_id in courses_list['course_id']:
@@ -1528,8 +1597,209 @@ def get_course_details(course_id, courses_list):
             'instructor_id': course.get('Instructor IDs', '0')
         }
     return None
+def deduplicate_similar_courses(content_scores, courses_list, user_interactions, preferred_instructors, preferred_categories, competency_score, similarity):
+    """Deduplicate courses with similar content, selecting the best based on multiple criteria."""
+    # Calculate enrollment counts for popularity
+    enrollment_counts = user_interactions.groupby('course_id').size().to_dict()
+    max_enrollments = max(enrollment_counts.values(), default=1) or 1  # Avoid division by zero
 
-def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, similarity=None, svd=None, user_interactions=None, user_competency=None, user_features=None, svd_predictions=None, pathways=None):
+    # Group courses by high similarity (threshold > 0.9)
+    similar_groups = []
+    used_course_ids = set()
+    for cid1, score1 in content_scores.items():
+        if cid1 in used_course_ids:
+            continue
+        group = [(cid1, score1)]
+        for cid2, score2 in content_scores.items():
+            if cid2 != cid1 and cid2 not in used_course_ids:
+                # Check similarity between cid1 and cid2
+                idx1 = courses_list[courses_list['course_id'] == cid1].index[0]
+                idx2 = courses_list[courses_list['course_id'] == cid2].index[0]
+                if similarity[idx1][idx2] > 0.9:  # High similarity threshold
+                    group.append((cid2, score2))
+                    used_course_ids.add(cid2)
+        if group:
+            similar_groups.append(group)
+        used_course_ids.add(cid1)
+
+    # Select the best course from each group
+    deduplicated_scores = {}
+    for group in similar_groups:
+        best_course = None
+        best_score = -1
+        for cid, content_score in group:
+            # Calculate prioritization score
+            course_row = courses_list[courses_list['course_id'] == cid]
+            course_rating = course_row['Course Rating'].iloc[0] / 5.0  # Normalize to [0, 1]
+            enrollment_score = enrollment_counts.get(cid, 0) / max_enrollments  # Normalize
+            instructor_ids = course_row['Instructor IDs'].iloc[0].split(',') if isinstance(course_row['Instructor IDs'].iloc[0], str) else []
+            instructor_boost = 1.3 if any(i in preferred_instructors for i in instructor_ids) else 1
+            course_categories = course_row['Categories'].iloc[0].split(',') if isinstance(course_row['Categories'].iloc[0], str) else []
+            category_boost = 1.5 if any(cat in preferred_categories for cat in course_categories) else 1
+            difficulty_score = 1 - abs(normalize_difficulty(course_row['Difficulty Level'].iloc[0]) - competency_score)  # Closer to competency is better
+
+            # Weighted score: 40% rating, 30% enrollment, 20% instructor, 10% difficulty
+            prioritization_score = (
+                0.4 * course_rating +
+                0.3 * enrollment_score +
+                0.2 * (instructor_boost - 1) / 0.3 +  # Normalize boost
+                0.1 * difficulty_score
+            ) * category_boost
+
+            if prioritization_score > best_score:
+                best_score = prioritization_score
+                best_course = (cid, content_score)
+
+        if best_course:
+            deduplicated_scores[best_course[0]] = best_course[1]
+
+    return deduplicated_scores
+
+# def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, similarity=None, svd=None, user_interactions=None, user_competency=None, user_features=None, svd_predictions=None, pathways=None,student_categories=None,reviews=None):
+#     """
+#     Generate course recommendations based on user_id, course_name, or both.
+#     Returns a list of dictionaries with complete course details.
+#     """
+#     if user_id is None and course_name is None:
+#         logger.info("Generating popular course recommendations")
+#         return get_popular_courses(courses_list, user_interactions)
+
+#     recommended_courses = []
+#     competency_score = user_competency[user_competency['user_id'] == user_id]['competency_score'].iloc[0] if user_id in user_competency['user_id'].values else 0.3
+#     preferred_categories = student_categories[student_categories['user_id'] == user_id]['category_name'].tolist() if user_id is not None else []
+#     if user_id is not None:
+#         user_cluster = user_features[user_features['user_id'] == user_id]['cluster'].iloc[0] if user_id in user_features['user_id'].values else 0
+#         cluster_users = user_features[user_features['cluster'] == user_cluster]['user_id']
+#         cluster_interactions = user_interactions[user_interactions['user_id'].isin(cluster_users)]
+        
+#         # Use precomputed SVD predictions
+#         cf_scores = svd_predictions.get(user_id, {})
+#         # Filter courses interacted by cluster users
+#         course_ids = cluster_interactions['course_id'].unique()
+#         course_ids = [cid for cid in course_ids if cid in courses_list['course_id'].values]
+
+#         # Kiểm tra đánh giá thấp với feedback_type
+#         low_rated_courses = reviews[(reviews['user_id'] == user_id) & (reviews['rating'] <= 2) & 
+#                                    (reviews['feedback_type'] != 'not_interested')]['course_id'].tolist()
+#         if low_rated_courses and course_name:
+#             alpha = 0.8  # Ưu tiên content-based nếu đánh giá thấp không phải do không quan tâm
+
+#         preferred_instructors = user_interactions[user_interactions['user_id'] == user_id][['course_id', 'rating']]
+#         preferred_instructors = preferred_instructors[preferred_instructors['rating'] >= 4]['course_id']
+#         preferred_instructors = courses_list[courses_list['course_id'].isin(preferred_instructors)]['Instructor IDs'].apply(lambda x: x.split(',') if isinstance(x, str) else []).explode().unique()
+
+#         if course_name is None:
+#             valid_courses = [
+#                 cid for cid in course_ids
+#                 if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score
+#                 and courses_list[courses_list['course_id'] == cid]['Status'].iloc[0] == 'approved'
+#             ]
+#             # Ưu tiên khóa học trong danh mục
+#             category_boosted_courses = []
+#             for cid in valid_courses:
+#                 course_categories = courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0].split(',') if isinstance(courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0], str) else []
+#                 category_boost = 1.5 if any(cat in preferred_categories for cat in course_categories) else 1
+#                 pathway_boost = 1.2 if cid in pathways.get(cid, {}) else 1
+#                 score = cf_scores.get(cid, 0) * category_boost * pathway_boost
+#                 category_boosted_courses.append((cid, score))
+
+#             top_courses = sorted(
+#                 [(cid, cf_scores.get(cid, 0) * (1.2 if cid in pathways.get(cid, {}) else 1)) for cid in valid_courses],
+#                 key=lambda x: x[1], reverse=True
+#             )[:5]
+#             for course_id, _ in top_courses:
+#                 course_details = get_course_details(course_id, courses_list)
+#                 if course_details:
+#                     recommended_courses.append(course_details)
+#         else:
+#             # try:
+#             #     course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+#             #     course_id = courses_list.iloc[course_index]['course_id']
+#             #     distances = similarity[course_index]
+#             #     content_scores = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:10]
+#             #     content_scores = {courses_list.iloc[idx]['course_id']: score for idx, score in content_scores}
+
+#             #     hybrid_scores = {}
+#             #     for cid in content_scores:
+#             #         if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score:
+#             #             instructor_ids = courses_list[courses_list['course_id'] == cid]['Instructor IDs'].iloc[0]
+#             #             instructor_ids = instructor_ids.split(',') if isinstance(instructor_ids, str) else []
+#             #             instructor_boost = 1.3 if any(i in preferred_instructors for i in instructor_ids) else 1
+#             #             pathway_boost = 1.2 if cid in pathways.get(course_id, {}) else 1
+#             #             hybrid_scores[cid] = (
+#             #                 alpha * content_scores[cid] +
+#             #                 (1 - alpha) * cf_scores.get(cid, 0)
+#             #             ) * instructor_boost * pathway_boost
+
+#             #     top_courses = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:5]
+#             #     for course_id, _ in top_courses:
+#             #         course_details = get_course_details(course_id, courses_list)
+#             #         if course_details:
+#             #             recommended_courses.append(course_details)
+#             # except IndexError:
+#             #     return [f"Course '{course_name}' not found."]
+#             try:
+#                 course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+#                 course_id = courses_list.iloc[course_index]['course_id']
+#                 distances = similarity[course_index]
+#                 content_scores = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:10]
+#                 content_scores = {courses_list.iloc[idx]['course_id']: score for idx, score in content_scores}
+
+#                 hybrid_scores = {}
+#                 for cid in content_scores:
+#                     if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score:
+#                         instructor_ids = courses_list[courses_list['course_id'] == cid]['Instructor IDs'].iloc[0]
+#                         instructor_ids = instructor_ids.split(',') if isinstance(instructor_ids, str) else []
+#                         instructor_boost = 1.3 if any(i in preferred_instructors for i in instructor_ids) else 1
+#                         pathway_boost = 1.2 if cid in pathways.get(course_id, {}) else 1
+#                         course_categories = courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0].split(',') if isinstance(courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0], str) else []
+#                         category_boost = 1.5 if any(cat in preferred_categories for cat in course_categories) else 1
+#                         hybrid_scores[cid] = (
+#                             alpha * content_scores[cid] +
+#                             (1 - alpha) * cf_scores.get(cid, 0)
+#                         ) * instructor_boost * pathway_boost * category_boost
+
+#                 top_courses = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:5]
+#                 for course_id, _ in top_courses:
+#                     course_details = get_course_details(course_id, courses_list)
+#                     if course_details:
+#                         recommended_courses.append(course_details)
+#             except IndexError:
+#                 return [f"Course '{course_name}' not found."]
+#     else:
+#         try:
+#             course_index = courses_list[courses_list['course_name'] == course_name].index[0]
+#             course_id = courses_list.iloc[course_index]['course_id']
+#             distances = sorted(list(enumerate(similarity[course_index])), reverse=True, key=lambda x: x[1])
+#             for i in distances[1:6]:
+#                 next_course_id = courses_list.iloc[i[0]]['course_id']
+#                 if normalize_difficulty(courses_list.iloc[i[0]]['Difficulty Level']) >= competency_score:
+#                     if next_course_id in pathways.get(course_id, {}):
+#                         course_details = get_course_details(next_course_id, courses_list)
+#                         if course_details:
+#                             recommended_courses.append(course_details)
+#         except IndexError:
+#             return [f"Course '{course_name}' not found."]
+
+#     return recommended_courses
+def extract_topic_sequence(course_row):
+    """Extract ordered list of topics from Skills or Course Description."""
+    skills = course_row['Skills'].split(',') if isinstance(course_row['Skills'], str) else []
+    skills = [s.strip().lower() for s in skills if s.strip()]
+    
+    # Fallback to Course Description if Skills is empty
+    if not skills and isinstance(course_row['Course Description'], str):
+        # Simple keyword-based extraction (can be enhanced with NLP)
+        description = course_row['Course Description'].lower()
+        common_topics = ['html', 'css', 'javascript', 'python', 'sql', 'react', 'angular']
+        skills = [topic for topic in common_topics if topic in description]
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    ordered_topics = [s for s in skills if not (s in seen or seen.add(s))]
+    return ordered_topics
+
+def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, similarity=None, svd=None, user_interactions=None, user_competency=None, user_features=None, svd_predictions=None, pathways=None, student_categories=None, reviews=None):
     """
     Generate course recommendations based on user_id, course_name, or both.
     Returns a list of dictionaries with complete course details.
@@ -1540,7 +1810,8 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
 
     recommended_courses = []
     competency_score = user_competency[user_competency['user_id'] == user_id]['competency_score'].iloc[0] if user_id in user_competency['user_id'].values else 0.3
-
+    preferred_categories = student_categories[student_categories['user_id'] == user_id]['category_name'].tolist() if user_id is not None else []
+    
     if user_id is not None:
         user_cluster = user_features[user_features['user_id'] == user_id]['cluster'].iloc[0] if user_id in user_features['user_id'].values else 0
         cluster_users = user_features[user_features['cluster'] == user_cluster]['user_id']
@@ -1548,9 +1819,19 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
         
         # Use precomputed SVD predictions
         cf_scores = svd_predictions.get(user_id, {})
-        # Filter courses interacted by cluster users
+        # Filter courses interacted by cluster users and ensure status is approved
         course_ids = cluster_interactions['course_id'].unique()
-        course_ids = [cid for cid in course_ids if cid in courses_list['course_id'].values]
+        course_ids = [
+            cid for cid in course_ids 
+            if cid in courses_list['course_id'].values 
+            and courses_list[courses_list['course_id'] == cid]['Status'].iloc[0] == 'approved'
+        ]
+
+        # Kiểm tra đánh giá thấp với feedback_type
+        low_rated_courses = reviews[(reviews['user_id'] == user_id) & (reviews['rating'] <= 2) & 
+                                   (reviews['feedback_type'] != 'not_interested')]['course_id'].tolist()
+        if low_rated_courses and course_name:
+            alpha = 0.8  # Prioritize content-based if low ratings are not due to lack of interest
 
         preferred_instructors = user_interactions[user_interactions['user_id'] == user_id][['course_id', 'rating']]
         preferred_instructors = preferred_instructors[preferred_instructors['rating'] >= 4]['course_id']
@@ -1560,7 +1841,17 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
             valid_courses = [
                 cid for cid in course_ids
                 if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score
+                and courses_list[courses_list['course_id'] == cid]['Status'].iloc[0] == 'approved'
             ]
+            # Prioritize courses in preferred categories
+            category_boosted_courses = []
+            for cid in valid_courses:
+                course_categories = courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0].split(',') if isinstance(courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0], str) else []
+                category_boost = 1.5 if any(cat in preferred_categories for cat in course_categories) else 1
+                pathway_boost = 1.2 if cid in pathways.get(cid, {}) else 1
+                score = cf_scores.get(cid, 0) * category_boost * pathway_boost
+                category_boosted_courses.append((cid, score))
+
             top_courses = sorted(
                 [(cid, cf_scores.get(cid, 0) * (1.2 if cid in pathways.get(cid, {}) else 1)) for cid in valid_courses],
                 key=lambda x: x[1], reverse=True
@@ -1573,21 +1864,42 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
             try:
                 course_index = courses_list[courses_list['course_name'] == course_name].index[0]
                 course_id = courses_list.iloc[course_index]['course_id']
+                if courses_list[courses_list['course_id'] == course_id]['Status'].iloc[0] != 'approved':
+                    return [f"Course '{course_name}' is not approved."]
                 distances = similarity[course_index]
                 content_scores = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:10]
-                content_scores = {courses_list.iloc[idx]['course_id']: score for idx, score in content_scores}
+                content_scores = {
+                    courses_list.iloc[idx]['course_id']: score 
+                    for idx, score in content_scores 
+                    if courses_list.iloc[idx]['Status'] == 'approved'
+                    and courses_list.iloc[idx]['course_id'] in pathways.get(course_id, {})
+                }
+                preferred_instructors = preferred_instructors[preferred_instructors['rating'] >= 4]['course_id']      
+                
+                # Deduplicate similar courses, reduce instructor bias
+                content_scores = deduplicate_similar_courses(
+                    content_scores, courses_list, user_interactions, 
+                    preferred_instructors, preferred_categories, competency_score,similarity
+                )
 
                 hybrid_scores = {}
                 for cid in content_scores:
-                    if normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score:
+                    if (normalize_difficulty(courses_list[courses_list['course_id'] == cid]['Difficulty Level'].iloc[0]) >= competency_score and
+                        courses_list[courses_list['course_id'] == cid]['Status'].iloc[0] == 'approved'):
                         instructor_ids = courses_list[courses_list['course_id'] == cid]['Instructor IDs'].iloc[0]
                         instructor_ids = instructor_ids.split(',') if isinstance(instructor_ids, str) else []
-                        instructor_boost = 1.3 if any(i in preferred_instructors for i in instructor_ids) else 1
+                        instructor_boost = 1.1 if any(i in preferred_instructors for i in instructor_ids) else 1  # Reduced boost for diversity
                         pathway_boost = 1.2 if cid in pathways.get(course_id, {}) else 1
+                        course_categories = courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0].split(',') if isinstance(courses_list[courses_list['course_id'] == cid]['Categories'].iloc[0], str) else []
+                        category_boost = 1.5 if any(cat in preferred_categories for cat in course_categories) else 1
+                        # Add topic progression boost
+                        topics_current = extract_topic_sequence(courses_list[courses_list['course_id'] == course_id].iloc[0])
+                        topics_next = extract_topic_sequence(courses_list[courses_list['course_id'] == cid].iloc[0])
+                        topic_boost = 1.3 if topics_next and topics_current and topics_current[-1] in topics_next and topics_next.index(topics_current[-1]) < len(topics_next) - 1 else 1
                         hybrid_scores[cid] = (
                             alpha * content_scores[cid] +
                             (1 - alpha) * cf_scores.get(cid, 0)
-                        ) * instructor_boost * pathway_boost
+                        ) * instructor_boost * pathway_boost * category_boost * topic_boost
 
                 top_courses = sorted(hybrid_scores.items(), key=lambda x: x[1], reverse=True)[:5]
                 for course_id, _ in top_courses:
@@ -1600,10 +1912,26 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
         try:
             course_index = courses_list[courses_list['course_name'] == course_name].index[0]
             course_id = courses_list.iloc[course_index]['course_id']
+            if courses_list[courses_list['course_id'] == course_id]['Status'].iloc[0] != 'approved':
+                return [f"Course '{course_name}' is not approved."]
             distances = sorted(list(enumerate(similarity[course_index])), reverse=True, key=lambda x: x[1])
-            for i in distances[1:6]:
-                next_course_id = courses_list.iloc[i[0]]['course_id']
-                if normalize_difficulty(courses_list.iloc[i[0]]['Difficulty Level']) >= competency_score:
+            content_scores = {
+                courses_list.iloc[idx]['course_id']: score 
+                for idx, score in distances[1:10] 
+                if courses_list.iloc[idx]['Status'] == 'approved'
+                and courses_list.iloc[idx]['course_id'] in pathways.get(course_id, {})
+            }
+            preferred_instructors = set()
+            # Deduplicate similar courses
+            content_scores = deduplicate_similar_courses(
+                content_scores, courses_list, user_interactions, 
+                preferred_instructors, preferred_categories, competency_score,similarity
+            )
+
+            for i, (cid, _) in enumerate(sorted(content_scores.items(), key=lambda x: x[1], reverse=True)[:5]):
+                next_course_id = cid
+                if (normalize_difficulty(courses_list[courses_list['course_id'] == next_course_id]['Difficulty Level'].iloc[0]) >= competency_score and
+                    courses_list[courses_list['course_id'] == next_course_id]['Status'].iloc[0] == 'approved'):
                     if next_course_id in pathways.get(course_id, {}):
                         course_details = get_course_details(next_course_id, courses_list)
                         if course_details:
@@ -1626,6 +1954,8 @@ def update_model():
         user_behavior = pd.read_csv('Data/Courseuserbehavior_new.csv')
         quiz_results = pd.read_csv('Data/quiz_results.csv')
         enrollments = pd.read_csv('Data/enrollments.csv')
+        reviews = pd.read_csv('Data/reviews.csv')
+        student_categories = pd.read_csv('Data/student_categories.csv')
     except FileNotFoundError as e:
         logger.error(f"Data file missing: {e}")
         raise Exception(f"Data file missing: {e}")
@@ -1670,14 +2000,35 @@ def update_model():
     course_id_map = {cid: np.random.choice(courses_list['course_id']) for cid in unique_course_ids}
     user_id_map = {uid: i+1 for i, uid in enumerate(unique_user_ids)}
 
+    # user_interactions = pd.DataFrame({
+    #     'user_id': user_behavior['userid_DI'].map(user_id_map),
+    #     'course_id': user_behavior['course_id'].map(course_id_map),
+    #     'rating': np.random.choice([1, 2, 3, 4, 5], size=len(user_behavior), p=[0.1, 0.1, 0.2, 0.3, 0.3]),
+    #     'viewed': user_behavior['viewed'].astype(bool),
+    #     'completed': user_behavior['certified'].astype(bool),
+    #     'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
+    # })
     user_interactions = pd.DataFrame({
-        'user_id': user_behavior['userid_DI'].map(user_id_map),
-        'course_id': user_behavior['course_id'].map(course_id_map),
-        'rating': np.random.choice([1, 2, 3, 4, 5], size=len(user_behavior), p=[0.1, 0.1, 0.2, 0.3, 0.3]),
-        'viewed': user_behavior['viewed'].astype(bool),
-        'completed': user_behavior['certified'].astype(bool),
-        'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
+    'user_id': user_behavior['userid_DI'].map(user_id_map),
+    'course_id': user_behavior['course_id'].map(course_id_map),
+    'rating': np.random.choice([1, 2, 3, 4, 5], size=len(user_behavior), p=[0.1, 0.1, 0.2, 0.3, 0.3]),
+    'viewed': user_behavior['viewed'].astype(bool),
+    'completed': user_behavior['certified'].astype(bool),
+    'timestamp': pd.to_datetime(user_behavior['last_event_DI'], errors='coerce').fillna(pd.Timestamp.now())
     })
+
+    # Gộp feedback_type từ reviews
+    reviews_subset = reviews[['user_id', 'course_id', 'rating', 'feedback_type']].copy()
+    user_interactions = user_interactions.merge(
+        reviews_subset,
+        on=['user_id', 'course_id'],
+        how='left',
+        suffixes=('', '_review')
+    )
+    # Sử dụng rating từ reviews nếu có, nếu không giữ rating ngẫu nhiên
+    user_interactions['rating'] = user_interactions['rating_review'].combine_first(user_interactions['rating'])
+    user_interactions['feedback_type'] = user_interactions['feedback_type'].fillna('unknown')
+    user_interactions = user_interactions.drop(columns=['rating_review'])
 
     quiz_results['started_at'] = pd.to_datetime(quiz_results['started_at'], errors='coerce')
     quiz_results['completed_at'] = pd.to_datetime(quiz_results['completed_at'], errors='coerce')
@@ -1693,6 +2044,13 @@ def update_model():
         ) for uid in unique_user_ids]
     })
 
+    # kmeans = KMeans(n_clusters=5, random_state=42)
+    # user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
+    # user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
+    # user_features['final_cc_cname_DI'] = user_features['final_cc_cname_DI'].fillna('Unknown')
+    # user_features['LoE_DI'] = user_features['LoE_DI'].fillna('Unknown')
+    # user_features['YoB'] = user_features['YoB'].fillna(user_features['YoB'].median())
+    # user_features['cluster'] = kmeans.fit_predict(user_features[['YoB']].values)
     kmeans = KMeans(n_clusters=5, random_state=42)
     user_features = user_behavior[['userid_DI', 'final_cc_cname_DI', 'LoE_DI', 'YoB']].drop_duplicates()
     user_features['user_id'] = user_features['userid_DI'].map(user_id_map)
@@ -1700,6 +2058,19 @@ def update_model():
     user_features['LoE_DI'] = user_features['LoE_DI'].fillna('Unknown')
     user_features['YoB'] = user_features['YoB'].fillna(user_features['YoB'].median())
     user_features['cluster'] = kmeans.fit_predict(user_features[['YoB']].values)
+
+    # Calculate user competency with LoE_DI
+    user_competency = pd.DataFrame({
+        'user_id': [user_id_map[uid] for uid in unique_user_ids],
+        'competency_score': [
+            calculate_competency(
+                user_interactions[user_interactions['user_id'] == user_id_map[uid]],
+                quiz_results[quiz_results['user_id'] == user_id_map[uid]],
+                enrollments[enrollments['user_id'] == user_id_map[uid]],
+                loe_di=user_features[user_features['user_id'] == user_id_map[uid]]['LoE_DI'].iloc[0] if user_id_map[uid] in user_features['user_id'].values else 'Unknown'
+            ) for uid in unique_user_ids
+        ]
+    })
 
     reader = Reader(rating_scale=(1, 5))
     surprise_data = Dataset.load_from_df(user_interactions[['user_id', 'course_id', 'rating']], reader)
@@ -1735,6 +2106,10 @@ def update_model():
             pickle.dump(svd_predictions, f)
         with open('models/pathways.pkl', 'wb') as f:
             pickle.dump(pathways, f)
+        with open('models/student_categories.pkl', 'wb') as f:
+            pickle.dump(student_categories, f)
+        with open('models/reviews.pkl', 'wb') as f:
+            pickle.dump(reviews, f)
         logger.info("All files saved successfully")
     except Exception as e:
         logger.error(f"Error saving pickle files: {e}")

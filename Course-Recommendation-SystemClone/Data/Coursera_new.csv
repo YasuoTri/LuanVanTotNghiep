@@ -1,0 +1,101 @@
+﻿course_id,Course Name,University,Difficulty Level,Course Rating,Course URL,Course Description,Skills,Price,Status,Categories,Instructor IDs
+1,Course 1,MIT,Beginner,4.0,courses_course_1,Description for course 1,Skill 1,954308,approved,"Data Science,Marketing,Language","1,1,1"
+2,Course 2,MIT,Advanced,4.5,courses/course_2,Description for course 2,Skill 2,586769,approved,"Business,Photography","2,2"
+3,Course 3,Stanford,Advanced,4.0,courses/course_3,Description for course 3,Skill 3,524180,rejected,Personal Development,2
+4,Course 4,Coursera,Advanced,0.0,courses/course_4,Description for course 4,Skill 4,422621,unavailable,"Data Science,Music,Photography","1,1,1"
+5,Course 5,MIT,Intermediate,3.666666666,courses/course_5,Description for course 5,Skill 5,401111,unavailable,"Programming,Marketing,Photography","3,3,3"
+6,Course 6,Harvard,Intermediate,0.0,courses/course_6,Description for course 6,Skill 6,193304,rejected,"Programming,Business,Design","1,1,1"
+7,Course 7,edX,Advanced,3.5,courses/course_7,Description for course 7,Skill 7,987808,rejected,"Business,Marketing","2,2"
+8,Course 8,Coursera,Intermediate,0.0,courses/course_8,Description for course 8,Skill 8,701379,unavailable,"Design,Marketing","2,2"
+9,Course 9,Harvard,Advanced,0.0,courses/course_9,Description for course 9,Skill 9,168873,unavailable,Music,3
+10,Course 10,Coursera,Intermediate,0.0,courses/course_10,Description for course 10,Skill 10,193405,rejected,"Data Science,Language","3,3"
+11,Course 11,Coursera,Advanced,0.0,courses/course_11,Description for course 11,Skill 11,279126,unavailable,Personal Development,3
+12,Course 12,MIT,Intermediate,3.0,courses/course_12,Description for course 12,Skill 12,682586,approved,"Personal Development,Music,Photography","2,2,2"
+13,Course 13,Harvard,Beginner,5.0,courses/course_13,Description for course 13,Skill 13,989463,pending,"Business,Personal Development","2,2"
+14,Course 14,Udemy,Advanced,4.0,courses/course_14,Description for course 14,Skill 14,468063,approved,"Design,Language","2,2"
+15,Course 15,Stanford,Beginner,0.0,courses/course_15,Description for course 15,Skill 15,695233,unavailable,"Programming,Language","1,1"
+16,Course 16,Stanford,Intermediate,3.5,courses/course_16,Description for course 16,Skill 16,412038,approved,"Data Science,Business,Photography","3,3,3"
+17,Course 17,Local University,Advanced,4.0,courses/course_17,Description for course 17,Skill 17,880380,rejected,Business,2
+18,Course 18,Coursera,Advanced,4.5,courses/course_18,Description for course 18,Skill 18,599632,pending,"Health & Fitness,Photography","1,1"
+19,Course 19,Local University,Beginner,0.0,courses/course_19,Description for course 19,Skill 19,991203,pending,"Marketing,Health & Fitness","2,2"
+20,Course 20,Stanford,Intermediate,4.0,courses/course_20,Description for course 20,Skill 20,238176,rejected,Business,3
+21,Course 21,Udemy,Intermediate,3.6,courses/course_21,Description for course 21,Skill 21,502605,approved,"Programming,Design,Photography","2,2,2"
+22,Course 22,Local University,Advanced,2.5,courses/course_22,Description for course 22,Skill 22,769630,unavailable,"Business,Health & Fitness","2,2"
+23,Course 23,MIT,Beginner,0.0,courses/course_23,Description for course 23,Skill 23,581379,rejected,Business,2
+24,Course 24,MIT,Intermediate,3.0,courses/course_24,Description for course 24,Skill 24,610578,pending,"Data Science,Business,Photography","1,1,1"
+25,Course 25,Udemy,Advanced,4.0,courses/course_25,Description for course 25,Skill 25,359471,approved,"Personal Development,Health & Fitness","3,3"
+26,Course 26,Local University,Beginner,0.0,courses/course_26,Description for course 26,Skill 26,1619,unavailable,Marketing,2
+27,Course 27,Local University,Intermediate,0.0,courses/course_27,Description for course 27,Skill 27,997336,approved,"Marketing,Personal Development,Music","2,2,2"
+28,Course 28,MIT,Beginner,3.0,courses/course_28,Description for course 28,Skill 28,671823,rejected,"Programming,Design,Marketing","2,2,2"
+29,Course 29,Coursera,Beginner,4.0,courses/course_29,Description for course 29,Skill 29,978559,approved,"Marketing,Photography","1,1"
+30,Course 30,Local University,Advanced,2.0,courses/course_30,Description for course 30,Skill 30,499333,approved,"Programming,Data Science","3,3"
+31,Course 31,Harvard,Advanced,0.0,courses/course_31,Description for course 31,Skill 31,263407,unavailable,"Health & Fitness,Language","2,2"
+32,Course 32,Harvard,Beginner,3.5,courses/course_32,Description for course 32,Skill 32,937027,approved,Programming,1
+33,Course 33,Coursera,Beginner,5.0,courses/course_33,Description for course 33,Skill 33,276750,rejected,Music,1
+34,Course 34,Coursera,Advanced,2.0,courses/course_34,Description for course 34,Skill 34,848992,unavailable,"Design,Photography","2,2"
+35,Course 35,Coursera,Beginner,3.5,courses/course_35,Description for course 35,Skill 35,395700,approved,Photography,2
+36,Course 36,edX,Intermediate,4.0,courses/course_36,Description for course 36,Skill 36,690060,rejected,"Business,Health & Fitness,Photography","3,3,3"
+37,Course 37,Udemy,Advanced,4.0,courses/course_37,Description for course 37,Skill 37,143769,approved,"Data Science,Business,Language","3,3,3"
+38,Course 38,edX,Advanced,0.0,courses/course_38,Description for course 38,Skill 38,95965,pending,"Business,Marketing","3,3"
+39,Course 39,Harvard,Advanced,3.0,courses/course_39,Description for course 39,Skill 39,330009,unavailable,Health & Fitness,1
+40,Course 40,edX,Intermediate,5.0,courses/course_40,Description for course 40,Skill 40,357656,unavailable,"Programming,Personal Development,Music","3,3,3"
+41,Course 41,Harvard,Advanced,0.0,courses/course_41,Description for course 41,Skill 41,967854,unavailable,"Business,Music,Language","1,1,1"
+42,Course 42,edX,Advanced,5.0,courses/course_42,Description for course 42,Skill 42,983561,pending,"Programming,Design","3,3"
+43,Course 43,MIT,Advanced,3.666666666,courses/course_43,Description for course 43,Skill 43,715930,unavailable,"Data Science,Business","2,2"
+44,Course 44,edX,Beginner,3.5,courses/course_44,Description for course 44,Skill 44,50000,pending,"Programming,Design,Photography","1,1,1"
+45,Course 45,MIT,Advanced,4.0,courses/course_45,Description for course 45,Skill 45,850445,unavailable,Marketing,3
+46,Course 46,Stanford,Intermediate,3.5,courses/course_46,Description for course 46,Skill 46,401360,unavailable,"Programming,Marketing","3,3"
+47,Course 47,edX,Beginner,3.75,courses/course_47,Description for course 47,Skill 47,574995,unavailable,"Business,Music,Photography","1,1,1"
+48,Course 48,Coursera,Advanced,0.0,courses/course_48,Description for course 48,Skill 48,74641,approved,"Design,Personal Development,Photography","3,3,3"
+49,Course 49,Harvard,Intermediate,0.0,courses/course_49,Description for course 49,Skill 49,858127,unavailable,"Data Science,Marketing","3,3"
+50,Course 50,Coursera,Intermediate,0.0,courses/course_50,Description for course 50,Skill 50,611656,rejected,Music,1
+51,Course 51,Coursera,Beginner,4.0,courses/course_51,Description for course 51,Skill 51,498206,pending,"Design,Personal Development,Language","2,2,2"
+52,Course 52,Stanford,Beginner,3.5,courses/course_52,Description for course 52,Skill 52,888742,approved,"Data Science,Business,Language","2,2,2"
+53,Course 53,edX,Beginner,0.0,courses/course_53,Description for course 53,Skill 53,867726,unavailable,"Data Science,Health & Fitness,Music","3,3,3"
+54,Course 54,edX,Intermediate,5.0,courses/course_54,Description for course 54,Skill 54,23794,pending,Photography,1
+55,Course 55,Udemy,Intermediate,0.0,courses/course_55,Description for course 55,Skill 55,898683,approved,"Design,Marketing,Language","2,2,2"
+56,Course 56,Stanford,Advanced,3.666666666,courses/course_56,Description for course 56,Skill 56,326571,approved,"Business,Health & Fitness","1,1"
+57,Course 57,Local University,Advanced,3.0,courses/course_57,Description for course 57,Skill 57,639447,approved,"Data Science,Design","2,2"
+58,Course 58,Coursera,Advanced,3.666666666,courses/course_58,Description for course 58,Skill 58,831594,pending,"Data Science,Music","2,2"
+59,Course 59,edX,Advanced,0.0,courses/course_59,Description for course 59,Skill 59,156625,rejected,Programming,2
+60,Course 60,Harvard,Intermediate,0.0,courses/course_60,Description for course 60,Skill 60,150463,pending,Health & Fitness,3
+61,Course 61,Local University,Beginner,4.0,courses/course_61,Description for course 61,Skill 61,780577,pending,"Data Science,Marketing,Language","1,1,1"
+62,Course 62,Stanford,Intermediate,0.0,courses/course_62,Description for course 62,Skill 62,881193,pending,Business,3
+63,Course 63,Harvard,Beginner,4.0,courses/course_63,Description for course 63,Skill 63,92468,pending,Data Science,3
+64,Course 64,MIT,Beginner,0.0,courses/course_64,Description for course 64,Skill 64,170856,pending,Personal Development,2
+65,Course 65,edX,Intermediate,0.0,courses/course_65,Description for course 65,Skill 65,269062,approved,"Personal Development,Language","2,2"
+66,Course 66,MIT,Intermediate,4.0,courses/course_66,Description for course 66,Skill 66,14847,approved,Programming,1
+67,Course 67,edX,Advanced,0.0,courses/course_67,Description for course 67,Skill 67,491695,rejected,"Data Science,Personal Development,Music","2,2,2"
+68,Course 68,Local University,Beginner,3.0,courses/course_68,Description for course 68,Skill 68,756753,unavailable,Business,3
+69,Course 69,Harvard,Advanced,4.0,courses/course_69,Description for course 69,Skill 69,129212,rejected,"Programming,Design,Personal Development","1,1,1"
+70,Course 70,Udemy,Advanced,4.0,courses/course_70,Description for course 70,Skill 70,751164,unavailable,"Marketing,Health & Fitness,Photography","1,1,1"
+71,Course 71,Harvard,Intermediate,4.0,courses/course_71,Description for course 71,Skill 71,693599,rejected,"Design,Personal Development,Health & Fitness","3,3,3"
+72,Course 72,Harvard,Beginner,4.0,courses/course_72,Description for course 72,Skill 72,178687,rejected,Language,1
+73,Course 73,Local University,Intermediate,4.5,courses/course_73,Description for course 73,Skill 73,675376,rejected,Marketing,1
+74,Course 74,Harvard,Intermediate,4.0,courses/course_74,Description for course 74,Skill 74,145226,unavailable,Business,2
+75,Course 75,Udemy,Advanced,0.0,courses/course_75,Description for course 75,Skill 75,828196,rejected,Health & Fitness,1
+76,Course 76,Local University,Advanced,3.0,courses/course_76,Description for course 76,Skill 76,828375,rejected,"Data Science,Business,Photography","3,3,3"
+77,Course 77,edX,Advanced,0.0,courses/course_77,Description for course 77,Skill 77,322603,rejected,Programming,1
+78,Course 78,Coursera,Beginner,5.0,courses/course_78,Description for course 78,Skill 78,415774,rejected,"Business,Health & Fitness","1,1"
+79,Course 79,MIT,Advanced,3.0,courses/course_79,Description for course 79,Skill 79,967206,unavailable,"Personal Development,Health & Fitness,Language","1,1,1"
+80,Course 80,edX,Beginner,0.0,courses/course_80,Description for course 80,Skill 80,208211,rejected,"Programming,Health & Fitness,Language","3,3,3"
+81,Course 81,Udemy,Intermediate,4.0,courses/course_81,Description for course 81,Skill 81,134335,approved,"Music,Photography,Language","1,1,1"
+82,Course 82,Harvard,Beginner,0.0,courses/course_82,Description for course 82,Skill 82,184372,rejected,Language,1
+83,Course 83,MIT,Beginner,5.0,courses/course_83,Description for course 83,Skill 83,307164,rejected,Data Science,1
+84,Course 84,Coursera,Advanced,5.0,courses/course_84,Description for course 84,Skill 84,360898,pending,Data Science,3
+85,Course 85,Harvard,Intermediate,0.0,courses/course_85,Description for course 85,Skill 85,977706,pending,"Data Science,Business","1,1"
+86,Course 86,MIT,Beginner,0.0,courses/course_86,Description for course 86,Skill 86,723414,approved,"Marketing,Personal Development,Language","2,2,2"
+87,Course 87,edX,Intermediate,3.0,courses/course_87,Description for course 87,Skill 87,506497,unavailable,"Data Science,Personal Development,Photography","1,1,1"
+88,Course 88,Harvard,Advanced,0.0,courses/course_88,Description for course 88,Skill 88,444284,pending,"Data Science,Business","1,1"
+89,Course 89,Stanford,Intermediate,3.0,courses/course_89,Description for course 89,Skill 89,671463,unavailable,"Design,Photography","2,2"
+90,Course 90,Local University,Beginner,4.0,courses/course_90,Description for course 90,Skill 90,435550,rejected,"Programming,Design,Music","3,3,3"
+91,Course 91,Stanford,Beginner,0.0,courses/course_91,Description for course 91,Skill 91,913473,approved,Business,3
+92,Course 92,Stanford,Intermediate,0.0,courses/course_92,Description for course 92,Skill 92,220468,pending,"Programming,Music,Photography","3,3,3"
+93,Course 93,Udemy,Intermediate,3.5,courses/course_93,Description for course 93,Skill 93,955917,approved,"Programming,Marketing,Photography","1,1,1"
+94,Course 94,Coursera,Advanced,3.0,courses/course_94,Description for course 94,Skill 94,134675,unavailable,"Programming,Music,Photography","3,3,3"
+95,Course 95,MIT,Advanced,3.0,courses/course_95,Description for course 95,Skill 95,260113,pending,"Programming,Photography","2,2"
+96,Course 96,Coursera,Beginner,0.0,courses/course_96,Description for course 96,Skill 96,13192,pending,"Programming,Personal Development","3,3"
+97,Course 97,edX,Intermediate,2.0,courses/course_97,Description for course 97,Skill 97,88782,unavailable,Business,1
+98,Course 98,Harvard,Beginner,3.0,courses/course_98,Description for course 98,Skill 98,352817,rejected,Personal Development,3
+99,Course 99,Stanford,Intermediate,5.0,courses/course_99,Description for course 99,Skill 99,2878,pending,"Business,Music","2,2"
+100,Course 100,Stanford,Intermediate,0.0,courses/course_100,Description for course 100,Skill 100,435260,pending,"Marketing,Music","3,3"

@@ -74,6 +74,8 @@ try:
     user_features = pickle.load(open('models/user_features.pkl', 'rb'))
     svd_predictions = pickle.load(open('models/svd_predictions.pkl', 'rb'))
     pathways = pickle.load(open('models/pathways.pkl', 'rb'))
+    student_categories = pickle.load(open('models/student_categories.pkl', 'rb'))
+    reviews = pickle.load(open('models/reviews.pkl', 'rb'))
 except FileNotFoundError as e:
     raise HTTPException(status_code=500, detail=f"Model file missing: {e}")
 
@@ -100,7 +102,9 @@ def get_recommendation(
         user_competency=user_competency,
         user_features=user_features,
         svd_predictions=svd_predictions,
-        pathways=pathways
+        pathways=pathways,
+        student_categories=student_categories,
+        reviews=reviews
     )
     return {"recommendations": result}
 

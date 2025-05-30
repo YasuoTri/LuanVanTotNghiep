@@ -12,7 +12,7 @@ conn = pymysql.connect(
     port=8200,
     user='root',
     password='123',
-    database='course_recommendation5',
+    database='course_recommendation8',
     charset='utf8mb4'
 )
 
@@ -122,5 +122,36 @@ enrollments_df = pd.read_sql(enrollments_query, conn)
 enrollments_df.to_csv('Data/enrollments.csv', index=False, encoding='utf-8-sig')
 print("✅ Exported Data/enrollments.csv")
 
+reviews_query = """
+SELECT 
+    id,
+    user_id,
+    course_id,
+    rating,
+    comment,
+    feedback_type,
+    created_at,
+    deleted_at,
+    updated_at
+FROM reviews
+"""
+reviews_df = pd.read_sql(reviews_query, conn)
+reviews_df.to_csv('Data/reviews.csv', index=False, encoding='utf-8-sig')
+print("✅ Exported Data/reviews.csv")
+
+# ✅ Xuất student_categories.csv từ bảng `student_category`
+student_categories_query = """
+SELECT 
+    sc.student_id,
+    s.user_id,
+    sc.category_id,
+    cat.name AS category_name
+FROM student_category sc
+JOIN categories cat ON sc.category_id = cat.id
+JOIN students s ON sc.student_id = s.id
+"""
+student_categories_df = pd.read_sql(student_categories_query, conn)
+student_categories_df.to_csv('Data/student_categories.csv', index=False, encoding='utf-8-sig')
+print("✅ Exported Data/student_categories.csv")
 # ✅ Đóng kết nối
 conn.close()

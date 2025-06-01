@@ -24,7 +24,7 @@ class CreateCourseRequest extends FormRequest
             'skills' => 'required|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'required|array|exists:categories,id',
-            'instructor_id' => 'required|exists:instructors,id',
+            'instructor_id' => 'nullable|exists:instructors,id',
         ];
     }
 }

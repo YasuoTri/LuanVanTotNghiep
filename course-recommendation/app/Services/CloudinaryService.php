@@ -35,28 +35,30 @@ class CloudinaryService
         return $result;
     }
 
-    /**
+/**
      * Upload image to Cloudinary
      *
      * @param UploadedFile $file
      * @param string $folder
-     * @return string URL của hình ảnh đã upload
+     * @return string URL of the uploaded image
      */
     public function uploadImage(UploadedFile $file, string $folder = 'images'): string
     {
-        return $this->upload($file, $folder, 'image');
+        $result = $this->upload($file, $folder, 'image');
+        return $result['secure_url'] ?? '';
     }
 
-    /**
+/**
      * Upload video to Cloudinary
      *
      * @param UploadedFile $file
      * @param string $folder
-     * @return string URL của video đã upload
+     * @return string URL of the uploaded video
      */
     public function uploadVideo(UploadedFile $file, string $folder = 'videos'): string
     {
-        return $this->upload($file, $folder, 'video');
+        $result = $this->upload($file, $folder, 'video');
+        return $result['secure_url'] ?? '';
     }
 
     /**

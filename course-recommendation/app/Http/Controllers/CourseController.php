@@ -331,6 +331,10 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+                if (!$validated['image']) {
+                    return response()->json(['message' => 'Image upload failed'], 422);
+                }
+                
             }
 
             // Tạo khóa học

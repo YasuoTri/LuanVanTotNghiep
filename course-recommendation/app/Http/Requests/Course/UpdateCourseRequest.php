@@ -15,7 +15,7 @@ class UpdateCourseRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_name' => 'required|string|max:255',
+            'course_name' => 'required|string|max:255|unique:courses,course_name,' . $this->route('course'), // Assuming 'course' is the route parameter
             'course_rating' => 'nullable|numeric|min:0|max:5',
             'university' => 'nullable|string|max:255',
             'difficulty_level' => 'nullable|string|max:50',

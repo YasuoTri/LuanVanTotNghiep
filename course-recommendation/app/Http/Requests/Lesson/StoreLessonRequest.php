@@ -14,7 +14,7 @@ class StoreLessonRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_id' => 'required|exists:courses,id',
+            'course_id' => 'nullable|exists:courses,id',
             'title' => 'required|string|max:255',
             'video' => 'required|file|max:102400', // Video tối đa 100MB
             'duration' => 'nullable|integer|min:0',

@@ -164,7 +164,7 @@ class LessonController extends Controller
 
                 // Tạo UploadedFile từ file tạm
                 $uploadedFile = new \Illuminate\Http\UploadedFile(
-                    storage_path('app/' . $path),
+                     storage_path('app/private/' . $path),
                     $fileName,
                     $file->getClientMimeType(),
                     null,
@@ -390,6 +390,7 @@ class LessonController extends Controller
         }
 
         $data = $request->validated();
+        $data['course_id'] = $course_id;
 
         // Xử lý chunked upload
         $receiver = new FileReceiver('video', $request, HandlerFactory::classFromRequest($request));
@@ -411,7 +412,7 @@ class LessonController extends Controller
 
             // Tạo UploadedFile từ file tạm
             $uploadedFile = new \Illuminate\Http\UploadedFile(
-                storage_path('app/' . $path),
+                storage_path('app/private/' . $path),
                 $fileName,
                 $file->getClientMimeType(),
                 null,
@@ -505,6 +506,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         }
 
         $data = $request->validated();
+        $data['course_id'] = $course_id;
 
         // Xử lý chunked upload nếu có video mới
         if ($request->hasFile('video')) {
@@ -527,7 +529,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 
                 // Tạo UploadedFile từ file tạm
                 $uploadedFile = new \Illuminate\Http\UploadedFile(
-                    storage_path('app/' . $path),
+                 storage_path('app/private/' . $path),
                     $fileName,
                     $file->getClientMimeType(),
                     null,

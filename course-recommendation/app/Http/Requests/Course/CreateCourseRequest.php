@@ -19,7 +19,7 @@ class CreateCourseRequest extends FormRequest
             'university' => 'required|string|max:255',
             'difficulty_level' => 'required|string|max:50',
             'course_description' => 'required|string',
-            'course_rating' => 'required|numeric|min:0|max:5',
+            'course_rating' => 'nullable|numeric|min:0|max:5',
             'price' => 'required|integer|min:0',
             'skills' => 'required|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',

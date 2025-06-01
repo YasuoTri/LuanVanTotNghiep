@@ -62,7 +62,7 @@
 from fastapi import FastAPI, Query, HTTPException
 from typing import Optional
 import pickle
-from CourseRecommendationSystem import recommend, update_model
+from CourseRecommendationSystem import recommend, update_model,recommend_similar_courses
 
 # Load pre-trained models at startup
 try:
@@ -108,6 +108,11 @@ def get_recommendation(
     )
     return {"recommendations": result}
 
+@app.get("/recommend-similar")
+def get_similar_courses(course_name: str = Query(...)):
+    recommendations = recommend_similar_courses(course_name)
+    return {"recommendations": recommendations}
+    
 @app.post("/update-model")
 def trigger_model_update():
     """

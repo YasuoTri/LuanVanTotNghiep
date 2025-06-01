@@ -1455,6 +1455,7 @@ import pandas as pd
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from surprise import SVD, Dataset, Reader
 import pickle
@@ -1544,30 +1545,23 @@ def get_popular_courses(courses_list, user_interactions, limit=5):
 #         pathways[course_id] = successors
 #     return pathways
 def build_learning_pathways(courses_list, similarity):
-    """Construct learning pathways using course similarity, difficulty, and topic progression."""
     G = nx.DiGraph()
     for i, row_i in courses_list.iterrows():
         G.add_node(row_i['course_id'], difficulty=normalize_difficulty(row_i['Difficulty Level']))
         topics_i = extract_topic_sequence(row_i)
-        
         for j, row_j in courses_list.iterrows():
             if i != j:
                 topics_j = extract_topic_sequence(row_j)
-                # Check if j builds on i's topics (e.g., j contains next topics)
                 topic_overlap = len(set(topics_i) & set(topics_j))
                 is_progression = False
-                
-                # j is a progression if it includes next topics or has higher difficulty
                 if topics_j and topics_i:
                     last_topic_i = topics_i[-1]
                     if last_topic_i in topics_j and topics_j.index(last_topic_i) < len(topics_j) - 1:
                         is_progression = True
                     elif topic_overlap > 0 and normalize_difficulty(row_j['Difficulty Level']) > normalize_difficulty(row_i['Difficulty Level']):
                         is_progression = True
-                
                 if is_progression:
-                    weight = 1 - similarity[i][j]  # Lower similarity means higher weight
-                    # Reduce weight if high topic overlap (encourage progression)
+                    weight = 1 - similarity[i][j]
                     weight *= (1 - topic_overlap / max(len(topics_i), len(topics_j), 1))
                     G.add_edge(row_i['course_id'], row_j['course_id'], weight=weight)
     
@@ -1575,13 +1569,36 @@ def build_learning_pathways(courses_list, similarity):
     for course_id in courses_list['course_id']:
         successors = nx.single_source_dijkstra_path(G, course_id)
         pathways[course_id] = successors
+        logger.info(f"Pathway for course_id={course_id}: {len(successors)} successors")
     return pathways
 
+# def get_course_details(course_id, courses_list):
+#     """Helper function to extract complete course details."""
+#     course_row = courses_list[courses_list['course_id'] == course_id]
+#     if not course_row.empty:
+#         course = course_row.iloc[0]
+#         return {
+#             'course_id': int(course['course_id']),
+#             'course_name': course.get('course_name', ''),
+#             'difficulty_level': course.get('Difficulty Level', ''),
+#             'university': course.get('University', 'Unknown'),
+#             'skills': course.get('Skills', ''),
+#             'description': course.get('Course Description', ''),
+#             'price': str(course.get('Price', 'Unknown')),
+#             'rating': float(course.get('Course Rating', 0)),
+#             'course_url': course.get('Course URL', 'Unknown'),
+#             'status': course.get('Status', 'Unknown'),
+#             'categories': course.get('Categories', 'Uncategorized'),
+#             'instructor_id': course.get('Instructor IDs', '0')
+#         }
+#     return None
 def get_course_details(course_id, courses_list):
-    """Helper function to extract complete course details."""
     course_row = courses_list[courses_list['course_id'] == course_id]
     if not course_row.empty:
         course = course_row.iloc[0]
+        rating = course.get('Course Rating', 0)
+        # Ensure rating is a valid float
+        rating = 0 if not np.isfinite(float(rating)) else float(rating)
         return {
             'course_id': int(course['course_id']),
             'course_name': course.get('course_name', ''),
@@ -1590,7 +1607,7 @@ def get_course_details(course_id, courses_list):
             'skills': course.get('Skills', ''),
             'description': course.get('Course Description', ''),
             'price': str(course.get('Price', 'Unknown')),
-            'rating': float(course.get('Course Rating', 0)),
+            'rating': rating,
             'course_url': course.get('Course URL', 'Unknown'),
             'status': course.get('Status', 'Unknown'),
             'categories': course.get('Categories', 'Uncategorized'),
@@ -1921,25 +1938,174 @@ def recommend(user_id=None, course_name=None, alpha=0.5, courses_list=None, simi
                 if courses_list.iloc[idx]['Status'] == 'approved'
                 and courses_list.iloc[idx]['course_id'] in pathways.get(course_id, {})
             }
+            logger.info(f"Content scores after filtering: {content_scores}")
             preferred_instructors = set()
             # Deduplicate similar courses
             content_scores = deduplicate_similar_courses(
                 content_scores, courses_list, user_interactions, 
                 preferred_instructors, preferred_categories, competency_score,similarity
             )
-
+            logger.info(f"Content scores after filtering: {content_scores}")
+            # In recommend(), for the else block (no user_id)
             for i, (cid, _) in enumerate(sorted(content_scores.items(), key=lambda x: x[1], reverse=True)[:5]):
                 next_course_id = cid
-                if (normalize_difficulty(courses_list[courses_list['course_id'] == next_course_id]['Difficulty Level'].iloc[0]) >= competency_score and
-                    courses_list[courses_list['course_id'] == next_course_id]['Status'].iloc[0] == 'approved'):
+                course_difficulty = normalize_difficulty(courses_list[courses_list['course_id'] == next_course_id]['Difficulty Level'].iloc[0])
+                logger.info(f"Course_id={next_course_id}, Difficulty={course_difficulty}, Competency={competency_score}")
+                if (course_difficulty >= 0.0  # Lower threshold to 0
+                    and courses_list[courses_list['course_id'] == next_course_id]['Status'].iloc[0] == 'approved'):
                     if next_course_id in pathways.get(course_id, {}):
                         course_details = get_course_details(next_course_id, courses_list)
                         if course_details:
                             recommended_courses.append(course_details)
         except IndexError:
             return [f"Course '{course_name}' not found."]
-
+    # After building recommended_courses
+    for course in recommended_courses:
+        logger.info(f"Course details: {course}")
+        for key, value in course.items():
+            if isinstance(value, float) and not np.isfinite(value):
+                logger.error(f"Invalid float in {key}: {value}")
+                course[key] = 0  # Replace invalid float
     return recommended_courses
+
+def recommend_similar_courses(course_name, data_file='Data/Coursera_new.csv', num_recommendations=5, random_sample_size=10):
+    """
+    Recommend courses similar to the input course based on difficulty, skills, and categories.
+    
+    Parameters:
+    - course_name (str): Name of the input course.
+    - data_file (str): Path to the CSV file containing course data.
+    - num_recommendations (int): Number of courses to recommend.
+    - random_sample_size (int): Number of candidate courses to sample randomly before ranking.
+    
+    Returns:
+    - list: List of dictionaries containing recommended course details.
+    """
+    try:
+        # Load data
+        df = pd.read_csv(data_file)
+        logger.info(f"Loaded {len(df)} courses from {data_file}")
+        
+        # Clean data
+        df['Course Description'] = df['Course Description'].fillna('')
+        df['Skills'] = df['Skills'].fillna('')
+        df['Categories'] = df['Categories'].fillna('Uncategorized')
+        df['Status'] = df['Status'].fillna('approved')
+        df['Course Rating'] = pd.to_numeric(df['Course Rating'], errors='coerce').fillna(0)
+        df['Price'] = pd.to_numeric(df['Price'], errors='coerce').fillna(0).astype(str)
+        df['Difficulty Level'] = df['Difficulty Level'].fillna('Unknown').astype(str)
+        logger.info(f"Difficulty Level unique values: {df['Difficulty Level'].unique()}")
+        
+        # Check if course exists
+        if course_name not in df['Course Name'].values:
+            logger.error(f"Course '{course_name}' not found.")
+            return [{"error": f"Course '{course_name}' not found."}]
+        
+        # Get input course details
+        input_course = df[df['Course Name'] == course_name].iloc[0]
+        input_difficulty = str(input_course['Difficulty Level'])
+        input_skills = input_course['Skills'].lower().split(',') if input_course['Skills'] else []
+        input_categories = input_course['Categories'].split(',') if input_course['Categories'] else []
+        input_skills = [s.strip() for s in input_skills if s.strip()]
+        input_categories = [c.strip() for c in input_categories if c.strip()]
+        
+        logger.info(f"Input course: {course_name}, Difficulty: {input_difficulty}, Skills: {input_skills}, Categories: {input_categories}")
+        
+        # Create text for TF-IDF (combine Skills and Categories)
+        df['combined_text'] = df['Skills'].str.lower() + ' ' + df['Categories'].str.lower()
+        input_text = ' '.join(input_skills + input_categories)
+        
+        # Compute TF-IDF similarity
+        vectorizer = TfidfVectorizer(stop_words='english')
+        tfidf_matrix = vectorizer.fit_transform(df['combined_text'])
+        input_vector = vectorizer.transform([input_text])
+        similarity_scores = cosine_similarity(input_vector, tfidf_matrix).flatten()
+        logger.info(f"Similarity scores range: {similarity_scores.min()} to {similarity_scores.max()}")
+        
+        # Create similarity DataFrame
+        similarity_df = pd.DataFrame({
+            'course_id': df.index + 1,
+            'course_name': df['Course Name'],
+            'similarity': similarity_scores,
+            'difficulty': df['Difficulty Level'].astype(str),
+            'status': df['Status'],
+            'skills': df['Skills'],
+            'categories': df['Categories']
+        })
+        
+        # Filter candidates
+        candidates = similarity_df[
+            (similarity_df['status'] == 'approved') &
+            (similarity_df['course_name'] != course_name) &
+            (similarity_df['similarity'] > 0)
+        ]
+        logger.info(f"Number of candidates after filtering: {len(candidates)}")
+        
+        if candidates.empty:
+            logger.warning("No candidates found after filtering.")
+            return [{"warning": "No similar courses found due to filtering."}]
+        
+        # Boost for same difficulty
+        candidates = candidates.copy()  # Avoid SettingWithCopyWarning
+        candidates['difficulty_boost'] = np.where(candidates['difficulty'].str.strip() == input_difficulty.strip(), 1.5, 1.0)
+        candidates['score'] = candidates['similarity'] * candidates['difficulty_boost']
+        logger.info(f"Difficulty boost applied: {candidates[['course_name', 'difficulty', 'difficulty_boost']].head().to_dict('records')}")
+        
+        # Filter by skill and category overlap
+        def skill_overlap(row):
+            course_skills = row['skills'].lower().split(',') if row['skills'] else []
+            course_skills = [s.strip() for s in course_skills if s.strip()]
+            overlap = len(set(course_skills) & set(input_skills))
+            return overlap / max(len(input_skills), 1) if input_skills else 0.0
+        
+        def category_overlap(row):
+            course_categories = row['categories'].split(',') if row['categories'] else []
+            course_categories = [c.strip() for c in course_categories if c.strip()]
+            overlap = len(set(course_categories) & set(input_categories))
+            return overlap / max(len(input_categories), 1) if input_categories else 0.0
+        
+        candidates['skill_overlap'] = candidates.apply(skill_overlap, axis=1)
+        candidates['category_overlap'] = candidates.apply(category_overlap, axis=1)
+        candidates['score'] *= (1 + 0.3 * candidates['skill_overlap'] + 0.2 * candidates['category_overlap'])
+        logger.info(f"Overlap scores applied: {candidates[['course_name', 'skill_overlap', 'category_overlap', 'score']].head().to_dict('records')}")
+        
+        # Randomly sample candidates for diversity
+        if len(candidates) > random_sample_size:
+            candidates = candidates.sample(n=random_sample_size, random_state=42)
+            logger.info(f"Sampled {len(candidates)} candidates for diversity")
+        
+        # Sort by score
+        top_candidates = candidates.sort_values(by='score', ascending=False).head(num_recommendations)
+        logger.info(f"Top candidates: {top_candidates[['course_name', 'score', 'similarity', 'skill_overlap', 'category_overlap']].to_dict('records')}")
+        
+        # Format output
+        recommendations = []
+        for _, row in top_candidates.iterrows():
+            course_row = df[df['Course Name'] == row['course_name']].iloc[0]
+            recommendations.append({
+                'course_id': int(row['course_id']),
+                'course_name': row['course_name'],
+                'difficulty_level': course_row['Difficulty Level'],
+                'university': course_row['University'],
+                'skills': course_row['Skills'],
+                'description': course_row['Course Description'],
+                'price': str(course_row['Price']),
+                'rating': float(course_row['Course Rating']),
+                'course_url': course_row['Course URL'],
+                'status': course_row['Status'],
+                'categories': course_row['Categories'],
+                'instructor_id': course_row.get('Instructor IDs', 'Unknown')
+            })
+        
+        if not recommendations:
+            logger.warning("No similar courses found after final selection.")
+            return [{"warning": "No similar courses found."}]
+        
+        return recommendations
+    
+    except Exception as e:
+        logger.error(f"Error in recommendation: {str(e)}")
+        return [{"error": f"Error: {str(e)}"}]
 
 def update_model():
     """
@@ -1950,7 +2116,7 @@ def update_model():
         os.makedirs('models')
 
     try:
-        data = pd.read_csv('Data/Coursera_new.csv').head(100)
+        data = pd.read_csv('Data/Coursera_new.csv').head(1000)
         user_behavior = pd.read_csv('Data/Courseuserbehavior_new.csv')
         quiz_results = pd.read_csv('Data/quiz_results.csv')
         enrollments = pd.read_csv('Data/enrollments.csv')
@@ -1966,13 +2132,22 @@ def update_model():
         logger.error(f"Missing columns in Coursera_new.csv: {missing_columns}")
         raise Exception(f"Missing columns in Coursera_new.csv: {missing_columns}")
 
+    # data['Course Description'] = data['Course Description'].fillna('')
+    # data['course_name'] = data['Course Name']
+    # data['course_id'] = range(1, len(data) + 1)
+    # data['Categories'] = data['Categories'].fillna('Uncategorized')
+    # data['Instructor IDs'] = data['Instructor IDs'].fillna('0')
+    # courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level', 'University', 'Skills', 'Price', 'Course Rating', 'Course URL', 'Status', 'Categories', 'Instructor IDs']]
     data['Course Description'] = data['Course Description'].fillna('')
     data['course_name'] = data['Course Name']
     data['course_id'] = range(1, len(data) + 1)
     data['Categories'] = data['Categories'].fillna('Uncategorized')
     data['Instructor IDs'] = data['Instructor IDs'].fillna('0')
+    data['Status'] = data['Status'].fillna('approved')
+    # Add cleaning for Course Rating and Price
+    data['Course Rating'] = pd.to_numeric(data['Course Rating'], errors='coerce').fillna(0).clip(0, 5)  # Ensure valid ratings
+    data['Price'] = pd.to_numeric(data['Price'], errors='coerce').fillna(0).astype(str)  # Convert to string after cleaning
     courses_list = data[['course_id', 'course_name', 'Course Description', 'Difficulty Level', 'University', 'Skills', 'Price', 'Course Rating', 'Course URL', 'Status', 'Categories', 'Instructor IDs']]
-
     try:
         model = SentenceTransformer('all-MiniLM-L6-v2')
         course_texts = (courses_list['Course Description'] + ' ' + courses_list['University'] + ' ' + courses_list['Skills']).tolist()
@@ -2080,14 +2255,24 @@ def update_model():
 
     # Precompute SVD predictions for all user-course pairs
     logger.info("Precomputing SVD predictions...")
+    # svd_predictions = {}
+    # for uid in unique_user_ids:
+    #     user_id = user_id_map[uid]
+    #     svd_predictions[user_id] = {}
+    #     for course_id in courses_list['course_id']:
+    #         pred = svd.predict(user_id, course_id)
+    #         svd_predictions[user_id][course_id] = pred.est
+    # Add debug code in update_model() before saving svd_predictions
     svd_predictions = {}
     for uid in unique_user_ids:
         user_id = user_id_map[uid]
         svd_predictions[user_id] = {}
         for course_id in courses_list['course_id']:
             pred = svd.predict(user_id, course_id)
-            svd_predictions[user_id][course_id] = pred.est
-    logger.info("SVD predictions computed")
+            score = pred.est
+            if not np.isfinite(score):
+                score = 0  # Default to 0 for invalid predictions
+            svd_predictions[user_id][course_id] = score
 
     try:
         with open('models/courses.pkl', 'wb') as f:

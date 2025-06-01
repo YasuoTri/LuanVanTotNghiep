@@ -22,7 +22,7 @@ class CloudinaryService
      * @param string $resourceType auto|image|video|raw
      * @return string URL của file đã upload
      */
-    public function upload(UploadedFile $file, string $folder = 'default', string $resourceType = 'auto'): string
+    public function upload(UploadedFile $file, string $folder = 'default', string $resourceType = 'auto')
     {
         $result = $this->cloudinary->uploadApi()->upload(
             $file->getRealPath(),
@@ -32,7 +32,7 @@ class CloudinaryService
             ]
         );
 
-        return $result['secure_url'];
+        return $result;
     }
 
     /**

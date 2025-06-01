@@ -161,16 +161,35 @@ public function show($id)
             }
 
             $course = Course::create($validated);
-            return response()->json($course, 201);
+                        // Gán danh mục cho khóa học
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Gán instructor cho khóa học
+            Course_Instructors::create([
+                'course_id' => $course->id,
+                'instructor_id' => $validated['instructor_id'],
+            ]);
+        // Refresh model và load relationships
+        $course = $course->fresh(['categories', 'instructors']);
+        
+        return response()->json($course, 200);
         } catch (\Exception $e) {
             Log::error("Failed to create course: {$e->getMessage()}");
-            return response()->json(['message' => 'Failed to create course'], 500);
+            return response()->json(['message' => 'Failed to create course:'.$e->getMessage()], 500);
         }
     }
 
     public function update(UpdateCourseRequest $request, $id)
     {
-        try {
+        try {            // Thêm debug này
+
             $course = Course::findOrFail($id);
             $validated = $request->validated();
             $validated['course_url'] = Str::slug($validated['course_name']);
@@ -182,12 +201,29 @@ public function show($id)
                 }
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
             }
-
+            
             $course->update($validated);
+            CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Gán instructor cho khóa học
+            Course_Instructors::where('course_id', $course->id)->delete(); // Xóa instructor cũ
+            Course_Instructors::create([
+                'course_id' => $course->id,
+                'instructor_id' => $validated['instructor_id'],
+            ]);
+            $course->load('categories'); // Load categories for the response
+            $course->load('instructors'); // Load instructors for the response
             return response()->json($course, 200);
         } catch (\Exception $e) {
             Log::error("Failed to update course: {$e->getMessage()}");
-            return response()->json(['message' => 'Failed to update course'], 500);
+            return response()->json(['message' => 'Failed to update course:'.$e->getMessage()], 500);
         }
     }
 public function destroy($id)
@@ -208,10 +244,6 @@ public function destroy($id)
     // Admin-specific APIs
     public function adminStats(Request $request, $id)
     {
-        // if (!auth()->user()->is_admin) {
-        //     return response()->json(['error' => 'Unauthorized'], 403);
-        // }
-
         $course = Course::findOrFail($id);
         $stats = [
             'enrollments' => $course->enrollments()->count(),

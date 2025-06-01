@@ -80,11 +80,23 @@ class LessonController extends Controller
             );
 
             // Upload lên Cloudinary
-            $data['video_url'] = $this->cloudinaryService->upload(
+            $apiResponse = $this->cloudinaryService->upload(
                 $uploadedFile,
                 'lessons/course_' . $data['course_id']
             );
-
+            // Log::info('Cloudinary upload response:', ['response' => $apiResponse]);
+            // return response()->json([
+            //     'message' => 'Video uploaded successfully',
+            //     'data' => $apiResponse
+            // ], 201);
+            $data['video_url'] = $apiResponse['secure_url'] ?? '';
+            if (isset($apiResponse['duration'])) {
+                $data['duration'] = round($apiResponse['duration'] / 60, 2); // Chuyển từ giây sang phút
+            } else {
+                // Nếu không có duration, ghi log lỗi hoặc đặt giá trị mặc định
+                Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+                $data['duration'] = 0; // Hoặc xử lý khác tùy yêu cầu
+            }
             // Xóa file tạm
             $disk->delete($path);
 
@@ -165,10 +177,28 @@ class LessonController extends Controller
                 }
 
                 // Upload lên Cloudinary
-                $data['video_url'] = $this->cloudinaryService->upload(
-                    $uploadedFile,
-                    'lessons/course_' . $lesson->course_id
-                );
+                // $data['video_url'] = $this->cloudinaryService->upload(
+                //     $uploadedFile,
+                //     'lessons/course_' . $lesson->course_id
+                // );
+                 // Upload lên Cloudinary
+            $apiResponse = $this->cloudinaryService->upload(
+                $uploadedFile,
+                'lessons/course_' . $data['course_id']
+            );
+            // Log::info('Cloudinary upload response:', ['response' => $apiResponse]);
+            // return response()->json([
+            //     'message' => 'Video uploaded successfully',
+            //     'data' => $apiResponse
+            // ], 201);
+            $data['video_url'] = $apiResponse['secure_url'] ?? '';
+            if (isset($apiResponse['duration'])) {
+                $data['duration'] = round($apiResponse['duration'] / 60, 2); // Chuyển từ giây sang phút
+            } else {
+                // Nếu không có duration, ghi log lỗi hoặc đặt giá trị mặc định
+                Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+                $data['duration'] = 0; // Hoặc xử lý khác tùy yêu cầu
+            }
 
                 // Xóa file tạm
                 $disk->delete($path);
@@ -389,10 +419,28 @@ class LessonController extends Controller
             );
 
             // Upload lên Cloudinary
-            $data['video_url'] = $this->cloudinaryService->upload(
+            // $data['video_url'] = $this->cloudinaryService->upload(
+            //     $uploadedFile,
+            //     'lessons/course_' . $course_id
+            // );
+             // Upload lên Cloudinary
+            $apiResponse = $this->cloudinaryService->upload(
                 $uploadedFile,
-                'lessons/course_' . $course_id
+                'lessons/course_' . $data['course_id']
             );
+            // Log::info('Cloudinary upload response:', ['response' => $apiResponse]);
+            // return response()->json([
+            //     'message' => 'Video uploaded successfully',
+            //     'data' => $apiResponse
+            // ], 201);
+            $data['video_url'] = $apiResponse['secure_url'] ?? '';
+            if (isset($apiResponse['duration'])) {
+                $data['duration'] = round($apiResponse['duration'] / 60, 2); // Chuyển từ giây sang phút
+            } else {
+                // Nếu không có duration, ghi log lỗi hoặc đặt giá trị mặc định
+                Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+                $data['duration'] = 0; // Hoặc xử lý khác tùy yêu cầu
+            }
 
             // Xóa file tạm
             $disk->delete($path);
@@ -492,10 +540,28 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
                 }
 
                 // Upload lên Cloudinary
-                $data['video_url'] = $this->cloudinaryService->upload(
-                    $uploadedFile,
-                    'lessons/course_' . $course_id
-                );
+                // $data['video_url'] = $this->cloudinaryService->upload(
+                //     $uploadedFile,
+                //     'lessons/course_' . $course_id
+                // );
+                 // Upload lên Cloudinary
+            $apiResponse = $this->cloudinaryService->upload(
+                $uploadedFile,
+                'lessons/course_' . $data['course_id']
+            );
+            // Log::info('Cloudinary upload response:', ['response' => $apiResponse]);
+            // return response()->json([
+            //     'message' => 'Video uploaded successfully',
+            //     'data' => $apiResponse
+            // ], 201);
+            $data['video_url'] = $apiResponse['secure_url'] ?? '';
+            if (isset($apiResponse['duration'])) {
+                $data['duration'] = round($apiResponse['duration'] / 60, 2); // Chuyển từ giây sang phút
+            } else {
+                // Nếu không có duration, ghi log lỗi hoặc đặt giá trị mặc định
+                Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+                $data['duration'] = 0; // Hoặc xử lý khác tùy yêu cầu
+            }
 
                 // Xóa file tạm
                 $disk->delete($path);

@@ -44,7 +44,10 @@ public function categories()
             'instructor_id' // Local key on course_instructors
         );
     }
-
+    public function category()
+    {
+        return $this->belongsToMany(Category::class, 'course_category', 'course_id', 'category_id');
+    }
     public function enrollments()
     {
         return $this->hasMany(Enrollment::class, 'course_id');

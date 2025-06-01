@@ -15,13 +15,16 @@ class CreateCourseRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_name' => 'required|string|max:255',
-            'university' => 'nullable|string|max:255',
-            'difficulty_level' => 'nullable|string|max:50',
-            'course_description' => 'nullable|string',
+            'course_name' => 'required|string|max:255|unique:courses,course_name',
+            'university' => 'required|string|max:255',
+            'difficulty_level' => 'required|string|max:50',
+            'course_description' => 'required|string',
+            'course_rating' => 'required|numeric|min:0|max:5',
             'price' => 'required|integer|min:0',
-            'skills' => 'nullable|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'skills' => 'required|string',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'category_ids' => 'required|array|exists:categories,id',
+            'instructor_id' => 'required|exists:instructors,id',
         ];
     }
 }

@@ -8,7 +8,9 @@ use Illuminate\Http\Request;
 use App\Models\Instructors;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class InstructorController extends Controller
 {
@@ -116,5 +118,58 @@ class InstructorController extends Controller
 
     return response()->json($query->paginate(10));
 }
+/**
+     * Get the top 10 outstanding instructors based on enrollments, course ratings, and course count.
+     *
+     * @return JsonResponse
+     */
+    public function getTopInstructors(): JsonResponse
+    {
+        try {
+            // Query to get top 10 instructors
+            $topInstructors = Instructors::select([
+                'instructors.id as instructor_id',
+                'users.username as instructor_name',
+                DB::raw('COUNT(DISTINCT course_instructors.course_id) as course_count'),
+                DB::raw('COALESCE(AVG(courses.course_rating), 0) as avg_course_rating'),
+                DB::raw('COUNT(DISTINCT enrollments.id) as total_enrollments')
+            ])
+            ->join('users', 'instructors.user_id', '=', 'users.id')
+            ->leftJoin('course_instructors', 'instructors.id', '=', 'course_instructors.instructor_id')
+            ->leftJoin('courses', function ($join) {
+                $join->on('course_instructors.course_id', '=', 'courses.id')
+                     ->whereNull('courses.deleted_at'); // Exclude soft-deleted courses
+            })
+            ->leftJoin('enrollments', 'courses.id', '=', 'enrollments.course_id')
+            ->groupBy('instructors.id', 'users.username')
+            ->orderByDesc('total_enrollments') // Primary sort: total enrollments
+            ->orderByDesc('avg_course_rating') // Secondary sort: average rating
+            ->orderByDesc('course_count') // Tertiary sort: course count
+            ->take(10) // Limit to top 10
+            ->get();
 
+            // Format the response
+            $response = $topInstructors->map(function ($instructor) {
+                return [
+                    'instructor_id' => $instructor->instructor_id,
+                    'name' => $instructor->instructor_name,
+                    'course_count' => $instructor->course_count,
+                    'avg_course_rating' => round($instructor->avg_course_rating, 2),
+                    'total_enrollments' => $instructor->total_enrollments,
+                ];
+            });
+
+            return response()->json([
+                'message' => 'Top 10 instructors retrieved successfully',
+                'data' => $response
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error retrieving top instructors: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'An error occurred while retrieving top instructors',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

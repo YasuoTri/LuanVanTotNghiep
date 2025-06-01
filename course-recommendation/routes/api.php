@@ -49,6 +49,7 @@ Route::middleware('jwt_cookie')->group(function () {
 Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
+Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 // Student Routes
 Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);

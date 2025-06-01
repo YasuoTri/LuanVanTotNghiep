@@ -174,7 +174,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/courses/{id}', [CourseController::class, 'destroy']);
     Route::delete('/admin/force-delete/{id}', [CourseController::class, 'forceDelete']);
     Route::get('/admin/courses/{id}/admin-stats', [CourseController::class, 'adminStats']);
-    Route::get('/courses/pending', [CourseController::class, 'getPendingCourses']);
+    Route::get('/admin/courses/pending', [CourseController::class, 'getPendingCourses']);
     Route::put('/courses/{id}/approve', [CourseController::class, 'approveCourse']);
     Route::put('/courses/{id}/reject', [CourseController::class, 'rejectCourse']);
     Route::get('/admin/quizzes', [QuizController::class, 'index']);

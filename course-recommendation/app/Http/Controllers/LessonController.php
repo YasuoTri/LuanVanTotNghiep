@@ -846,4 +846,13 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
     return response()->json($query->paginate(10));
 }
 
+// app/Http/Controllers/LessonController.php
+public function getPendingLessons(Request $request, $courseId)
+{
+    $lessons = Lesson::where('course_id', $courseId)
+        ->where('status', 'pending')
+        ->get();
+
+    return response()->json($lessons);
+}
 }

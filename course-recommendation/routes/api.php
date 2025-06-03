@@ -314,6 +314,8 @@ Route::get('/admin/instructor-requests/search', [InstructorRequestController::cl
     ->name('api.instructor-requests.search');
     Route::post('/admin/revenue-sessions/{id}/distribute', [RevenueSessionController::class, 'distributeRevenue']);
     Route::post('/admin/revenue-sessions', [RevenueSessionController::class, 'createMonthlySession']);
+
+    Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

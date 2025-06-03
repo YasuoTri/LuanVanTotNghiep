@@ -130,6 +130,7 @@ class InstructorController extends Controller
             $topInstructors = Instructors::select([
                 'instructors.id as instructor_id',
                 'users.username as instructor_name',
+                'instructors.user_id as user_id',
                 DB::raw('COUNT(DISTINCT course_instructors.course_id) as course_count'),
                 DB::raw('COALESCE(AVG(courses.course_rating), 0) as avg_course_rating'),
                 DB::raw('COUNT(DISTINCT enrollments.id) as total_enrollments')
@@ -141,7 +142,7 @@ class InstructorController extends Controller
                      ->whereNull('courses.deleted_at'); // Exclude soft-deleted courses
             })
             ->leftJoin('enrollments', 'courses.id', '=', 'enrollments.course_id')
-            ->groupBy('instructors.id', 'users.username')
+            ->groupBy('instructors.id', 'users.username','instructors.user_id')
             ->orderByDesc('total_enrollments') // Primary sort: total enrollments
             ->orderByDesc('avg_course_rating') // Secondary sort: average rating
             ->orderByDesc('course_count') // Tertiary sort: course count
@@ -152,10 +153,12 @@ class InstructorController extends Controller
             $response = $topInstructors->map(function ($instructor) {
                 // Ensure instructor profile is not null
                 $instructor_info=Instructors::find($instructor->instructor_id);
+                $user_info = User::find($instructor->user_id);
                 return [
                     'instructor_id' => $instructor->instructor_id,
                     'name' => $instructor->instructor_name,
                     'instructor_profile' => $instructor_info ??null,
+                    'user_info' => $user_info ?? null,
                     'course_count' => $instructor->course_count,
                     'avg_course_rating' => round($instructor->avg_course_rating, 2),
                     'total_enrollments' => $instructor->total_enrollments,

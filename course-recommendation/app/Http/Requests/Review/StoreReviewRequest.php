@@ -18,6 +18,7 @@ class StoreReviewRequest extends FormRequest
             'course_id' => 'required|exists:courses,id',
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string',
+            'feedback_type' => 'nullable|in:content_quality,instructor,platform_issue,not_interested',
         ];
     }
 }

@@ -18,6 +18,7 @@ class UpdateReviewRequest extends FormRequest
             'course_id' => 'sometimes|exists:courses,id',
             'rating' => 'sometimes|integer|min:1|max:5',
             'comment' => 'nullable|string',
+            'feedback_type' => 'nullable|in:content_quality,instructor,platform_issue,not_interested',
         ];
     }
 }

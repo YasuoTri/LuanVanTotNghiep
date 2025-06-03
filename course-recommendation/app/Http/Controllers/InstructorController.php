@@ -150,9 +150,12 @@ class InstructorController extends Controller
 
             // Format the response
             $response = $topInstructors->map(function ($instructor) {
+                // Ensure instructor profile is not null
+                $instructor_info=Instructors::find($instructor->instructor_id);
                 return [
                     'instructor_id' => $instructor->instructor_id,
                     'name' => $instructor->instructor_name,
+                    'instructor_profile' => $instructor_info ??null,
                     'course_count' => $instructor->course_count,
                     'avg_course_rating' => round($instructor->avg_course_rating, 2),
                     'total_enrollments' => $instructor->total_enrollments,

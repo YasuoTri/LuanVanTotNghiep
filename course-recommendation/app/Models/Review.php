@@ -11,7 +11,7 @@ class Review extends Model
     protected $table = 'reviews';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $fillable = ['user_id', 'course_id', 'rating', 'comment', 'created_at', 'updated_at'];
+    protected $fillable = ['user_id', 'course_id', 'rating', 'comment','feedback_type', 'created_at', 'updated_at'];
     
     protected $casts = [
         'created_at' => 'datetime',

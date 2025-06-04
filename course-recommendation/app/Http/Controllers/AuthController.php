@@ -480,7 +480,7 @@ class AuthController extends Controller
         if ($requestData['status'] === 'approved') {
             $user = User::findOrFail($instructorRequest->user_id);
             $user->update(['role' => 'instructor']);
-            $instructor=Instructors::findOrFail($instructorRequest->id);
+            $instructor=Instructors::findOrFail($instructorRequest->user_id);
             if ($instructor) {
                 $instructor->update([
                     'bio' => $instructorRequest->bio,

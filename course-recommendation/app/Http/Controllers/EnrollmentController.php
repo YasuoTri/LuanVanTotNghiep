@@ -509,7 +509,7 @@ class EnrollmentController extends Controller
             'expires_at' => Carbon::now()->addMonths(3), // Hết hạn sau 3 tháng
             'status' => 'active',
         ]);
-
+        
         return response()->json([
             'message' => 'Successfully enrolled in free course',
             'data' => $enrollment

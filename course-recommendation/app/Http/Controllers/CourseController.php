@@ -406,10 +406,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
             $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
 
-            // Kiểm tra category_ids
-            if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
-                return response()->json(['message' => 'At least one category must be selected'], 422);
-            }
 
             // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
@@ -422,7 +418,8 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             $course->update($validated);
 
             // Cập nhật danh mục
-            CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
+            if(isset($validated['category_ids']) && is_array($validated['category_ids'])) {
+                CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
             foreach ($validated['category_ids'] as $categoryId) {
                 CourseCategory::create([
                     'course_id' => $course->id,
@@ -430,7 +427,8 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            }
+                }
+            } 
 
             return response()->json([
                 'success' => true,

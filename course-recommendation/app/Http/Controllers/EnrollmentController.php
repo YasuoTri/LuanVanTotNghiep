@@ -313,9 +313,7 @@ class EnrollmentController extends Controller
         }
 
         $enrollments = Enrollment::where('user_id', $user->id)
-            ->with(['course' => function ($query) {
-                $query->select('id', 'course_name', 'university', 'difficulty_level', 'course_rating');
-            }])
+            ->with('course')
             ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'expires_at', 'status')
             ->orderBy('enrolled_at', 'desc')
             ->paginate(10);

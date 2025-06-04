@@ -401,7 +401,9 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
 
             $validated = $request->validated();
-            $validated['course_url'] = Str::slug($validated['course_name']);
+            if(isset($validated['course_name'])){
+                $validated['course_url'] = Str::slug($validated['course_name']);
+            }
             $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
 
             // Kiểm tra category_ids
@@ -416,19 +418,8 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 }
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
             }
-
             // Cập nhật khóa học
-            $course->update([
-                'course_name' => $validated['course_name'],
-                'university' => $validated['university'] ?? $course->university,
-                'difficulty_level' => $validated['difficulty_level'] ?? $course->difficulty_level,
-                'course_url' => $validated['course_url'],
-                'image' => $validated['image'] ?? $course->image,
-                'course_description' => $validated['course_description'] ?? $course->course_description,
-                'price' => $validated['price'] ?? $course->price,
-                'skills' => $validated['skills'] ?? $course->skills,
-                'status' => $validated['status'],
-            ]);
+            $course->update($validated);
 
             // Cập nhật danh mục
             CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ

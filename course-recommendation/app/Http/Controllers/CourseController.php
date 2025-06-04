@@ -260,7 +260,7 @@ public function destroy($id)
         try {
             $instructor = Auth::user()->instructor;
             $courses = $instructor->courses()
-                ->with('coursereview')
+                ->with('coursereview', 'categories')
                 ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
                 ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
                 ->paginate(10);

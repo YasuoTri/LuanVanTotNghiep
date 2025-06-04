@@ -463,7 +463,7 @@ class AuthController extends Controller
 
         $instructorRequest = InstructorRequest::findOrFail($requestId);
 
-        $adminInAdminTable = \App\Models\Admins::where('user_id', $admin->id)->first();
+        $adminInAdminTable = Admins::where('user_id', $admin->id)->first();
         if (!$adminInAdminTable) {
             return response()->json([
                 'error' => 'Admin not found in the admin table.',
@@ -480,13 +480,21 @@ class AuthController extends Controller
         if ($requestData['status'] === 'approved') {
             $user = User::findOrFail($instructorRequest->user_id);
             $user->update(['role' => 'instructor']);
-
-            Instructors::create([
+            $instructor=Instructors::findOrFail($instructorRequest->id);
+            if ($instructor) {
+                $instructor->update([
+                    'bio' => $instructorRequest->bio,
+                    'organization' => $instructorRequest->organization,
+                ]);
+            } else {
+                Instructors::create([
                 'user_id' => $user->id,
                 'name' => $instructorRequest->name,
                 'bio' => $instructorRequest->bio,
                 'organization' => $instructorRequest->organization,
             ]);
+                Log::info('Creating new instructor record for user ID: ' . $user->id);
+            }
         }
 
         return response()->json([

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Lesson\StoreLessonRequest;
 use App\Http\Requests\Lesson\UpdateLessonRequest;
+use App\Models\Admins;
 use App\Services\CloudinaryService;
 use App\Models\Lesson;
 use App\Models\Course;
@@ -855,5 +856,73 @@ public function getPendingLessons(Request $request, $courseId)
 
     return response()->json($lessons);
 }
+/**
+     * Admin duyệt trạng thái của lesson
+     *
+     * @param Request $request
+     * @param int $lessonId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function approveLesson(Request $request, $lessonId)
+    {
+        try {
+            // Kiểm tra quyền admin
+            $admin = Admins::where('user_id', Auth::id())->first();
 
+            if (!$admin || !in_array($admin->admin_level, ['program', 'organization'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền duyệt lesson.'
+                ], 403);
+            }
+
+            // Tìm lesson
+            $lesson = Lesson::findOrFail($lessonId);
+
+            // Validate trạng thái mới
+            $newStatus = $request->input('status');
+            $validStatuses = ['pending', 'approved', 'rejected'];
+
+            if (!in_array($newStatus, $validStatuses)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Trạng thái không hợp lệ. Chỉ chấp nhận: ' . implode(', ', $validStatuses)
+                ], 400);
+            }
+
+            // Cập nhật trạng thái lesson
+            $lesson->status = $newStatus;
+            $lesson->updated_at = now();
+            $lesson->save();
+
+            // Ghi log hoạt động vào activity_log
+            $activityLog = json_decode($admin->activity_log, true) ?? [];
+            $activityLog[] = [
+                'action' => 'update_lesson_status',
+                'lesson_id' => $lesson->id,
+                'new_status' => $newStatus,
+                'timestamp' => now()->toDateTimeString()
+            ];
+            $admin->activity_log = json_encode($activityLog);
+            $admin->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Lesson đã được cập nhật trạng thái thành '$newStatus'.",
+                'data' => $lesson
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy lesson.'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Lỗi khi duyệt lesson: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra. Vui lòng thử lại.'
+            ], 500);
+        }
+    }
 }

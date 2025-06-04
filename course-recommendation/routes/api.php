@@ -306,16 +306,17 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::apiResource('/admin/coupons', CouponController::class);
 
     // Route để lấy danh sách pending requests
-Route::get('/admin/instructor-requests/pending', [InstructorRequestController::class, 'getLatestPendingRequests'])
+    Route::get('/admin/instructor-requests/pending', [InstructorRequestController::class, 'getLatestPendingRequests'])
     ->name('api.instructor-requests.pending');
 
-// Route để tìm kiếm instructor requests
-Route::get('/admin/instructor-requests/search', [InstructorRequestController::class, 'searchRequests'])
+    // Route để tìm kiếm instructor requests
+    Route::get('/admin/instructor-requests/search', [InstructorRequestController::class, 'searchRequests'])
     ->name('api.instructor-requests.search');
     Route::post('/admin/revenue-sessions/{id}/distribute', [RevenueSessionController::class, 'distributeRevenue']);
     Route::post('/admin/revenue-sessions', [RevenueSessionController::class, 'createMonthlySession']);
 
     Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);
+    Route::put('/admin/lessons/{lessonId}/review', [LessonController::class, 'approveLesson']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

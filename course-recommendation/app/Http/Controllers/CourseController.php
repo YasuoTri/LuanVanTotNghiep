@@ -94,9 +94,10 @@ class CourseController extends Controller
     {
         try {
             // Fetch all courses, including soft-deleted ones
-            $courses = Course::with(['instructors', 'reviews'])
+            $courses = Course::with(['instructors', 'reviews',])
                 ->withTrashed() // Include soft-deleted courses
                 ->paginate(10); // No pagination for admin view, or use paginate(10) if preferred
+            $courses->loadCount(['lessons', 'reviews']);
             return response()->json($courses, 200);
         } catch (\Exception $e) {
             Log::error("Failed to fetch all courses for admin: {$e->getMessage()}");
@@ -258,7 +259,11 @@ public function destroy($id)
     {
         try {
             $instructor = Auth::user()->instructor;
-            $courses = $instructor->courses()->paginate(10);
+            $courses = $instructor->courses()
+                ->with('coursereview')
+                ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+                ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
+                ->paginate(10);
             return response()->json($courses, 200);
         } catch (\Exception $e) {
             Log::error("Failed to fetch instructor courses: {$e->getMessage()}");

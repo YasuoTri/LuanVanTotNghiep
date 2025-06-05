@@ -645,66 +645,63 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         }
     }
 
-    public function getCourseLessons($id): JsonResponse
-    {
-        try {
-            $user = Auth::user();
+ public function getCourseLessons($id): JsonResponse
+{
+    try {
+        $user = Auth::user();
 
-            if ($user->role !== 'student') {
-                return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-            }
-
-            // Kiểm tra enrollment
-            $enrollment = Enrollment::where('id', $id)
-                ->where('user_id', $user->id)
-                ->firstOrFail();
-
-            // Kiểm tra course đã approved
-            $course = Course::findOrFail($enrollment->course_id);
-            if ($course->status !== 'approved') {
-                return response()->json(['message' => 'Course is not approved yet'], 403);
-            }
-
-            // Lấy lessons đã approved
-            $lessons = Lesson::where('course_id', $enrollment->course_id)
-                ->where('status', 'approved')
-                ->leftJoin('lesson_progress', function ($join) use ($user) {
-                    $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
-                        ->where('lesson_progress.user_id', '=', $user->id);
-                })
-                ->select(
-                    'lessons.id',
-                    'lessons.title',
-                    'lessons.video_url',
-                    'lessons.duration',
-                    'lessons.is_preview',
-                    'lessons.sort_order',
-                    'lesson_progress.status as progress_status',
-                    'lesson_progress.completed_at'
-                )
-                ->orderBy('lessons.sort_order', 'asc')
-                ->get();
-
-            $course = Course::where('id', $enrollment->course_id)
-                ->select('id', 'course_name', 'university')
-                ->first();
-
-            return response()->json([
-                'data' => [
-                    'enrollment_id' => $enrollment->id,
-                    'course' => $course,
-                    'lessons' => $lessons
-                ]
-            ]);
-        } catch (Exception $e) {
-            Log::error('Get course lessons error:', ['message' => $e->getMessage()]);
-            return response()->json([
-                'status' => 500,
-                'error' => 'An error occurred while retrieving lessons.',
-                'message' => $e->getMessage()
-            ], 500);
+        if ($user->role !== 'student') {
+            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
         }
+
+        $enrollment = Enrollment::where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $course = Course::where('id', $enrollment->course_id)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$course) {
+            return response()->json(['message' => 'Course is not approved yet'], 403);
+        }
+
+        $lessons = Lesson::where('course_id', $course->id)
+            ->where('lessons.status', 'approved')
+            ->leftJoin('lesson_progress', function ($join) use ($user) {
+                $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
+                    ->where('lesson_progress.user_id', '=', $user->id);
+            })
+            ->select(
+                'lessons.id',
+                'lessons.title',
+                'lessons.video_url',
+                'lessons.duration',
+                'lessons.is_preview',
+                'lessons.sort_order',
+                'lessons.status as progress_status',
+                'lesson_progress.completed_at'
+            )
+            ->orderBy('lessons.sort_order', 'asc')
+            ->get();
+
+        return response()->json([
+            'data' => [
+                'enrollment_id' => $enrollment->id,
+                'course' => $course,
+                'lessons' => $lessons
+            ]
+        ]);
+    } catch (Exception $e) {
+        Log::error('Get course lessons error:', ['message' => $e->getMessage()]);
+        return response()->json([
+            'status' => 500,
+            'error' => 'An error occurred while retrieving lessons.',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function approve($course_id, $lesson_id): JsonResponse
     {

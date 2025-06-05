@@ -69,9 +69,8 @@ class PaymentController extends Controller
                 'payment_date',
                 'created_at'
             ])
-            ->orderBy('created_at', 'desc')
+            ->orderBy('payment_date', 'desc')
             ->paginate(20);
-
         return response()->json([
             'message' => 'Payments retrieved successfully',
             'data' => $payments
@@ -87,13 +86,8 @@ class PaymentController extends Controller
     public function showForAdmin($id): JsonResponse
     {
         // Tìm payment với thông tin liên quan
-        $payment = Payment::with(['user' => function ($query) {
-            $query->select('id', 'final_cc_cname_DI', 'email');
-        }, 'course' => function ($query) {
-            $query->select('id', 'course_name', 'price');
-        }, 'coupon' => function ($query) {
-            $query->select('id', 'code', 'discount_type', 'discount_value');
-        }])
+        $payment = Payment::with('user' 
+        , 'coupon', 'course')
             ->select([
                 'id',
                 'user_id',

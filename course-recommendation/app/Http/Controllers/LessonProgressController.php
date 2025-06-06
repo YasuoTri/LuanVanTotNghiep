@@ -132,12 +132,11 @@ class LessonProgressController extends Controller
         $progressData = $lessons->map(function ($lesson) use ($user_id) {
             $progress = LessonProgress::where('lesson_id', $lesson->id)
                 ->where('user_id', $user_id)->first();
-
             return [
                 'lesson_id' => $lesson->id,
                 'title' => $lesson->title,
                 'status' => $progress->status ?? 'not_started',
-                'completed_at' => $progress->completed_at,
+                'completed_at' => $progress->completed_at??NUll,
             ];
         });
 

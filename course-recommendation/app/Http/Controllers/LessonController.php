@@ -666,7 +666,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         if (!$course) {
             return response()->json(['message' => 'Course is not approved yet'], 403);
         }
-        $review= Review::where('course_id', $course->id)->get();
+        $review= Review::with('user','user.student')->where('course_id', $course->id)->get();
         $lessons = Lesson::where('course_id', $course->id)
             ->where('lessons.status', 'approved')
             ->leftJoin('lesson_progress', function ($join) use ($user) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Lesson\StoreLessonRequest;
 use App\Http\Requests\Lesson\UpdateLessonRequest;
 use App\Models\Admins;
+use App\Models\Review;
 use App\Services\CloudinaryService;
 use App\Models\Lesson;
 use App\Models\Course;
@@ -665,7 +666,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         if (!$course) {
             return response()->json(['message' => 'Course is not approved yet'], 403);
         }
-
+        $review= Review::where('course_id', $course->id)->get();
         $lessons = Lesson::where('course_id', $course->id)
             ->where('lessons.status', 'approved')
             ->leftJoin('lesson_progress', function ($join) use ($user) {
@@ -689,7 +690,8 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             'data' => [
                 'enrollment_id' => $enrollment->id,
                 'course' => $course,
-                'lessons' => $lessons
+                'lessons' => $lessons,
+                'reviews' => $review
             ]
         ]);
     } catch (Exception $e) {

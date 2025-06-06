@@ -179,4 +179,78 @@ class AnalyticsController extends Controller
             'data' => $analytics
         ]);
     }
+
+     public function adminStatistics()
+    {
+        $totalRevenue = DB::table('payments')
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $totalUsers = DB::table('users')->count();
+        $totalInstructors = DB::table('instructors')->count();
+        $totalCourses = DB::table('courses')->count();
+
+        $coursesByStatus = DB::table('courses')
+            ->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->get();
+
+        $coursesByCategory = DB::table('course_category')
+            ->join('categories', 'course_category.category_id', '=', 'categories.id')
+            ->select('categories.name', DB::raw('count(*) as total'))
+            ->groupBy('categories.name')
+            ->get();
+
+        return response()->json([
+            'total_revenue' => $totalRevenue,
+            'total_users' => $totalUsers,
+            'total_instructors' => $totalInstructors,
+            'total_courses' => $totalCourses,
+            'courses_by_status' => $coursesByStatus,
+            'courses_by_category' => $coursesByCategory,
+        ]);
+    }
+
+   public function instructorStatistics($userId)
+{
+    // Lấy instructor ID theo user
+    $instructor = DB::table('instructors')->where('user_id', $userId)->first();
+    if (!$instructor) {
+        return response()->json(['error' => 'Instructor not found'], 404);
+    }
+
+    $instructorId = $instructor->id;
+
+    // Tổng số khoá học mà instructor giảng dạy
+    $totalCourses = DB::table('course_instructors')
+        ->where('instructor_id', $instructorId)
+        ->count();
+
+    // Doanh thu theo tháng & năm
+    $monthlyRevenue = DB::table('revenue_distributions')
+        ->join('revenue_sessions', 'revenue_distributions.revenue_session_id', '=', 'revenue_sessions.id')
+        ->where('revenue_distributions.instructor_id', $instructorId)
+        ->select(
+            'revenue_sessions.month',
+            'revenue_sessions.year',
+            DB::raw('SUM(revenue_distributions.instructor_share) as total_revenue')
+        )
+        ->groupBy('revenue_sessions.month', 'revenue_sessions.year')
+        ->orderByDesc('revenue_sessions.year')
+        ->orderByDesc('revenue_sessions.month')
+        ->get();
+
+    // Tổng doanh thu instructor nhận được
+    $totalRevenue = DB::table('revenue_distributions')
+        ->where('instructor_id', $instructorId)
+        ->sum('instructor_share');
+
+    return response()->json([
+        'instructor_id' => $instructorId,
+        'total_courses' => $totalCourses,
+        'total_revenue' => $totalRevenue,
+        'monthly_revenue' => $monthlyRevenue,
+    ]);
+}
+
 }

@@ -383,7 +383,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
         }
     }
 
-
    public function updateCourseInstructor(UpdateCourseRequest $request, $id)
     {
         try {

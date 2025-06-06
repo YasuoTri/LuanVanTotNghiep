@@ -166,6 +166,7 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
 
     Route::post('/user-answers/{user_answer_id}/grade', [QuizController::class, 'gradeOpenEndedAnswer'])->name('user-answers.grade');
     Route::get('/instructor/deleted-courses', [CourseController::class, 'getDeletedCoursesForInstructor']);
+    Route::get('/instructor/statistics/{userId}', [AnalyticsController::class, 'instructorStatistics']);
 });
 
 // Admin Routes
@@ -317,6 +318,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
 
     Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);
     Route::put('/admin/lessons/{lessonId}/review', [LessonController::class, 'approveLesson']);
+    Route::get('/admin/statistics', [AnalyticsController::class, 'adminStatistics']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

@@ -34,6 +34,10 @@ class ReviewController extends Controller
     public function update(UpdateReviewRequest $request, $id): JsonResponse
     {
         $review = Review::findOrFail($id);
+        $review->fill($request->validated());
+        if (!$review->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $review->update($request->validated());
         return response()->json(['message' => 'Review updated successfully', 'data' => $review]);
     }

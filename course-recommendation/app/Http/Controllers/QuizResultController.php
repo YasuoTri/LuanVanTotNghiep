@@ -107,6 +107,10 @@ class QuizResultController extends Controller
     public function update(UpdateQuizResultRequest $request, $id): JsonResponse
     {
         $quizResult = QuizResult::findOrFail($id);
+        $quizResult->fill($request->validated());
+        if(!$quizResult->isDirty()){
+            return response()->json(['message' => 'No changes detected'], 400);
+        }
         $quizResult->update($request->validated());
         return response()->json(['message' => 'Quiz result updated successfully', 'data' => $quizResult]);
     }

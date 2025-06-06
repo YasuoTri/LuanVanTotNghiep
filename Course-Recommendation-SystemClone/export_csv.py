@@ -12,7 +12,7 @@ conn = pymysql.connect(
     port=8200,
     user='root',
     password='123',
-    database='course_recommendation9',
+    database='course_recommendation',
     charset='utf8mb4'
 )
 

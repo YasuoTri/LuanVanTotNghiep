@@ -33,6 +33,10 @@ class QuestionChoiceController extends Controller
         if (!$choice) {
             return response()->json(['message' => 'Choice not found'], 404);
         }
+        $choice->fill($request->validated());
+        if (!$choice->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $choice->update($request->validated());
         return response()->json(['message'=>"updated successfully",'choice'=>$choice], 200);
     }

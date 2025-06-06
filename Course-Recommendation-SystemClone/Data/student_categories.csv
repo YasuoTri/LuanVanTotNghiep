@@ -1,0 +1,98 @@
+﻿student_id,user_id,category_id,category_name
+9,9,3,Business
+11,11,3,Business
+13,13,3,Business
+14,14,3,Business
+20,20,3,Business
+22,22,3,Business
+28,28,3,Business
+33,33,3,Business
+34,34,3,Business
+35,35,3,Business
+36,36,3,Business
+1,1,2,Data Science
+9,9,2,Data Science
+20,20,2,Data Science
+23,23,2,Data Science
+24,24,2,Data Science
+37,37,2,Data Science
+39,39,2,Data Science
+40,40,2,Data Science
+42,42,2,Data Science
+2,2,4,Design
+5,5,4,Design
+10,10,4,Design
+22,22,4,Design
+26,26,4,Design
+31,31,4,Design
+34,34,4,Design
+41,41,4,Design
+45,45,4,Design
+1,1,7,Health & Fitness
+5,5,7,Health & Fitness
+11,11,7,Health & Fitness
+13,13,7,Health & Fitness
+15,15,7,Health & Fitness
+19,19,7,Health & Fitness
+21,21,7,Health & Fitness
+27,27,7,Health & Fitness
+29,29,7,Health & Fitness
+32,32,7,Health & Fitness
+43,43,7,Health & Fitness
+45,45,7,Health & Fitness
+3,3,10,Language
+6,6,10,Language
+7,7,10,Language
+10,10,10,Language
+21,21,10,Language
+23,23,10,Language
+24,24,10,Language
+25,25,10,Language
+27,27,10,Language
+28,28,10,Language
+30,30,10,Language
+34,34,10,Language
+40,40,10,Language
+43,43,10,Language
+44,44,10,Language
+5,5,5,Marketing
+6,6,5,Marketing
+7,7,5,Marketing
+16,16,5,Marketing
+19,19,5,Marketing
+25,25,5,Marketing
+31,31,5,Marketing
+45,45,5,Marketing
+1,1,8,Music
+11,11,8,Music
+12,12,8,Music
+15,15,8,Music
+17,17,8,Music
+26,26,8,Music
+31,31,8,Music
+35,35,8,Music
+37,37,8,Music
+44,44,8,Music
+2,2,6,Personal Development
+4,4,6,Personal Development
+9,9,6,Personal Development
+13,13,6,Personal Development
+14,14,6,Personal Development
+16,16,6,Personal Development
+17,17,6,Personal Development
+23,23,6,Personal Development
+24,24,6,Personal Development
+30,30,6,Personal Development
+37,37,6,Personal Development
+44,44,6,Personal Development
+6,6,9,Photography
+8,8,9,Photography
+14,14,9,Photography
+18,18,9,Photography
+38,38,9,Photography
+39,39,9,Photography
+40,40,9,Photography
+19,19,1,Programming
+30,30,1,Programming
+35,35,1,Programming
+43,43,1,Programming

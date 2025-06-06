@@ -557,7 +557,127 @@ class AuthController extends Controller
         }
     }
 
-    public function updateProfile(Request $request)
+    // public function updateProfile(Request $request)
+    // {
+    //     try {
+    //         $userId = Auth::id();
+    //         if (!$userId) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Unauthorized or user not found',
+    //             ], 401);
+    //         }
+
+    //         $user = User::findOrFail($userId);
+
+    //         // Validate input
+    //         $validatedData = $request->validate([
+    //             'username' =>'required|string|max:50',
+    //             'final_cc_cname_DI' => 'nullable|string|max:100',
+    //             'LoE_DI' => 'nullable|string|max:50',
+    //             'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
+    //             'gender' => 'nullable|string|in:Male,Female,other',
+    //             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+    //             'learning_goals' => 'nullable|string',
+    //             'category_ids' => 'nullable|array',
+    //             'category_ids.*' => 'nullable|exists:categories,id',
+    //             'bio' => 'nullable|string|max:1000',
+    //             'organization' => 'nullable|string|max:100',
+    //             'name' => 'nullable|string|max:100',
+    //         ]);
+
+    //         // Handle avatar upload
+    //         if ($request->hasFile('avatar')) {
+    //             try {
+    //                 Log::info('Uploading avatar to Cloudinary');
+    //                 if ($user->avatar && strpos($user->avatar, 'cloudinary.com') !== false) {
+    //                     try {
+    //                         $this->cloudinaryService->deleteByUrl($user->avatar);
+    //                     } catch (\Exception $e) {
+    //                         Log::error('Error deleting old avatar: ' . $e->getMessage());
+    //                     }
+    //                 }
+    //                 $avatarUrl = $this->cloudinaryService->uploadImage($request->file('avatar'), 'user_avatars');
+    //                 $validatedData['avatar'] = $avatarUrl;
+    //             } catch (\Exception $e) {
+    //                 Log::error('Avatar upload error: ' . $e->getMessage());
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'Failed to upload avatar',
+    //                     'error' => $e->getMessage()
+    //                 ], 500);
+    //             }
+    //         }
+
+    //         // Update user data
+    //         $userDataToUpdate = array_intersect_key($validatedData, array_flip([
+    //             'username', 'final_cc_cname_DI', 'LoE_DI', 'YoB', 'gender', 'avatar'
+    //         ]));
+    //         $user->fill($userDataToUpdate);
+    //         $userIsDirty = $user->isDirty();
+    //         if (!empty($userDataToUpdate)) {
+    //             $user->update($userDataToUpdate);
+    //         }
+          
+    //         $studentIsDirty = false;
+    //         $instructorIsDirty = false;
+    //         $categoryChanged = false;
+    //         // Update role-based data
+    //         if ($user->role === 'student') {
+    //             $studentDataToUpdate = array_intersect_key($validatedData, array_flip([
+    //                 'learning_goals'
+    //             ]));
+    //             if (!empty($studentDataToUpdate)) {
+    //                 $student = $user->student;
+    //                 if ($student) {
+    //                     $student->update($studentDataToUpdate);
+    //                 }
+    //             }
+    //             if (isset($validatedData['category_ids'])) {
+    //                 $student = $user->student;
+    //                 if ($student) {
+    //                     $student->categories()->sync($validatedData['category_ids']);
+    //                 }
+    //             }
+    //         } elseif ($user->role === 'instructor') {
+    //             $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
+    //                 'bio', 'organization', 'name'
+    //             ]));
+    //             if (!empty($instructorDataToUpdate)) {
+    //                 $instructor = $user->instructor;
+    //                 if ($instructor) {
+    //                     $instructor->update($instructorDataToUpdate);
+    //                 }
+    //             }
+    //         }
+
+    //         $user = $user->fresh();
+    //         if ($user->role === 'instructor') {
+    //             $user->load('instructor');
+    //         } elseif ($user->role === 'student') {
+    //             $user->load('student', 'student.categories');
+    //         }
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Profile updated successfully',
+    //             'user' => $user
+    //         ]);
+    //     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'User not found',
+    //             'error' => $e->getMessage()
+    //         ], 404);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error updating profile',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+     public function updateProfile(Request $request)
     {
         try {
             $userId = Auth::id();
@@ -613,37 +733,62 @@ class AuthController extends Controller
             $userDataToUpdate = array_intersect_key($validatedData, array_flip([
                 'username', 'final_cc_cname_DI', 'LoE_DI', 'YoB', 'gender', 'avatar'
             ]));
+            $user->fill($userDataToUpdate);
+            $userIsDirty = $user->isDirty();
             if (!empty($userDataToUpdate)) {
                 $user->update($userDataToUpdate);
             }
-
+          
+            $studentIsDirty = false;
+            $instructorIsDirty = false;
+            $categoryChanged = false;
             // Update role-based data
-            if ($user->role === 'student') {
-                $studentDataToUpdate = array_intersect_key($validatedData, array_flip([
-                    'learning_goals'
-                ]));
-                if (!empty($studentDataToUpdate)) {
-                    $student = $user->student;
-                    if ($student) {
-                        $student->update($studentDataToUpdate);
-                    }
-                }
-                if (isset($validatedData['category_ids'])) {
-                    $student = $user->student;
-                    if ($student) {
-                        $student->categories()->sync($validatedData['category_ids']);
+           if ($user->role === 'student') {
+                $student = $user->student;
+                if ($student) {
+                    $studentDataToUpdate = array_intersect_key($validatedData, array_flip(['learning_goals']));
+                    $student->fill($studentDataToUpdate);
+                    $studentIsDirty = $student->isDirty();
+
+                    if (isset($validatedData['category_ids'])) {
+                        $existingIds = $student->categories()->pluck('categories.id')->toArray();
+                        $incomingIds = $validatedData['category_ids'];
+                        // Compare sorted arrays
+                        $categoryChanged = array_diff($existingIds, $incomingIds) || array_diff($incomingIds, $existingIds);
                     }
                 }
             } elseif ($user->role === 'instructor') {
-                $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
-                    'bio', 'organization', 'name'
-                ]));
-                if (!empty($instructorDataToUpdate)) {
-                    $instructor = $user->instructor;
-                    if ($instructor) {
-                        $instructor->update($instructorDataToUpdate);
-                    }
+                $instructor = $user->instructor;
+                if ($instructor) {
+                    $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
+                        'bio', 'organization', 'name'
+                    ]));
+                    $instructor->fill($instructorDataToUpdate);
+                    $instructorIsDirty = $instructor->isDirty();
                 }
+            }
+
+            // ✅ Nếu không có thay đổi gì thì return luôn
+            if (!$userIsDirty && !$studentIsDirty && !$instructorIsDirty && !$categoryChanged) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No changes detected.',
+                    'user' => $user->fresh()
+                ]);
+            }
+
+            // Nếu có thay đổi, mới tiến hành save như cũ
+            if ($userIsDirty) {
+                $user->save();
+            }
+            if ($studentIsDirty) {
+                $student->save();
+            }
+            if ($categoryChanged) {
+                $student->categories()->sync($validatedData['category_ids']);
+            }
+            if ($instructorIsDirty) {
+                $instructor->save();
             }
 
             $user = $user->fresh();

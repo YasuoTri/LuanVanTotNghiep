@@ -35,6 +35,10 @@ class LessonProgressController extends Controller
     public function update(UpdateLessonProgressRequest $request, $id): JsonResponse
     {
         $lessonProgress = LessonProgress::findOrFail($id);
+        $lessonProgress->fill($request->validated());
+        if(!$lessonProgress->isDirty()){
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $lessonProgress->update($request->validated());
         return response()->json(['message' => 'Lesson progress updated successfully', 'data' => $lessonProgress]);
     }
@@ -93,7 +97,7 @@ class LessonProgressController extends Controller
         $request->validate([
             'status' => 'required|in:not_started,in_progress,completed',
         ]);
-
+        
         $user_id = Auth::id();
 
         $progress = LessonProgress::updateOrCreate(

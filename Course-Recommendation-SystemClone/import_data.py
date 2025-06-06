@@ -85,8 +85,9 @@ def import_courses():
         # Filter out courses that already exist (case-insensitive)
         courses_to_import = courses[~courses['course_name'].str.lower().isin(existing_names)]
         print(f"Found {len(courses_to_import)} new courses to import")
-
-        if not courses_to_import.empty:
+        if courses['course_name'].isnull().any() or (courses['course_name'] == 'Unknown').any():
+            raise ValueError("Course Name cannot be null or 'Unknown'")
+        elif not courses_to_import.empty:
             # Insert new courses
             courses_to_import.to_sql('courses', engine, if_exists='append', index=False)
             print(f"Imported {len(courses_to_import)} courses successfully")

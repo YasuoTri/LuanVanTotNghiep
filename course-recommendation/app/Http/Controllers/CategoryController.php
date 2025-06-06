@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
-
+use App\Traits\DetectAndUpdateIfChanged;
 class CategoryController extends Controller
 {
+    use DetectAndUpdateIfChanged;
     public function index()
     {
         // Fetch all categories
-        $categories = Category::all()->paginate(10);
+        $categories = Category::paginate(10);
         return response()->json($categories);
     }
     public function show($id)
@@ -35,8 +36,7 @@ class CategoryController extends Controller
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
-        $category->update($request->all());
-        return response()->json($category);
+        return $this->updateIfChanged($category,$request->all(), 'Category');
     }
     public function destroy($id)
     {

@@ -282,6 +282,10 @@ class PaymentController extends Controller
     public function update(UpdatePaymentRequest $request, $id): JsonResponse
     {
         $payment = Payment::findOrFail($id);
+        $payment->fill($request->validated());
+        if (!$payment->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 400);
+        }
         $payment->update($request->validated());
         return response()->json(['message' => 'Payment updated successfully', 'data' => $payment]);
     }

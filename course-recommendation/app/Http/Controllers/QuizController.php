@@ -44,6 +44,10 @@ class QuizController extends Controller
     public function update(UpdateQuizRequest $request, $id): JsonResponse
     {
         $quiz = Quiz::findOrFail($id);
+        $quiz->fill($request->validated());
+        if(!$quiz->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 400);
+        }
         $quiz->update($request->validated());
         return response()->json(['message' => 'Quiz updated successfully', 'data' => $quiz]);
     }
@@ -168,7 +172,7 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         return response()->json($quiz, 201);
     }
 
-    public function updateForInstructor(Request $request, $id)
+    public function updateForInstructor(UpdateQuizRequest $request, $id)
     {
         $user = Auth::user();
         $quiz = Quiz::find($id);
@@ -176,7 +180,6 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
         $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
             ->whereHas('instructor', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
@@ -186,12 +189,11 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$instructor) {
             return response()->json(['message' => 'You are not an instructor for this course'], 403);
         }
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-        ]);
-
-        $quiz->update($validated);
+        $quiz->fill($request->validated());
+        if(!$quiz->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 400);
+        }
+        $quiz->update($request->validated());
         return response()->json($quiz, 200);
     }
 
@@ -289,13 +291,16 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$instructor) {
             return response()->json(['message' => 'You are not an instructor for this course'], 403);
         }
-
+        
         $validated = $request->validate([
             'max_attempts' => 'nullable|integer|min:1',
             'time_limit' => 'nullable|integer|min:1', // In minutes
             'is_visible' => 'nullable|boolean',
         ]);
-
+        $quiz->fill($validated);
+        if(!$quiz->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 400);
+        }
         // Update quiz settings (assuming these columns exist in quizzes table)
         $quiz->update($validated);
 

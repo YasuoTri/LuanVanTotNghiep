@@ -85,7 +85,7 @@ app = FastAPI()
 def get_recommendation(
     user_id: Optional[int] = Query(default=None, description="User ID for personalized recommendations"),
     course_name: Optional[str] = Query(default=None, description="Course name for content-based recommendations"),
-    alpha: float = Query(default=0.5, ge=0, le=1, description="Weight for hybrid filtering (0 = collaborative, 1 = content-based)")
+    alpha: float = Query(default=0.7, ge=0, le=1, description="Weight for hybrid filtering (0 = collaborative, 1 = content-based)")
 ):
     """
     Get course recommendations based on user_id, course_name, or both.

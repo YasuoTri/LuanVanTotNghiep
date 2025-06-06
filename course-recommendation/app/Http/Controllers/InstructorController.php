@@ -47,6 +47,10 @@ class InstructorController extends Controller
         if (!$instructor) {
             return response()->json(['message' => 'Instructor not found'], 404);
         }
+        $instructor->fill($request->all());
+        if (!$instructor->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $instructor->update($request->all());
         return response()->json($instructor);
     }

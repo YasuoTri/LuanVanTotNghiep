@@ -35,6 +35,10 @@ class ForumPostController extends Controller
     public function update(UpdateForumPostRequest $request, $id): JsonResponse
     {
         $forumPost = ForumPost::findOrFail($id);
+        $forumPost->fill($request->validated());
+        if (!$forumPost->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $forumPost->update($request->validated());
         return response()->json(['message' => 'Forum post updated successfully', 'data' => $forumPost]);
     }
@@ -140,7 +144,6 @@ class ForumPostController extends Controller
         if (!$post) {
             return response()->json(['message' => 'Forum post not found'], 404);
         }
-
         // Add a flag field to the forum_posts table if needed
         $post->update(['flagged' => 1]); // Assuming a flagged column exists
         return response()->json(['message' => 'Forum post flagged successfully'], 200);

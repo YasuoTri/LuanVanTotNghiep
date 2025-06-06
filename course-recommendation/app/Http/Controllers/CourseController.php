@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
+use Illuminate\Support\Facades\DB;
 
 class CourseController extends Controller
 {
@@ -189,21 +190,30 @@ public function show($id)
 
     public function update(UpdateCourseRequest $request, $id)
     {
-        try {            // Thêm debug này
-
+        try {     
             $course = Course::findOrFail($id);
             $validated = $request->validated();
             $validated['course_url'] = Str::slug($validated['course_name']);
-
+            $flag=false;
+            // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
-                // Xóa hình ảnh cũ trên Cloudinary nếu có
-                if ($course->image) {
+            $newFile = $request->file('image');
+
+            // Nếu ảnh cũ tồn tại và giống ảnh mới thì bỏ qua upload
+            if ($course->image && $this->isSameImage($course->image, $newFile)) {
+                return response()->json(['message' => 'No changes detected in the image'], 200);
+            } else {
+                // Xóa ảnh cũ nếu có
+                if ($course->image && str_contains($course->image, 'cloudinary.com')) {
                     $this->cloudinaryService->deleteByUrl($course->image);
                 }
-                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+                $flag=true;
+                // Upload ảnh mới
+                $validated['image'] = $this->cloudinaryService->uploadImage($newFile, 'courses');
+            }
             }
             
-            $course->update($validated);
+            $courseCategory = CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
             CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
             foreach ($validated['category_ids'] as $categoryId) {
                 CourseCategory::create([
@@ -212,13 +222,19 @@ public function show($id)
                     'updated_at' => now(),
                 ]);
             }
-
+            $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
+            
             // Gán instructor cho khóa học
             Course_Instructors::where('course_id', $course->id)->delete(); // Xóa instructor cũ
             Course_Instructors::create([
                 'course_id' => $course->id,
                 'instructor_id' => $validated['instructor_id'],
             ]);
+            $course->fill($validated);
+            if(!$course->isDirty() && !$flag && $courseCategoryCurrent === $courseCategory) {          
+                return response()->json(['message' => 'No changes detected'], 200);
+            }
+            $course->update($validated);
             $course->load('categories'); // Load categories for the response
             $course->load('instructors'); // Load instructors for the response
             return response()->json($course, 200);
@@ -383,6 +399,25 @@ public function storeCourseInstructor(CreateCourseRequest $request)
         }
     }
 
+function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploadedFile): bool
+{
+    try {
+        // Tải ảnh Cloudinary tạm về
+        $tempCloudinaryImage = tempnam(sys_get_temp_dir(), 'cloudinary_');
+        file_put_contents($tempCloudinaryImage, file_get_contents($cloudinaryUrl));
+
+        // Tính hash cả 2 ảnh
+        $oldHash = md5_file($tempCloudinaryImage);
+        $newHash = md5_file($uploadedFile->getRealPath());
+
+        // Xóa file tạm
+        unlink($tempCloudinaryImage);
+
+        return $oldHash === $newHash;
+    } catch (\Exception $e) {
+        return false;
+    }
+}
    public function updateCourseInstructor(UpdateCourseRequest $request, $id)
     {
         try {
@@ -403,19 +438,28 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             if(isset($validated['course_name'])){
                 $validated['course_url'] = Str::slug($validated['course_name']);
             }
-            $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
 
-
+            $flag=false;
             // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
-                if ($course->image) {
+            $newFile = $request->file('image');
+
+            // Nếu ảnh cũ tồn tại và giống ảnh mới thì bỏ qua upload
+            if ($course->image && $this->isSameImage($course->image, $newFile)) {
+                return response()->json(['message' => 'No changes detected in the image'], 200);
+            } else {
+                // Xóa ảnh cũ nếu có
+                if ($course->image && str_contains($course->image, 'cloudinary.com')) {
                     $this->cloudinaryService->deleteByUrl($course->image);
                 }
-                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
-            }
-            // Cập nhật khóa học
-            $course->update($validated);
 
+                // Upload ảnh mới
+                $validated['image'] = $this->cloudinaryService->uploadImage($newFile, 'courses');
+            }
+            }
+
+            $courseCategory = CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
+            Log::info("Current course categories before update: " . json_encode($courseCategory));
             // Cập nhật danh mục
             if(isset($validated['category_ids']) && is_array($validated['category_ids'])) {
                 CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
@@ -427,8 +471,16 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                     'updated_at' => now(),
                 ]);
                 }
-            } 
-
+            }
+            $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
+            Log::info("Current course categories: " . json_encode($courseCategoryCurrent));
+            // Cập nhật khóa học
+            $course->fill($validated);        
+            if((!$course->isDirty()) && $courseCategoryCurrent === $courseCategory&&!$flag) {          
+                return response()->json(['message' => 'No changes detected'], 200);
+            }
+            $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
+            $course->update($validated);
             return response()->json([
                 'success' => true,
                 'message' => 'Course updated successfully, pending review.',

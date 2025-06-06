@@ -30,6 +30,10 @@ class InteractionController extends Controller
     public function update(UpdateInteractionRequest $request, $id): JsonResponse
     {
         $interaction = Interaction::findOrFail($id);
+        $interaction->fill($request->validated());
+        if (!$interaction->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $interaction->update($request->validated());
         return response()->json(['message' => 'Interaction updated successfully', 'data' => $interaction]);
     }

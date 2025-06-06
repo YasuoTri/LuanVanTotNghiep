@@ -62,7 +62,10 @@ public function update(UpdateQuestionRequest $request, Question $question)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
     }
-
+    $question->fill($request->validated());
+    if (!$question->isDirty()) {
+        return response()->json(['message' => 'No changes detected'], 200);
+    }
     $question->update($request->validated());
     return response()->json($question);
 }

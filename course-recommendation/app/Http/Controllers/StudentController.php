@@ -34,6 +34,10 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404);
         }
+        $student->fill($request->all());
+        if (!$student->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $student->update($request->all());
         return response()->json($student);
     }

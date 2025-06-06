@@ -35,6 +35,10 @@ class CouponController extends Controller
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
+        $coupon->fill($request->all());
+        if (!$coupon->isDirty()) {
+            return response()->json(['message' => 'No changes detected'], 200);
+        }
         $coupon->update($request->all());
         return response()->json($coupon);
     }

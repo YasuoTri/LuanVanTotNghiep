@@ -414,8 +414,8 @@ class EnrollmentController extends Controller
             }])
             ->select('id', 'user_id', 'lesson_id', 'status', 'completed_at')
             ->get();
-
-        $totalLessons = $progress->count();
+        
+        $totalLessons = $lessons = Lesson::where('course_id', $enrollment->course_id)->count();
         $completedLessons = $progress->where('status', 'completed')->count();
         $progressPercentage = $totalLessons > 0 ? ($completedLessons / $totalLessons) * 100 : 0;
 

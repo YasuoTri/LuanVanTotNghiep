@@ -1658,4 +1658,44 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
     return response()->json($query->paginate(10));
 }
 
+/**
+     * Lấy danh sách quiz theo lesson_id
+     *
+     * @param int $lessonId
+     * @return JsonResponse
+     */
+    public function getQuizzesByLessonId($lessonId): JsonResponse
+    {
+        try {
+            // Truy vấn các quiz theo lesson_id
+            $quizzes = Quiz::where('lesson_id', $lessonId)
+                ->select('id as quiz_id', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at')
+                ->get();
+
+            // Kiểm tra xem có quiz nào hay không
+            if ($quizzes->isEmpty()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No quizzes found for this lesson.',
+                    'data' => []
+                ], 200);
+            }
+
+            // Trả về danh sách quiz
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Quizzes retrieved successfully.',
+                'data' => $quizzes
+            ], 200);
+
+        } catch (\Exception $e) {
+            // Xử lý lỗi nếu có
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while retrieving quizzes.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

@@ -358,7 +358,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
 
             $instructor = Auth::user()->instructor;
             $validated['course_url'] = Str::slug($validated['course_name']);
-            $validated['status'] = 'pending'; // Khóa học mới tạo ở trạng thái pending
+            $validated['status'] = 'draft'; // Khóa học mới tạo ở trạng thái pending
 
             // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {

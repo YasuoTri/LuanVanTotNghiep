@@ -51,6 +51,7 @@ Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
+Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
 // Student Routes
 Route::middleware(['jwt_cookie', 'instructor_or_student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
@@ -301,7 +302,6 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/students/restore/{id}', [StudentController::class, 'restore']);
     Route::delete('/admin/students/force-delete/{id}', [StudentController::class, 'forceDelete']);
 
-
     Route::post('/admin/forum-posts/restore/{id}', [ForumPostController::class, 'restore']);
     Route::delete('/admin/forum-posts/force-delete/{id}', [ForumPostController::class, 'forceDelete']);
 
@@ -338,7 +338,6 @@ Route::get('/search/reviews', [ReviewController::class, 'search']);
 Route::get('/search/payments', [PaymentController::class, 'search']);
 Route::get('/search/enrollments', [EnrollmentController::class, 'search']);
 Route::get('/search/forum-posts', [ForumPostController::class, 'search']);
-
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)

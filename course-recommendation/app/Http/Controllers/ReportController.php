@@ -35,9 +35,14 @@ class ReportController extends Controller
     // Admin xem danh sách báo cáo
     public function viewReports(Request $request)
     {
-        $reports = Report::with(['user', 'course'])
-            ->where('status', $request->status ?? 'pending')
-            ->get();
+        $reports = Report::with(['user', 'course','user.student','user.instructor','course.instructors'])
+            ->when($request->status, function ($query, $status) {
+                return $query->where('status', $status);
+            })
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
 
         return response()->json($reports);
     }
@@ -53,13 +58,16 @@ class ReportController extends Controller
 
         $report->update([
             'status' => $request->status,
-            'admin_id' => Auth::id(),
+            'admin_id' => Auth::user()->admin->id, // Giả sử admin đã đăng nhập
             'admin_notes' => $request->admin_notes,
             'reviewed_at' => now(),
         ]);
 
         // Xử lý khóa học dựa trên hành động
         $course = Course::find($report->course_id);
+        if (!$course) {
+            return response()->json(['message' => 'Course not found'], 404);
+        }
         if ($request->action === 'ban') {
             $course->update(['status' => 'banned']);
         } elseif ($request->action === 'delete') {

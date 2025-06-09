@@ -111,6 +111,7 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
    
     Route::get('/instructor/allcourses', [CourseController::class, 'indexCourseInstructor']);//xong
     Route::get('/instructor/courses-except-unavailable', [CourseController::class, 'indexAvailableCourseInstructor']);//xong
+    Route::get('/instructor/courses-get-ban', [CourseController::class, 'indexAvailableCourseInstructorGetBan']);//xong
     Route::post('/instructor/courses', [CourseController::class, 'storeCourseInstructor']);//xong
     Route::put('/instructor/courses/{id}', [CourseController::class, 'updateCourseInstructor']);//xong
     Route::delete('/instructor/courses/{id}', [CourseController::class, 'destroyCourseInstructor']);//xong

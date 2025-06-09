@@ -298,7 +298,18 @@ public function destroy($id)
         return response()->json(['message' => 'Failed to fetch available courses'], 500);
     }
 }
-   
+     public function indexAvailableCourseInstructorGetBan()
+{
+    try {
+        $instructor = Auth::user()->instructor;
+        $courses = $instructor->courses()->where('status', '=', 'banned')->paginate(10);
+
+        return response()->json($courses, 200);
+    } catch (\Exception $e) {
+        Log::error("Failed to fetch available instructor courses: {$e->getMessage()}");
+        return response()->json(['message' => 'Failed to fetch available courses'], 500);
+    }
+}
 
 // public function storeCourseInstructor(CreateCourseRequest $request)
 // {

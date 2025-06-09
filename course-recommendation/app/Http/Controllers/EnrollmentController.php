@@ -444,7 +444,8 @@ class EnrollmentController extends Controller
 
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000'
+            'comment' => 'nullable|string|max:1000',
+            'feedback_type' => 'nullable|string|max:1000',
         ]);
 
         // Kiểm tra xem đã có review cho khóa học này chưa
@@ -460,7 +461,8 @@ class EnrollmentController extends Controller
             'user_id' => $user->id,
             'course_id' => $enrollment->course_id,
             'rating' => $request->rating,
-            'comment' => $request->comment
+            'comment' => $request->comment,
+            'feedback_type' => $request->feedback_type,
         ]);
 
         return response()->json(['message' => 'Review submitted successfully', 'data' => $review], 201);
@@ -474,9 +476,9 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
+        // if ($user->role !== 'student') {
+        //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
+        // }
 
         // Check if course exists and is free
         $course = Course::find($course_id);
@@ -519,9 +521,9 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
+        // if ($user->role !== 'student') {
+        //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
+        // }
 
         // Check if course exists and is paid
         $course = Course::find($course_id);

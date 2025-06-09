@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckAdminRole;
 use App\Http\Middleware\CheckInstructorRole;
+use App\Http\Middleware\CheckStudentOrInstructor;
 use App\Http\Middleware\InstructorOrAdmin;
 use App\Http\Middleware\StudentOrAdmin;
 use Illuminate\Foundation\Application;
@@ -34,7 +35,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'instructor' => CheckInstructorRole::class,
             'instructor_or_admin' => InstructorOrAdmin::class,
             'student_or_admin' => StudentOrAdmin::class,
+            'instructor_or_student' => CheckStudentOrInstructor::class,
             'jwt_cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
+
             // 'cors' => Cors::class,
         ]);
 

@@ -19,6 +19,7 @@ use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LessonProgressController;
 use App\Http\Controllers\QuestionChoiceController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StudentController;
@@ -51,7 +52,7 @@ Route::apiResource('/admin/category', CategoryController::class);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 // Student Routes
-Route::middleware(['jwt_cookie', 'student'])->group(function () {
+Route::middleware(['jwt_cookie', 'instructor_or_student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
@@ -99,6 +100,7 @@ Route::middleware(['jwt_cookie', 'student'])->group(function () {
     Route::get('/user-answers/{answer}', [UserAnswerController::class, 'show'])->name('user-answers.show');//xong
 
     Route::post('/instructor/request', [AuthController::class, 'requestInstructorRole']);
+    Route::post('/reports', [ReportController::class, 'submitReport']);
 });
 
 // Instructor Routes
@@ -319,6 +321,9 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);
     Route::put('/admin/lessons/{lessonId}/review', [LessonController::class, 'approveLesson']);
     Route::get('/admin/statistics', [AnalyticsController::class, 'adminStatistics']);
+
+    Route::get('/admin/reports', [ReportController::class, 'viewReports']);
+    Route::put('/admin/reports/{report}', [ReportController::class, 'handleReport']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

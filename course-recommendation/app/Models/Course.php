@@ -13,7 +13,7 @@ class Course extends Model
     protected $primaryKey = 'id';
     protected $fillable = [
         'course_name', 'university', 'difficulty_level', 'course_rating',
-        'course_url','image', 'course_description', 'price','skills','status',
+        'course_url','image', 'course_description', 'price','skills','status','origin_id', 'version'
     ];
     
     protected $dates = ['deleted_at'];
@@ -23,6 +23,14 @@ class Course extends Model
     {
         $this->attributes['course_name'] = $value;
         $this->attributes['course_url'] = Str::slug($value);
+    }
+    public function origin()
+    {
+        return $this->belongsTo(Course::class, 'origin_id');
+    }
+    public function derivedCourses()
+    {
+        return $this->hasMany(Course::class, 'origin_id');
     }
         // Accessor for full URL
     public function getFullCourseUrlAttribute()
@@ -89,7 +97,7 @@ public function categories()
 
         public function Course_Instructorss()
     {
-        return $this->belongsTo(Course_Instructors::class);
+        return $this->hasOne(Course_Instructors::class);
     }
     public function reports()
     {

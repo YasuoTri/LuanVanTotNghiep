@@ -171,6 +171,7 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
     Route::post('/user-answers/{user_answer_id}/grade', [QuizController::class, 'gradeOpenEndedAnswer'])->name('user-answers.grade');
     Route::get('/instructor/deleted-courses', [CourseController::class, 'getDeletedCoursesForInstructor']);
     Route::get('/instructor/statistics/{userId}', [AnalyticsController::class, 'instructorStatistics']);
+    Route::put('/instructor/courses/{courseId}/submit-review-course', [CourseController::class, 'submitCourseForReviewInstructor']);
 });
 
 // Admin Routes

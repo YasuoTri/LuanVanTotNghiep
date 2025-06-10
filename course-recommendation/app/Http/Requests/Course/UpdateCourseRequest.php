@@ -15,7 +15,7 @@ class UpdateCourseRequest extends FormRequest
     public function rules()
     {
         return [
-            'course_name' => 'nullable|string|max:255|unique:courses,course_name,' . $this->route('id'),
+            'course_name' => 'nullable|string|max:255',
             'course_rating' => 'nullable|numeric|min:0|max:5',
             'university' => 'nullable|string|max:255',
             'difficulty_level' => 'nullable|string|max:50',
@@ -25,6 +25,8 @@ class UpdateCourseRequest extends FormRequest
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'nullable|array|exists:categories,id',
             'instructor_id' => 'nullable|exists:instructors,id',
+            'origin_id' => 'nullable|exists:courses,id',
+            'version' => 'nullable|string|max:50',
         ];
     }
 }

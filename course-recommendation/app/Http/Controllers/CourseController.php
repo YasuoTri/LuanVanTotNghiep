@@ -368,153 +368,153 @@ public function indexAvailableCourseInstructor()
 //     }
 // }
 
-// public function storeCourseInstructor(CreateCourseRequest $request)
-//     {
-//         try {
-//             $validated = $request->validated();
-
-//             // Kiểm tra từ khóa cấm
-//             $bannedWords = ['inappropriate', 'offensive'];
-//             if (isset($validated['course_description']) &&
-//                 preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
-//                 return response()->json(['message' => 'Course description contains banned words'], 422);
-//             }
-
-//             // Kiểm tra category_ids
-//             if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
-//                 return response()->json(['message' => 'At least one category must be selected'], 422);
-//             }
-
-//             $instructor = Auth::user()->instructor;
-//             $validated['course_url'] = Str::slug($validated['course_name']);
-//             $validated['status'] = 'draft'; // Khóa học mới tạo ở trạng thái pending
-
-//             // Xử lý upload hình ảnh
-//             if ($request->hasFile('image')) {
-//                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
-//                 if (!$validated['image']) {
-//                     return response()->json(['message' => 'Image upload failed'], 422);
-//                 }
-                
-//             }
-
-//             // Tạo khóa học
-//             $course = Course::create([
-//                 'course_name' => $validated['course_name'],
-//                 'university' => $validated['university'] ?? null,
-//                 'difficulty_level' => $validated['difficulty_level'] ?? null,
-//                 'course_rating' => 0,
-//                 'course_url' => $validated['course_url'],
-//                 'image' => $validated['image'] ?? null,
-//                 'course_description' => $validated['course_description'] ?? null,
-//                 'price' => $validated['price'] ?? 0,
-//                 'skills' => $validated['skills'] ?? null,
-//                 'status' => $validated['status'],
-//             ]);
-
-//             // Gán danh mục cho khóa học
-//             foreach ($validated['category_ids'] as $categoryId) {
-//                 CourseCategory::create([
-//                     'course_id' => $course->id,
-//                     'category_id' => $categoryId,
-//                     'created_at' => now(),
-//                     'updated_at' => now(),
-//                 ]);
-//             }
-
-//             // Gán instructor cho khóa học
-//             Course_Instructors::create([
-//                 'course_id' => $course->id,
-//                 'instructor_id' => $instructor->id,
-//             ]);
-
-//             return response()->json([
-//                 'success' => true,
-//                 'message' => 'Course created successfully, pending review.',
-//                 'course' => $course->load('categories'),
-//             ], 201);
-//         } catch (\Exception $e) {
-//             Log::error("Failed to create course: {$e->getMessage()}");
-//             return response()->json(['message' => 'Failed to create course', 'error' => $e->getMessage()], 500);
-//         }
-//     }
 public function storeCourseInstructor(CreateCourseRequest $request)
-{
-    try {
-        $validated = $request->validated();
-        $courseNamededupplicate = Course::where('course_name', $validated['course_name'])->where('status', '!=', 'archived')
-           ->where('status', '!=', 'draft')
-            ->first();
-        if ($courseNamededupplicate) {
-            return response()->json(['message' => 'Course name already exists'], 422);
-        }
-        // Kiểm tra từ khóa cấm
-        $bannedWords = ['inappropriate', 'offensive'];
-        if (isset($validated['course_description']) &&
-            preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
-            return response()->json(['message' => 'Course description contains banned words'], 422);
-        }
+    {
+        try {
+            $validated = $request->validated();
 
-        // Kiểm tra category_ids
-        if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
-            return response()->json(['message' => 'At least one category must be selected'], 422);
-        }
-
-        $instructor = Auth::user()->instructor;
-        $validated['course_url'] = Str::slug($validated['course_name']);
-        $validated['status'] = 'draft'; // Khóa học mới ở trạng thái draft
-        $validated['version'] = 1; // Phiên bản đầu tiên
-
-        // Xử lý upload hình ảnh
-        if ($request->hasFile('image')) {
-            $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
-            if (!$validated['image']) {
-                return response()->json(['message' => 'Image upload failed'], 422);
+            // Kiểm tra từ khóa cấm
+            $bannedWords = ['inappropriate', 'offensive'];
+            if (isset($validated['course_description']) &&
+                preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
+                return response()->json(['message' => 'Course description contains banned words'], 422);
             }
-        }
 
-        // Tạo khóa học
-        $course = Course::create([
-            'course_name' => $validated['course_name'],
-            'university' => $validated['university'] ?? null,
-            'difficulty_level' => $validated['difficulty_level'] ?? null,
-            'course_rating' => 0,
-            'course_url' => $validated['course_url'],
-            'image' => $validated['image'] ?? null,
-            'course_description' => $validated['course_description'] ?? null,
-            'price' => $validated['price'] ?? 0,
-            'skills' => $validated['skills'] ?? null,
-            'status' => $validated['status'],
-            'version' => $validated['version'],
-            'origin_id' => null, // Khóa học mới không có origin
-        ]);
+            // Kiểm tra category_ids
+            if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
+                return response()->json(['message' => 'At least one category must be selected'], 422);
+            }
 
-        // Gán danh mục cho khóa học
-        foreach ($validated['category_ids'] as $categoryId) {
-            CourseCategory::create([
-                'course_id' => $course->id,
-                'category_id' => $categoryId,
-                'created_at' => now(),
-                'updated_at' => now(),
+            $instructor = Auth::user()->instructor;
+            $validated['course_url'] = Str::slug($validated['course_name']);
+            $validated['status'] = 'draft'; // Khóa học mới tạo ở trạng thái pending
+
+            // Xử lý upload hình ảnh
+            if ($request->hasFile('image')) {
+                $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+                if (!$validated['image']) {
+                    return response()->json(['message' => 'Image upload failed'], 422);
+                }
+                
+            }
+
+            // Tạo khóa học
+            $course = Course::create([
+                'course_name' => $validated['course_name'],
+                'university' => $validated['university'] ?? null,
+                'difficulty_level' => $validated['difficulty_level'] ?? null,
+                'course_rating' => 0,
+                'course_url' => $validated['course_url'],
+                'image' => $validated['image'] ?? null,
+                'course_description' => $validated['course_description'] ?? null,
+                'price' => $validated['price'] ?? 0,
+                'skills' => $validated['skills'] ?? null,
+                'status' => $validated['status'],
             ]);
+
+            // Gán danh mục cho khóa học
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            // Gán instructor cho khóa học
+            Course_Instructors::create([
+                'course_id' => $course->id,
+                'instructor_id' => $instructor->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Course created successfully, pending review.',
+                'course' => $course->load('categories'),
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error("Failed to create course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to create course', 'error' => $e->getMessage()], 500);
         }
-
-        // Gán instructor cho khóa học
-        Course_Instructors::create([
-            'course_id' => $course->id,
-            'instructor_id' => $instructor->id,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Course created successfully as draft, pending admin review.',
-            'course' => $course->load('categories', 'instructors'),
-        ], 201);
-    } catch (\Exception $e) {
-        Log::error("Failed to create course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to create course', 'error' => $e->getMessage()], 500);
     }
-}
+// public function storeCourseInstructor(CreateCourseRequest $request)
+// {
+//     try {
+//         $validated = $request->validated();
+//         $courseNamededupplicate = Course::where('course_name', $validated['course_name'])->where('status', '!=', 'archived')
+//            ->where('status', '!=', 'draft')
+//             ->first();
+//         if ($courseNamededupplicate) {
+//             return response()->json(['message' => 'Course name already exists'], 422);
+//         }
+//         // Kiểm tra từ khóa cấm
+//         $bannedWords = ['inappropriate', 'offensive'];
+//         if (isset($validated['course_description']) &&
+//             preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
+//             return response()->json(['message' => 'Course description contains banned words'], 422);
+//         }
+
+//         // Kiểm tra category_ids
+//         if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
+//             return response()->json(['message' => 'At least one category must be selected'], 422);
+//         }
+
+//         $instructor = Auth::user()->instructor;
+//         $validated['course_url'] = Str::slug($validated['course_name']);
+//         $validated['status'] = 'draft'; // Khóa học mới ở trạng thái draft
+//         $validated['version'] = 1; // Phiên bản đầu tiên
+
+//         // Xử lý upload hình ảnh
+//         if ($request->hasFile('image')) {
+//             $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
+//             if (!$validated['image']) {
+//                 return response()->json(['message' => 'Image upload failed'], 422);
+//             }
+//         }
+
+//         // Tạo khóa học
+//         $course = Course::create([
+//             'course_name' => $validated['course_name'],
+//             'university' => $validated['university'] ?? null,
+//             'difficulty_level' => $validated['difficulty_level'] ?? null,
+//             'course_rating' => 0,
+//             'course_url' => $validated['course_url'],
+//             'image' => $validated['image'] ?? null,
+//             'course_description' => $validated['course_description'] ?? null,
+//             'price' => $validated['price'] ?? 0,
+//             'skills' => $validated['skills'] ?? null,
+//             'status' => $validated['status'],
+//             'version' => $validated['version'],
+//             'origin_id' => null, // Khóa học mới không có origin
+//         ]);
+
+//         // Gán danh mục cho khóa học
+//         foreach ($validated['category_ids'] as $categoryId) {
+//             CourseCategory::create([
+//                 'course_id' => $course->id,
+//                 'category_id' => $categoryId,
+//                 'created_at' => now(),
+//                 'updated_at' => now(),
+//             ]);
+//         }
+
+//         // Gán instructor cho khóa học
+//         Course_Instructors::create([
+//             'course_id' => $course->id,
+//             'instructor_id' => $instructor->id,
+//         ]);
+
+//         return response()->json([
+//             'success' => true,
+//             'message' => 'Course created successfully as draft, pending admin review.',
+//             'course' => $course->load('categories', 'instructors'),
+//         ], 201);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to create course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to create course', 'error' => $e->getMessage()], 500);
+//     }
+// }
 
 function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploadedFile): bool
 {
@@ -535,7 +535,231 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
         return false;
     }
 }
-//    public function updateCourseInstructor(UpdateCourseRequest $request, $id)
+   public function updateCourseInstructor(UpdateCourseRequest $request, $id)
+    {
+        try {
+            $course = Course::find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
+
+            $instructor = Auth::user()->instructor;
+            $courseInstructor = Course_Instructors::where('course_id', $id)
+                ->where('instructor_id', $instructor->id)
+                ->first();
+            if (!$courseInstructor) {
+                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
+
+            $validated = $request->validated();
+            if(isset($validated['course_name'])){
+                $validated['course_url'] = Str::slug($validated['course_name']);
+            }
+
+            $flag=false;
+            // Xử lý upload hình ảnh
+            if ($request->hasFile('image')) {
+            $newFile = $request->file('image');
+
+            // Nếu ảnh cũ tồn tại và giống ảnh mới thì bỏ qua upload
+            if ($course->image && $this->isSameImage($course->image, $newFile)) {
+                return response()->json(['message' => 'No changes detected in the image'], 200);
+            } else {
+                // Xóa ảnh cũ nếu có
+                if ($course->image && str_contains($course->image, 'cloudinary.com')) {
+                    $this->cloudinaryService->deleteByUrl($course->image);
+                }
+
+                // Upload ảnh mới
+                $validated['image'] = $this->cloudinaryService->uploadImage($newFile, 'courses');
+            }
+            }
+
+            $courseCategory = CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
+            Log::info("Current course categories before update: " . json_encode($courseCategory));
+            // Cập nhật danh mục
+            if(isset($validated['category_ids']) && is_array($validated['category_ids'])) {
+                CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
+            foreach ($validated['category_ids'] as $categoryId) {
+                CourseCategory::create([
+                    'course_id' => $course->id,
+                    'category_id' => $categoryId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                }
+            }
+            $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
+            Log::info("Current course categories: " . json_encode($courseCategoryCurrent));
+            // Cập nhật khóa học
+            $course->fill($validated);        
+            if((!$course->isDirty()) && $courseCategoryCurrent === $courseCategory&&!$flag) {          
+                return response()->json(['message' => 'No changes detected'], 200);
+            }
+            $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
+            $course->update($validated);
+            return response()->json([
+                'success' => true,
+                'message' => 'Course updated successfully, pending review.',
+                'course' => $course->load('categories'),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
+        }
+    }
+// public function updateCourseInstructor(UpdateCourseRequest $request, $id)
+// {
+//     try {
+//         $validated = $request->validated();
+//         $courseNamededupplicate = Course::where('course_name', $validated['course_name'])->where('status', '!=', 'archived')
+//            ->where('status', '!=', 'draft')
+//             ->first();
+//         if ($courseNamededupplicate) {
+//             return response()->json(['message' => 'Course name already exists'], 422);
+//         }
+//         $originalCourse = Course::find($id);
+//         if (!$originalCourse) {
+//             return response()->json(['message' => 'Course not found'], 404);
+//         }
+
+//         $instructor = Auth::user()->instructor;
+//         $courseInstructor = Course_Instructors::where('course_id', $id)
+//             ->where('instructor_id', $instructor->id)
+//             ->first();
+//         if (!$courseInstructor) {
+//             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+//         }
+
+//         $existingDraft = Course::where('origin_id', $originalCourse->id)
+//             ->where('status', 'pending')
+//             ->first();
+//         if ($existingDraft) {
+//             return response()->json(['message' => 'A draft version is already pending review'], 422);
+//         }
+        
+//         $validated = $request->validated();
+//         if (isset($validated['course_name'])) {
+//             $validated['course_url'] = Str::slug($validated['course_name']);
+//         } else {
+//             $validated['course_url'] = $originalCourse->course_url;
+//         }
+//         $validated['status'] = 'draft';
+//         $validated['version'] = $originalCourse->version + 1;
+//         $validated['origin_id'] = $originalCourse->id;
+
+//         // Xử lý hình ảnh
+//         $imageUrl = $originalCourse->image;
+//         if ($request->hasFile('image')) {
+//             $newFile = $request->file('image');
+//             if (!$originalCourse->image || !$this->isSameImage($originalCourse->image, $newFile)) {
+//                 // Upload ảnh mới
+//                 $imageUrl = $this->cloudinaryService->uploadImage($newFile, 'courses');
+//             }
+//         }
+//         if($originalCourse->status=="draft"){
+//             $originalCourse->update([
+//             'course_name' => $validated['course_name'] ?? $originalCourse->course_name,
+//             'university' => $validated['university'] ?? $originalCourse->university,
+//             'difficulty_level' => $validated['difficulty_level'] ?? $originalCourse->difficulty_level,
+//             'course_rating' => $originalCourse->course_rating,
+//             'course_url' => $validated['course_url'],
+//             'image' => $imageUrl,
+//             'course_description' => $validated['course_description'] ?? $originalCourse->course_description,
+//             'price' => $validated['price'] ?? $originalCourse->price,
+//             'skills' => $validated['skills'] ?? $originalCourse->skills,
+//             'status' => $validated['status']]);
+//              // Gán danh mục
+//         $categoryIds = $validated['category_ids'] ?? $originalCourse->categories->pluck('id')->toArray();
+//         $originalCourse->categories()->detach();
+//         foreach ($categoryIds as $categoryId) {   
+//             CourseCategory::create([
+//                 'course_id' => $originalCourse->id,
+//                 'category_id' => $categoryId,
+//                 'created_at' => now(),
+//                 'updated_at' => now(),
+//             ]);
+//         }
+//         $originalCourse->Course_Instructorss()->delete();
+//         // Gán instructor
+//         Course_Instructors::create([
+//             'course_id' => $originalCourse->id,
+//             'instructor_id' => $instructor->id,
+//         ]);
+//         return response()->json([
+//             'success' => true,
+//             'message' => 'Draft course created successfully, pending admin review.',
+//             'course' => $originalCourse->load('categories', 'instructors'),
+//         ], 200);
+//         }else{
+//         // Tạo bản sao khóa học
+//         $newCourse = Course::create([
+//             'course_name' => $validated['course_name'] ?? $originalCourse->course_name,
+//             'university' => $validated['university'] ?? $originalCourse->university,
+//             'difficulty_level' => $validated['difficulty_level'] ?? $originalCourse->difficulty_level,
+//             'course_rating' => $originalCourse->course_rating,
+//             'course_url' => $validated['course_url'],
+//             'image' => $imageUrl,
+//             'course_description' => $validated['course_description'] ?? $originalCourse->course_description,
+//             'price' => $validated['price'] ?? $originalCourse->price,
+//             'skills' => $validated['skills'] ?? $originalCourse->skills,
+//             'status' => $validated['status'],
+//             'version' => $validated['version'],
+//             'origin_id' => $validated['origin_id'],
+//         ]);
+//          // Gán danh mục
+//         $categoryIds = $validated['category_ids'] ?? $originalCourse->categories->pluck('id')->toArray();
+//         foreach ($categoryIds as $categoryId) {
+//             CourseCategory::create([
+//                 'course_id' => $newCourse->id,
+//                 'category_id' => $categoryId,
+//                 'created_at' => now(),
+//                 'updated_at' => now(),
+//             ]);
+//         }
+
+//         // Gán instructor
+//         Course_Instructors::create([
+//             'course_id' => $newCourse->id,
+//             'instructor_id' => $instructor->id,
+//         ]);
+//                 return response()->json([
+//             'success' => true,
+//             'message' => 'Draft course created successfully, pending admin review.',
+//             'course' => $newCourse->load('categories', 'instructors'),
+//         ], 200);
+//     }
+
+//     } catch (\Exception $e) {
+//         Log::error("Failed to update course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
+//     }
+// }
+
+    // public function destroyCourseInstructor($id)
+    // {
+    //     try {
+    //         $course = Course::find($id);
+    //         if (!$course) {
+    //             return response()->json(['message' => 'Course not found'], 404);
+    //         }
+
+    //         $instructor = Auth::user()->instructor;
+    //         $courseInstructor = Course_Instructors::where('course_id', $id)
+    //                                             ->where('instructor_id', $instructor->id)
+    //                                             ->first();
+    //         if (!$courseInstructor) {
+    //             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+    //         }
+
+    //         $course->delete();
+    //         return response()->json(['message' => 'Course deleted successfully'], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error("Failed to delete course: {$e->getMessage()}");
+    //         return response()->json(['message' => 'Failed to delete course'], 500);
+    //     }
+    // }
+//     public function destroyCourseInstructor($id)
 //     {
 //         try {
 //             $course = Course::find($id);
@@ -551,403 +775,160 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
 //                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
 //             }
 
-//             $validated = $request->validated();
-//             if(isset($validated['course_name'])){
-//                 $validated['course_url'] = Str::slug($validated['course_name']);
+//             if ($course->image) {
+//                 $this->cloudinaryService->deleteByUrl($course->image);
 //             }
 
-//             $flag=false;
-//             // Xử lý upload hình ảnh
-//             if ($request->hasFile('image')) {
-//             $newFile = $request->file('image');
-
-//             // Nếu ảnh cũ tồn tại và giống ảnh mới thì bỏ qua upload
-//             if ($course->image && $this->isSameImage($course->image, $newFile)) {
-//                 return response()->json(['message' => 'No changes detected in the image'], 200);
-//             } else {
-//                 // Xóa ảnh cũ nếu có
-//                 if ($course->image && str_contains($course->image, 'cloudinary.com')) {
-//                     $this->cloudinaryService->deleteByUrl($course->image);
-//                 }
-
-//                 // Upload ảnh mới
-//                 $validated['image'] = $this->cloudinaryService->uploadImage($newFile, 'courses');
-//             }
-//             }
-
-//             $courseCategory = CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
-//             Log::info("Current course categories before update: " . json_encode($courseCategory));
-//             // Cập nhật danh mục
-//             if(isset($validated['category_ids']) && is_array($validated['category_ids'])) {
-//                 CourseCategory::where('course_id', $course->id)->delete(); // Xóa danh mục cũ
-//             foreach ($validated['category_ids'] as $categoryId) {
-//                 CourseCategory::create([
-//                     'course_id' => $course->id,
-//                     'category_id' => $categoryId,
-//                     'created_at' => now(),
-//                     'updated_at' => now(),
-//                 ]);
-//                 }
-//             }
-//             $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
-//             Log::info("Current course categories: " . json_encode($courseCategoryCurrent));
-//             // Cập nhật khóa học
-//             $course->fill($validated);        
-//             if((!$course->isDirty()) && $courseCategoryCurrent === $courseCategory&&!$flag) {          
-//                 return response()->json(['message' => 'No changes detected'], 200);
-//             }
-//             $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
-//             $course->update($validated);
-//             return response()->json([
-//                 'success' => true,
-//                 'message' => 'Course updated successfully, pending review.',
-//                 'course' => $course->load('categories'),
-//             ], 200);
+//             $course->delete();
+//             return response()->json(['message' => 'Course deleted successfully'], 200);
 //         } catch (\Exception $e) {
-//             Log::error("Failed to update course: {$e->getMessage()}");
-//             return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
+//             Log::error("Failed to delete course: {$e->getMessage()}");
+//             return response()->json(['message' => 'Failed to delete course'], 500);
 //         }
 //     }
-public function updateCourseInstructor(UpdateCourseRequest $request, $id)
-{
-    try {
-        $validated = $request->validated();
-        $courseNamededupplicate = Course::where('course_name', $validated['course_name'])->where('status', '!=', 'archived')
-           ->where('status', '!=', 'draft')
-            ->first();
-        if ($courseNamededupplicate) {
-            return response()->json(['message' => 'Course name already exists'], 422);
-        }
-        $originalCourse = Course::find($id);
-        if (!$originalCourse) {
-            return response()->json(['message' => 'Course not found'], 404);
-        }
+//     public function destroyCourseInstructor($id)
+// {
+//     try {
+//         $course = Course::find($id);
+//         if (!$course) {
+//             return response()->json(['message' => 'Course not found'], 404);
+//         }
 
-        $instructor = Auth::user()->instructor;
-        $courseInstructor = Course_Instructors::where('course_id', $id)
-            ->where('instructor_id', $instructor->id)
-            ->first();
-        if (!$courseInstructor) {
-            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-        }
+//         if ($course->status === 'draft') {
+//             return response()->json(['message' => 'Cannot delete a draft course'], 422);
+//         }
 
-        $existingDraft = Course::where('origin_id', $originalCourse->id)
-            ->where('status', 'pending')
-            ->first();
-        if ($existingDraft) {
-            return response()->json(['message' => 'A draft version is already pending review'], 422);
-        }
-        
-        $validated = $request->validated();
-        if (isset($validated['course_name'])) {
-            $validated['course_url'] = Str::slug($validated['course_name']);
-        } else {
-            $validated['course_url'] = $originalCourse->course_url;
-        }
-        $validated['status'] = 'draft';
-        $validated['version'] = $originalCourse->version + 1;
-        $validated['origin_id'] = $originalCourse->id;
+//         $instructor = Auth::user()->instructor;
+//         $courseInstructor = Course_Instructors::where('course_id', $id)
+//             ->where('instructor_id', $instructor->id)
+//             ->first();
+//         if (!$courseInstructor) {
+//             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+//         }
 
-        // Xử lý hình ảnh
-        $imageUrl = $originalCourse->image;
-        if ($request->hasFile('image')) {
-            $newFile = $request->file('image');
-            if (!$originalCourse->image || !$this->isSameImage($originalCourse->image, $newFile)) {
-                // Upload ảnh mới
-                $imageUrl = $this->cloudinaryService->uploadImage($newFile, 'courses');
-            }
-        }
-        if($originalCourse->status=="draft"){
-            $originalCourse->update([
-            'course_name' => $validated['course_name'] ?? $originalCourse->course_name,
-            'university' => $validated['university'] ?? $originalCourse->university,
-            'difficulty_level' => $validated['difficulty_level'] ?? $originalCourse->difficulty_level,
-            'course_rating' => $originalCourse->course_rating,
-            'course_url' => $validated['course_url'],
-            'image' => $imageUrl,
-            'course_description' => $validated['course_description'] ?? $originalCourse->course_description,
-            'price' => $validated['price'] ?? $originalCourse->price,
-            'skills' => $validated['skills'] ?? $originalCourse->skills,
-            'status' => $validated['status']]);
-             // Gán danh mục
-        $categoryIds = $validated['category_ids'] ?? $originalCourse->categories->pluck('id')->toArray();
-        $originalCourse->categories()->detach();
-        foreach ($categoryIds as $categoryId) {   
-            CourseCategory::create([
-                'course_id' => $originalCourse->id,
-                'category_id' => $categoryId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        $originalCourse->Course_Instructorss()->delete();
-        // Gán instructor
-        Course_Instructors::create([
-            'course_id' => $originalCourse->id,
-            'instructor_id' => $instructor->id,
-        ]);
-        return response()->json([
-            'success' => true,
-            'message' => 'Draft course created successfully, pending admin review.',
-            'course' => $originalCourse->load('categories', 'instructors'),
-        ], 200);
-        }else{
-        // Tạo bản sao khóa học
-        $newCourse = Course::create([
-            'course_name' => $validated['course_name'] ?? $originalCourse->course_name,
-            'university' => $validated['university'] ?? $originalCourse->university,
-            'difficulty_level' => $validated['difficulty_level'] ?? $originalCourse->difficulty_level,
-            'course_rating' => $originalCourse->course_rating,
-            'course_url' => $validated['course_url'],
-            'image' => $imageUrl,
-            'course_description' => $validated['course_description'] ?? $originalCourse->course_description,
-            'price' => $validated['price'] ?? $originalCourse->price,
-            'skills' => $validated['skills'] ?? $originalCourse->skills,
-            'status' => $validated['status'],
-            'version' => $validated['version'],
-            'origin_id' => $validated['origin_id'],
-        ]);
-         // Gán danh mục
-        $categoryIds = $validated['category_ids'] ?? $originalCourse->categories->pluck('id')->toArray();
-        foreach ($categoryIds as $categoryId) {
-            CourseCategory::create([
-                'course_id' => $newCourse->id,
-                'category_id' => $categoryId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+//         if ($course->image) {
+//             $this->cloudinaryService->deleteByUrl($course->image);
+//         }
 
-        // Gán instructor
-        Course_Instructors::create([
-            'course_id' => $newCourse->id,
-            'instructor_id' => $instructor->id,
-        ]);
-                return response()->json([
-            'success' => true,
-            'message' => 'Draft course created successfully, pending admin review.',
-            'course' => $newCourse->load('categories', 'instructors'),
-        ], 200);
-    }
-
-    } catch (\Exception $e) {
-        Log::error("Failed to update course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
-    }
-}
-
-    // public function destroyCourseInstructor($id)
-    // {
-    //     try {
-    //         $course = Course::find($id);
-    //         if (!$course) {
-    //             return response()->json(['message' => 'Course not found'], 404);
-    //         }
-
-    //         $instructor = Auth::user()->instructor;
-    //         $courseInstructor = Course_Instructors::where('course_id', $id)
-    //                                             ->where('instructor_id', $instructor->id)
-    //                                             ->first();
-    //         if (!$courseInstructor) {
-    //             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-    //         }
-
-    //         $course->delete();
-    //         return response()->json(['message' => 'Course deleted successfully'], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error("Failed to delete course: {$e->getMessage()}");
-    //         return response()->json(['message' => 'Failed to delete course'], 500);
-    //     }
-    // }
-    // public function destroyCourseInstructor($id)
-    // {
-    //     try {
-    //         $course = Course::find($id);
-    //         if (!$course) {
-    //             return response()->json(['message' => 'Course not found'], 404);
-    //         }
-
-    //         $instructor = Auth::user()->instructor;
-    //         $courseInstructor = Course_Instructors::where('course_id', $id)
-    //             ->where('instructor_id', $instructor->id)
-    //             ->first();
-    //         if (!$courseInstructor) {
-    //             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-    //         }
-
-    //         if ($course->image) {
-    //             $this->cloudinaryService->deleteByUrl($course->image);
-    //         }
-
-    //         $course->delete();
-    //         return response()->json(['message' => 'Course deleted successfully'], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error("Failed to delete course: {$e->getMessage()}");
-    //         return response()->json(['message' => 'Failed to delete course'], 500);
-    //     }
-    // }
-    public function destroyCourseInstructor($id)
-{
-    try {
-        $course = Course::find($id);
-        if (!$course) {
-            return response()->json(['message' => 'Course not found'], 404);
-        }
-
-        if ($course->status === 'draft') {
-            return response()->json(['message' => 'Cannot delete a draft course'], 422);
-        }
-
-        $instructor = Auth::user()->instructor;
-        $courseInstructor = Course_Instructors::where('course_id', $id)
-            ->where('instructor_id', $instructor->id)
-            ->first();
-        if (!$courseInstructor) {
-            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-        }
-
-        if ($course->image) {
-            $this->cloudinaryService->deleteByUrl($course->image);
-        }
-
-        $course->delete();
-        return response()->json(['message' => 'Course deleted successfully'], 200);
-    } catch (\Exception $e) {
-        Log::error("Failed to delete course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to delete course'], 500);
-    }
-}
-    // public function makeCourseUnavailableInstructor($id)
-    // {
-    //     try {
-    //         $course = Course::find($id);
-    //         if (!$course) {
-    //             return response()->json(['message' => 'Course not found'], 404);
-    //         }
-
-    //         $instructor = Auth::user()->instructor;
-    //         $courseInstructor = Course_Instructors::where('course_id', $id)
-    //                                             ->where('instructor_id', $instructor->id)
-    //                                             ->first();
-    //         if (!$courseInstructor) {
-    //             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-    //         }
-
-    //         $course->update(['status' => 'unavailable']);
-    //         return response()->json(['message' => 'Course marked as unavailable'], 200);
-    //     } catch (\Exception $e) {
-    //         Log::error("Failed to update course: {$e->getMessage()}");
-    //         return response()->json(['message' => 'Failed to update course'], 500);
-    //     }
-    // }
+//         $course->delete();
+//         return response()->json(['message' => 'Course deleted successfully'], 200);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to delete course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to delete course'], 500);
+//     }
+// }
     public function makeCourseUnavailableInstructor($id)
-{
-    try {
-        $course = Course::find($id);
-        if (!$course) {
-            return response()->json(['message' => 'Course not found'], 404);
-        }
+    {
+        try {
+            $course = Course::find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
 
-        if (in_array($course->status, ['draft', 'archived'])) {
-            return response()->json(['message' => 'Cannot modify draft or archived course'], 422);
-        }
+            $instructor = Auth::user()->instructor;
+            $courseInstructor = Course_Instructors::where('course_id', $id)
+                                                ->where('instructor_id', $instructor->id)
+                                                ->first();
+            if (!$courseInstructor) {
+                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
 
-        $instructor = Auth::user()->instructor;
-        $courseInstructor = Course_Instructors::where('course_id', $id)
-            ->where('instructor_id', $instructor->id)
-            ->first();
-        if (!$courseInstructor) {
-            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            $course->update(['status' => 'unavailable']);
+            return response()->json(['message' => 'Course marked as unavailable'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course'], 500);
         }
-
-        $course->update(['status' => 'unavailable']);
-        return response()->json(['message' => 'Course marked as unavailable'], 200);
-    } catch (\Exception $e) {
-        Log::error("Failed to update course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to update course'], 500);
     }
-}
-// public function makeCourseAvailableInstructor($id)
-//     {
-//         try {
-//             $course = Course::find($id);
-//             if (!$course) {
-//                 return response()->json(['message' => 'Course not found'], 404);
-//             }
-
-//             $instructor = Auth::user()->instructor;
-//             $courseInstructor = Course_Instructors::where('course_id', $id)
-//                                                 ->where('instructor_id', $instructor->id)
-//                                                 ->first();
-//             if (!$courseInstructor) {
-//                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-//             }
-
-//             $course->update(['status' => 'approved']);
-//             return response()->json(['message' => 'Course marked as available'], 200);
-//         } catch (\Exception $e) {
-//             Log::error("Failed to update course: {$e->getMessage()}");
-//             return response()->json(['message' => 'Failed to update course'], 500);
+//     public function makeCourseUnavailableInstructor($id)
+// {
+//     try {
+//         $course = Course::find($id);
+//         if (!$course) {
+//             return response()->json(['message' => 'Course not found'], 404);
 //         }
+
+//         if (in_array($course->status, ['draft', 'archived'])) {
+//             return response()->json(['message' => 'Cannot modify draft or archived course'], 422);
+//         }
+
+//         $instructor = Auth::user()->instructor;
+//         $courseInstructor = Course_Instructors::where('course_id', $id)
+//             ->where('instructor_id', $instructor->id)
+//             ->first();
+//         if (!$courseInstructor) {
+//             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+//         }
+
+//         $course->update(['status' => 'unavailable']);
+//         return response()->json(['message' => 'Course marked as unavailable'], 200);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to update course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to update course'], 500);
 //     }
+// }
 public function makeCourseAvailableInstructor($id)
-{
-    try {
-        $course = Course::find($id);
-        if (!$course) {
-            return response()->json(['message' => 'Course not found'], 404);
-        }
+    {
+        try {
+            $course = Course::find($id);
+            if (!$course) {
+                return response()->json(['message' => 'Course not found'], 404);
+            }
 
-        if (in_array($course->status, ['draft', 'archived'])) {
-            return response()->json(['message' => 'Cannot modify draft or archived course'], 422);
-        }
+            $instructor = Auth::user()->instructor;
+            $courseInstructor = Course_Instructors::where('course_id', $id)
+                                                ->where('instructor_id', $instructor->id)
+                                                ->first();
+            if (!$courseInstructor) {
+                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            }
 
-        $instructor = Auth::user()->instructor;
-        $courseInstructor = Course_Instructors::where('course_id', $id)
-            ->where('instructor_id', $instructor->id)
-            ->first();
-        if (!$courseInstructor) {
-            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+            $course->update(['status' => 'approved']);
+            return response()->json(['message' => 'Course marked as available'], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to update course: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to update course'], 500);
         }
-
-        $course->update(['status' => 'approved']);
-        return response()->json(['message' => 'Course marked as available'], 200);
-    } catch (\Exception $e) {
-        Log::error("Failed to update course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to update course'], 500);
     }
-}
-    // public function getUnavailableCourses(Request $request)
-    // {
-    //     // Lấy instructor dựa trên user_id của người dùng đang đăng nhập
-    //     $instructor = Instructors::where('user_id', Auth::id())->first();
+// public function makeCourseAvailableInstructor($id)
+// {
+//     try {
+//         $course = Course::find($id);
+//         if (!$course) {
+//             return response()->json(['message' => 'Course not found'], 404);
+//         }
 
-    //     if (!$instructor) {
-    //         return response()->json([
-    //             'message' => 'Instructor not found.'
-    //         ], 404);
-    //     }
+//         if (in_array($course->status, ['draft', 'archived'])) {
+//             return response()->json(['message' => 'Cannot modify draft or archived course'], 422);
+//         }
 
-    //     // Lấy các khóa học của instructor có status là unavailable
-    //     $courses = Course::whereHas('instructors', function ($query) use ($instructor) {
-    //         $query->where('instructor_id', $instructor->id);
-    //     })
-    //     ->where('status', 'unavailable')
-    //     ->paginate(10);
+//         $instructor = Auth::user()->instructor;
+//         $courseInstructor = Course_Instructors::where('course_id', $id)
+//             ->where('instructor_id', $instructor->id)
+//             ->first();
+//         if (!$courseInstructor) {
+//             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+//         }
 
-    //     return response()->json([
-    //         'message' => 'Unavailable courses retrieved successfully.',
-    //         'data' => $courses
-    //     ], 200);
-    // }
+//         $course->update(['status' => 'approved']);
+//         return response()->json(['message' => 'Course marked as available'], 200);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to update course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to update course'], 500);
+//     }
+// }
     public function getUnavailableCourses(Request $request)
-{
-    try {
+    {
+        // Lấy instructor dựa trên user_id của người dùng đang đăng nhập
         $instructor = Instructors::where('user_id', Auth::id())->first();
+
         if (!$instructor) {
-            return response()->json(['message' => 'Instructor not found'], 404);
+            return response()->json([
+                'message' => 'Instructor not found.'
+            ], 404);
         }
 
+        // Lấy các khóa học của instructor có status là unavailable
         $courses = Course::whereHas('instructors', function ($query) use ($instructor) {
             $query->where('instructor_id', $instructor->id);
         })
@@ -958,11 +939,30 @@ public function makeCourseAvailableInstructor($id)
             'message' => 'Unavailable courses retrieved successfully.',
             'data' => $courses
         ], 200);
-    } catch (\Exception $e) {
-        Log::error("Failed to fetch unavailable courses: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to fetch unavailable courses'], 500);
     }
-}
+//     public function getUnavailableCourses(Request $request)
+// {
+//     try {
+//         $instructor = Instructors::where('user_id', Auth::id())->first();
+//         if (!$instructor) {
+//             return response()->json(['message' => 'Instructor not found'], 404);
+//         }
+
+//         $courses = Course::whereHas('instructors', function ($query) use ($instructor) {
+//             $query->where('instructor_id', $instructor->id);
+//         })
+//         ->where('status', 'unavailable')
+//         ->paginate(10);
+
+//         return response()->json([
+//             'message' => 'Unavailable courses retrieved successfully.',
+//             'data' => $courses
+//         ], 200);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to fetch unavailable courses: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to fetch unavailable courses'], 500);
+//     }
+// }
      public function getDeletedCoursesForInstructor()
     {
         try {
@@ -985,59 +985,59 @@ public function makeCourseAvailableInstructor($id)
         }
     }
 
-//     public function approveCourse(Request $request, $id)
-// {
-//     $course = Course::findOrFail($id);
-//     $course->status = 'approved';
-//     $course->save();
-
-//     // Lưu lịch sử duyệt (nếu dùng bảng course_reviews)
-//     CourseReview::create([
-//         'course_id' => $course->id,
-//         'admin_id' => Auth::user()->admin->id,
-//         'status' => 'approved',
-//         'notes' => $request->input('notes'),
-//     ]);
-
-//     return response()->json(['message' => 'Course approved successfully']);
-// }
 public function approveCourse(Request $request, $id)
 {
-    try {
-        $course = Course::findOrFail($id);
-        if ($course->status !== 'pending') {
-            return response()->json(['message' => 'Only pending courses can be approved'], 422);
-        }
+    $course = Course::findOrFail($id);
+    $course->status = 'approved';
+    $course->save();
 
-        // Tìm khóa học gốc
-        $originalCourse = Course::find($course->origin_id);
-        if ($originalCourse && $originalCourse->status === 'approved') {
-            // Chuyển khóa học gốc thành archived
-            $originalCourse->update(['status' => 'archived']);
-            $originalCourse->delete(); // Xóa khóa học gốc
-        }
+    // Lưu lịch sử duyệt (nếu dùng bảng course_reviews)
+    CourseReview::create([
+        'course_id' => $course->id,
+        'admin_id' => Auth::user()->admin->id,
+        'status' => 'approved',
+        'notes' => $request->input('notes'),
+    ]);
 
-        // Cập nhật khóa học draft thành approved
-        $course->update(['status' => 'approved']);
-
-        // Lưu lịch sử duyệt
-        CourseReview::create([
-            'course_id' => $course->id,
-            'admin_id' => Auth::user()->admin->id,
-            'status' => 'approved',
-            'notes' => $request->input('notes'),
-        ]);
-        $Lesson=Lesson::where('course_id',$course->origin_id)->get();
-        foreach ($Lesson as $lesson) {
-            $lesson->course_id = $course->id; // Cập nhật ID khóa học cho các bài học
-            $lesson->save();
-        }
-        return response()->json(['message' => 'Course approved successfully']);
-    } catch (\Exception $e) {
-        Log::error("Failed to approve course: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to approve course'], 500);
-    }
+    return response()->json(['message' => 'Course approved successfully']);
 }
+// public function approveCourse(Request $request, $id)
+// {
+//     try {
+//         $course = Course::findOrFail($id);
+//         if ($course->status !== 'pending') {
+//             return response()->json(['message' => 'Only pending courses can be approved'], 422);
+//         }
+
+//         // Tìm khóa học gốc
+//         $originalCourse = Course::find($course->origin_id);
+//         if ($originalCourse && $originalCourse->status === 'approved') {
+//             // Chuyển khóa học gốc thành archived
+//             $originalCourse->update(['status' => 'archived']);
+//             $originalCourse->delete(); // Xóa khóa học gốc
+//         }
+
+//         // Cập nhật khóa học draft thành approved
+//         $course->update(['status' => 'approved']);
+
+//         // Lưu lịch sử duyệt
+//         CourseReview::create([
+//             'course_id' => $course->id,
+//             'admin_id' => Auth::user()->admin->id,
+//             'status' => 'approved',
+//             'notes' => $request->input('notes'),
+//         ]);
+//         $Lesson=Lesson::where('course_id',$course->origin_id)->get();
+//         foreach ($Lesson as $lesson) {
+//             $lesson->course_id = $course->id; // Cập nhật ID khóa học cho các bài học
+//             $lesson->save();
+//         }
+//         return response()->json(['message' => 'Course approved successfully']);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to approve course: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to approve course'], 500);
+//     }
+// }
 
 public function rejectCourse(Request $request, $id)
 {

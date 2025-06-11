@@ -27,4 +27,9 @@ class Review extends Model
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
+    public function admin()
+    {
+        return $this->belongsTo(Admins::class);
+    }
+ 
 }

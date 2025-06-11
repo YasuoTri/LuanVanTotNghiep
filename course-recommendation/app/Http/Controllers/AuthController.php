@@ -137,25 +137,85 @@ class AuthController extends Controller
         }
     }
 
-     public function login(Request $request)
+    //  public function login(Request $request)
+    // {
+    //     $credentials = $request->validate([
+    //         'email' => 'required|email',
+    //         'password' => 'required',
+    //     ]);
+        
+    //     if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+    //         $user = Auth::user();
+    //         $token = JWTAuth::fromUser($user);
+
+    //         $cookie = cookie(
+    //             'jwt_token',
+    //             $token,
+    //             60,
+    //             '/',
+    //             null,
+    //             true,
+    //             true,
+    //             false,
+    //             'Strict'
+    //         );
+
+    //         return response()->json([
+    //             'message' => 'Login successful',
+    //             'token' => $token,
+    //             'user' => $user,
+    //         ])->withCookie($cookie);
+    //     }
+
+    //     return response()->json([
+    //         'error' => 'The provided credentials do not match our records.',
+    //     ], 401);
+    // }
+    public function login(Request $request)
     {
+        // Validate input
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-        if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+        try {
+            // Attempt authentication
+            if (!Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+                return response()->json([
+                    'error' => 'The provided credentials do not match our records.',
+                ], 401);
+            }
+
             $user = Auth::user();
+
+            // Check user status
+            if ($user->status === 'banned') {
+                Auth::logout(); // Log out the user to prevent token generation
+                return response()->json([
+                    'error' => 'Your account has been permanently banned. Please contact support.',
+                ], 403);
+            }
+
+            if ($user->status === 'suspended' && $user->suspended_until && now()->lt($user->suspended_until)) {
+                Auth::logout(); // Log out the user
+                return response()->json([
+                    'error' => 'Your account is suspended until ' . $user->suspended_until->toFormattedDateString() . '. Please try again later.',
+                ], 403);
+            }
+
+            // Generate JWT token
             $token = JWTAuth::fromUser($user);
 
+            // Create JWT cookie
             $cookie = cookie(
                 'jwt_token',
                 $token,
-                60,
+                60, // 60 minutes
                 '/',
                 null,
-                true,
-                true,
+                true, // secure
+                true, // httpOnly
                 false,
                 'Strict'
             );
@@ -165,11 +225,12 @@ class AuthController extends Controller
                 'token' => $token,
                 'user' => $user,
             ])->withCookie($cookie);
+        } catch (\Exception $e) {
+            Log::error('Error in login: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'An error occurred during login. Please try again.',
+            ], 500);
         }
-
-        return response()->json([
-            'error' => 'The provided credentials do not match our records.',
-        ], 401);
     }
 
     public function refresh()

@@ -26,6 +26,7 @@ class User extends Authenticatable implements JWTSubject
         'role',
         'provider',
         'provider_id',
+        'suspended_until',
         'created_at',
         'updated_at',
     ];
@@ -120,4 +121,8 @@ class User extends Authenticatable implements JWTSubject
             'YoB' => $this->YoB,
         ];
     }
+    public function violations()
+{
+    return $this->hasMany(Violation::class);
+}
 }

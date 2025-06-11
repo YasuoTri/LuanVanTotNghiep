@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Seed Users - Create 50 diverse users
+    
         $this->seedUsers();
         
         // Seed Categories
@@ -82,7 +82,6 @@ class DatabaseSeeder extends Seeder
         // Seed Course Reviews
         $this->seedCourseReviews();
         
-        // Seed Interactions
         $this->seedInteractions();
         
         // Seed Enrollments
@@ -129,12 +128,7 @@ class DatabaseSeeder extends Seeder
         
         // Seed Forum Posts
         $this->seedForumPosts();
-        
-        // Seed Media
-        // $this->seedMedia();
-        
-        // Seed Similarity Matrix
-        $this->seedSimilarityMatrix();
+
     }
 
     private function seedUsers()
@@ -552,15 +546,10 @@ private function seedCourseInstructors()
                 $startTime = now()->subDays(rand(1, 180));
                 $lastEvent = $viewed ? $startTime->copy()->addDays(rand(1, 30)) : null;
                 
-                $rating = null;
-                if ($viewed) {
-                    $rating = $certified ? rand(40, 50) / 10 : rand(20, 50) / 10;
-                }
                 
                 Interaction::create([
                     'user_id' => $student->id,
                     'course_id' => $course->id,
-                    'rating' => $rating,
                     'viewed' => $viewed,
                     'explored' => $explored,
                     'certified' => $certified,
@@ -569,7 +558,6 @@ private function seedCourseInstructors()
                     'nevents' => $viewed ? rand(1, 50) : 0,
                     'ndays_act' => $viewed ? rand(1, 15) : 0,
                     'nplay_video' => $viewed ? rand(0, 20) : 0,
-                    'nchapters' => $viewed ? rand(0, 10) : 0,
                     'nforum_posts' => $viewed ? rand(0, 5) : 0,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -952,24 +940,17 @@ private function seedCourseInstructors()
     private function seedReviews()
     {
         $this->command->info('Seeding reviews...');
-        
-        $interactions = Interaction::whereNotNull('rating')->get();
-        
-        foreach ($interactions as $interaction) {
-            if (!Review::where('user_id', $interaction->user_id)
-                ->where('course_id', $interaction->course_id)
-                ->exists()) {
-                Review::create([
-                    'user_id' => $interaction->user_id,
-                    'course_id' => $interaction->course_id,
-                    'rating' => round($interaction->rating),
-                    'comment' => 'This course was very helpful!',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+        $user= User::where('role', 'student')->inRandomOrder()->take(20)->get();
+        for($i=0;$i<$user->count();$i++){
+            Review::create([
+                'user_id' => $user[$i]->id,
+                'course_id' => Course::inRandomOrder()->first()->id,
+                'rating' => rand(1, 5),
+                'content' => 'This is a review for the course.',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
-        
         $this->command->info('Reviews seeded successfully!');
     }
 

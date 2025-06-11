@@ -101,6 +101,6 @@ public function categories()
     }
     public function reports()
     {
-        return $this->hasMany(Report::class);
+        return $this->morphMany(Report::class, 'reportable');
     }
 }

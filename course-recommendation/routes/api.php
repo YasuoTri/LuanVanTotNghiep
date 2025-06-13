@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\AuditController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecommendationController;
@@ -324,6 +326,7 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::put('/admin/lessons/{lessonId}/review', [LessonController::class, 'approveLesson']);
     Route::get('/admin/statistics', [AnalyticsController::class, 'adminStatistics']);
 
+    Route::get('/admin/reports/trashed', [ReportController::class, 'trashed']);
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::get('/admin/reports/find', [ReportController::class, 'FindviewReports']);
     Route::put('/admin/reports/handle-report/{report}', [ReportController::class, 'handleReport']);
@@ -334,9 +337,19 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/reports/{report}', [ReportController::class, 'destroy']);
     Route::post('/admin/reports/{report}/restore', [ReportController::class, 'restore']);
     Route::delete('/admin/reports/{report}/force-delete', [ReportController::class, 'forceDelete']);
-    Route::get('/admin/reports/trashed', [ReportController::class, 'trashed']);
     Route::get('/admin/reports/{report}/view', [ReportController::class, 'search']);
     
+    Route::get('/admin/audit-logs/trashed', [AuditLogController::class, 'trashed']);
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+    Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show']);
+    Route::post('/admin/audit-logs', [AuditLogController::class, 'store']);
+    Route::put('/admin/audit-logs/{id}', [AuditLogController::class, 'update']);
+    Route::delete('/admin/audit-logs/{id}', [AuditLogController::class, 'destroy']);
+    Route::post('/admin/audit-logs/{id}/restore', [AuditLogController::class, 'restore']);
+    Route::delete('/admin/audit-logs/{id}/force-delete', [AuditLogController::class, 'forceDelete']);
+    Route::post('/admin/audit-logs/restore-all', [AuditLogController::class, 'restoreAll']);
+    Route::delete('/admin/audit-logs/force-delete-all', [AuditLogController::class, 'forceDeleteAll']);
+
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

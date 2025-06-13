@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Http\Requests\Payment\UpdatePaymentRequest;
 use App\Models\AdminAccount;
+use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\RevenueSession;
 use App\Services\PaymentGateways\PayPalGateway;
@@ -248,6 +249,13 @@ class PaymentController extends Controller
             'payment_date' => $paymentData['payment_date'] ?? null,
             'revenue_session_id' => $revenueSession->id,
         ]);
+        
+        AuditLog::create([
+            'payment_id' => $payment->id,
+            'action' => 'created',
+            'details' => 'Init payment',
+            'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
+        ]);
 
         // Update coupon
         if ($coupon) {
@@ -434,6 +442,13 @@ try{
             if ($adminAccount && $payment->amount > 0) {
                 $adminAccount->increment('balance', $payment->amount);
             }
+            // Cập nhật lịch sử thanh toán
+            AuditLog::create([
+                'payment_id' => $payment->id,
+                'action' => 'payment_completed',
+                'details' => 'Payment completed successfully',
+                'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
+            ]);
         }
 
         DB::commit();

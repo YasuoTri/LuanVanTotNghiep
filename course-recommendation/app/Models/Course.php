@@ -12,7 +12,7 @@ class Course extends Model
     protected $table = 'courses';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'course_name', 'university', 'difficulty_level', 'course_rating',
+        'course_name', 'difficulty_level', 'course_rating',
         'course_url','image', 'course_description', 'price','skills','status','origin_id', 'version'
     ];
     

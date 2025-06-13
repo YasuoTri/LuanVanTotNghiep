@@ -17,7 +17,6 @@ class UpdateCourseRequest extends FormRequest
         return [
             'course_name' => 'nullable|string|max:255',
             'course_rating' => 'nullable|numeric|min:0|max:5',
-            'university' => 'nullable|string|max:255',
             'difficulty_level' => 'nullable|string|max:50',
             'course_description' => 'nullable|string',
             'price' => 'nullable|integer|min:0',
@@ -25,8 +24,6 @@ class UpdateCourseRequest extends FormRequest
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'nullable|array|exists:categories,id',
             'instructor_id' => 'nullable|exists:instructors,id',
-            'origin_id' => 'nullable|exists:courses,id',
-            'version' => 'nullable|string|max:50',
         ];
     }
 }

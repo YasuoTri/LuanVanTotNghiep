@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Course;
+use App\Observers\CourseObserver;
 use Illuminate\Support\ServiceProvider;
 use Cloudinary\Configuration\Configuration;
 use App\Services\CloudinaryService;
@@ -22,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Course::observe(CourseObserver::class);
          Configuration::instance([
         'cloud' => [
             'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),

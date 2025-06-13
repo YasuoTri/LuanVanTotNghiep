@@ -47,4 +47,8 @@ class Payment extends Model
     {
         return $this->belongsTo(RevenueSession::class, 'revenue_session_id');
     }
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
 }

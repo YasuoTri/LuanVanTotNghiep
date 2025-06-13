@@ -46,7 +46,6 @@ class CourseController extends Controller
             return [
                 'id' => $course->id,
                 'course_name' => $course->course_name,
-                'university' => $course->university,
                 'difficulty_level' => $course->difficulty_level,
                 'course_rating' => $course->course_rating,
                 'course_url' => $course->course_url,
@@ -401,7 +400,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             // Tạo khóa học
             $course = Course::create([
                 'course_name' => $validated['course_name'],
-                'university' => $validated['university'] ?? null,
                 'difficulty_level' => $validated['difficulty_level'] ?? null,
                 'course_rating' => 0,
                 'course_url' => $validated['course_url'],
@@ -1158,7 +1156,6 @@ public function getPendingCourses()
             ->select([
                 'id',
                 'course_name',
-                'university',
                 'difficulty_level',
                 'course_rating',
                 'course_url',

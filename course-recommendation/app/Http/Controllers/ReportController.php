@@ -278,9 +278,6 @@ public function FindviewReports(Request $request)
         ]);
 
         $user = Auth::user();
-        if (!in_array($user->role, ['student', 'instructor'])) {
-            return response()->json(['message' => 'Only students or instructors can submit reports'], 403);
-        }
 
         // Chuyển đổi reportable_type thành namespace đầy đủ
         $reportableType = 'App\\Models\\' . $request->reportable_type;
@@ -326,8 +323,9 @@ public function FindviewReports(Request $request)
         $report->delete();
         return response()->json(['message' => 'Report deleted successfully']);
     }
-    public function forcedelete(Report $report)
+    public function forcedelete($id)
     {
+        $report = Report::withTrashed()->findOrFail($id);
         $report->forceDelete();
         return response()->json(['message' => 'Report permanently deleted']);
     }

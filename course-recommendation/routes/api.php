@@ -336,9 +336,10 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::put('/admin/reports/{report}', [ReportController::class, 'update']);
     Route::delete('/admin/reports/{report}', [ReportController::class, 'destroy']);
     Route::post('/admin/reports/{report}/restore', [ReportController::class, 'restore']);
-    Route::delete('/admin/reports/{report}/force-delete', [ReportController::class, 'forceDelete']);
+    Route::delete('/admin/reports/{id}/force-delete', [ReportController::class, 'forceDelete']);
     Route::get('/admin/reports/{report}/view', [ReportController::class, 'search']);
     
+    Route::get('/admin/audit-logs/search', [AuditLogController::class, 'search']);
     Route::get('/admin/audit-logs/trashed', [AuditLogController::class, 'trashed']);
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
     Route::get('/admin/audit-logs/{id}', [AuditLogController::class, 'show']);
@@ -349,7 +350,6 @@ Route::middleware(['jwt_cookie', 'admin'])->group(function () {
     Route::delete('/admin/audit-logs/{id}/force-delete', [AuditLogController::class, 'forceDelete']);
     Route::post('/admin/audit-logs/restore-all', [AuditLogController::class, 'restoreAll']);
     Route::delete('/admin/audit-logs/force-delete-all', [AuditLogController::class, 'forceDeleteAll']);
-
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

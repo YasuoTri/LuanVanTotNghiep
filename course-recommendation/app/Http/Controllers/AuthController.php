@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\InstructorApprovalMail;
 use App\Models\Admins;
 use App\Models\Instructors;
 use App\Models\Student;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
@@ -556,6 +558,8 @@ class AuthController extends Controller
             ]);
                 Log::info('Creating new instructor record for user ID: ' . $user->id);
             }
+              // Gửi email thông báo
+            Mail::to($user->email)->send(new InstructorApprovalMail($user, $instructorRequest));
         }
 
         return response()->json([

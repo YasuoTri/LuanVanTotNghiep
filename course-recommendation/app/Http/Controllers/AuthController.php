@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\InstructorApprovalMail;
+use App\Mail\InstructorRejectionMail;
 use App\Models\Admins;
 use App\Models\Instructors;
 use App\Models\Student;
@@ -540,8 +541,8 @@ class AuthController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        $user = User::findOrFail($instructorRequest->user_id);
         if ($requestData['status'] === 'approved') {
-            $user = User::findOrFail($instructorRequest->user_id);
             $user->update(['role' => 'instructor']);
             $instructor=Instructors::where('user_id', $instructorRequest->user_id)->first();
             if ($instructor) {
@@ -560,6 +561,9 @@ class AuthController extends Controller
             }
               // Gửi email thông báo
             Mail::to($user->email)->send(new InstructorApprovalMail($user, $instructorRequest));
+        }elseif ($requestData['status'] === 'rejected') {
+            // Gửi email từ chối
+            Mail::to($user->email)->send(new InstructorRejectionMail($user, $requestData['admin_notes']));
         }
 
         return response()->json([

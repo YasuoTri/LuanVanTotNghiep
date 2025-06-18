@@ -16,7 +16,7 @@ class StoreQuestionRequest extends FormRequest
         return [
             'quiz_id' => 'required|exists:quizzes,id',
             'title' => 'required|string',
-            'question_type' => 'required|in:multiple_choice,true_false,open_ended',
+            'question_type' => 'required|in:multiple_choice,true_false',
             'points' => 'required|numeric|min:0',
             'sort_order' => 'integer|min:0',
             'is_visible' => 'boolean',

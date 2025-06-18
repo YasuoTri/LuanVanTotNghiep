@@ -173,11 +173,11 @@ public function show($id)
                 ]);
             }
 
-            // Gán instructor cho khóa học
-            Course_Instructors::create([
-                'course_id' => $course->id,
-                'instructor_id' => $validated['instructor_id'],
-            ]);
+            // // Gán instructor cho khóa học
+            // Course_Instructors::create([
+            //     'course_id' => $course->id,
+            //     'instructor_id' => $validated['instructor_id'],
+            // ]);
         // Refresh model và load relationships
         $course = $course->fresh(['categories', 'instructors']);
         
@@ -224,12 +224,12 @@ public function show($id)
             }
             $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
             
-            // Gán instructor cho khóa học
-            Course_Instructors::where('course_id', $course->id)->delete(); // Xóa instructor cũ
-            Course_Instructors::create([
-                'course_id' => $course->id,
-                'instructor_id' => $validated['instructor_id'],
-            ]);
+            // // Gán instructor cho khóa học
+            // Course_Instructors::where('course_id', $course->id)->delete(); // Xóa instructor cũ
+            // Course_Instructors::create([
+            //     'course_id' => $course->id,
+            //     'instructor_id' => $validated['instructor_id'],
+            // ]);
             $course->fill($validated);
             if(!$course->isDirty() && !$flag && $courseCategoryCurrent === $courseCategory) {          
                 return response()->json(['message' => 'No changes detected'], 200);
@@ -421,10 +421,10 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
 
             // Gán instructor cho khóa học
-            Course_Instructors::create([
-                'course_id' => $course->id,
-                'instructor_id' => $instructor->id,
-            ]);
+            // Course_Instructors::create([
+            //     'course_id' => $course->id,
+            //     'instructor_id' => $instructor->id,
+            // ]);
 
             return response()->json([
                 'success' => true,
@@ -542,10 +542,9 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             }
 
             $instructor = Auth::user()->instructor;
-            $courseInstructor = Course_Instructors::where('course_id', $id)
-                ->where('instructor_id', $instructor->id)
-                ->first();
-            if (!$courseInstructor) {
+            $course = Course::findOrFail($id);
+
+            if ($course->instructor_id !== $instructor->id) {
                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
             }
 
@@ -824,12 +823,11 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             }
 
             $instructor = Auth::user()->instructor;
-            $courseInstructor = Course_Instructors::where('course_id', $id)
-                                                ->where('instructor_id', $instructor->id)
-                                                ->first();
-            if (!$courseInstructor) {
-                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-            }
+         $course = Course::findOrFail($id);
+
+if ($course->instructor_id !== $instructor->id) {
+    return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+}
 
             $course->update(['status' => 'unavailable']);
             return response()->json(['message' => 'Course marked as unavailable'], 200);
@@ -874,12 +872,12 @@ public function makeCourseAvailableInstructor($id)
             }
 
             $instructor = Auth::user()->instructor;
-            $courseInstructor = Course_Instructors::where('course_id', $id)
-                                                ->where('instructor_id', $instructor->id)
-                                                ->first();
-            if (!$courseInstructor) {
-                return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-            }
+          $course = Course::findOrFail($id);
+
+if ($course->instructor_id !== $instructor->id) {
+    return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+}
+
 
             $course->update(['status' => 'approved']);
             return response()->json(['message' => 'Course marked as available'], 200);
@@ -1200,12 +1198,12 @@ public function getPendingCourses()
 
         // Kiểm tra quyền instructor
         $instructor = Auth::user()->instructor;
-        $courseInstructor = Course_Instructors::where('course_id', $id)
-            ->where('instructor_id', $instructor->id)
-            ->first();
-        if (!$courseInstructor) {
-            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-        }
+       $course = Course::findOrFail($id);
+
+if ($course->instructor_id !== $instructor->id) {
+    return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+}
+
         $course=Course::where("course_name",$course->course_name)->where('status', 'approved')->first();
         if ($course) {
             return response()->json(['message' => 'Course with this name already exists and is approved'], 422);

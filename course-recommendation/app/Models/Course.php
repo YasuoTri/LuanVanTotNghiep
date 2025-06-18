@@ -11,11 +11,10 @@ class Course extends Model
     use HasFactory, SoftDeletes;
     protected $table = 'courses';
     protected $primaryKey = 'id';
-    protected $fillable = [
+    protected $fillable = ['instructor_id',
         'course_name', 'difficulty_level', 'course_rating',
-        'course_url','image', 'course_description', 'price','skills','status','origin_id', 'version'
+        'course_url','image', 'price','skills','tag','status',
     ];
-    
     protected $dates = ['deleted_at'];
 
     // Automatically generate slug from course_name
@@ -43,14 +42,7 @@ public function categories()
     }
    public function instructors()
     {
-        return $this->hasOneThrough(
-            Instructors::class,
-            Course_Instructors::class,
-            'course_id', // Foreign key on course_instructors
-            'id',        // Foreign key on instructors
-            'id',        // Local key on courses
-            'instructor_id' // Local key on course_instructors
-        );
+        return $this->belongsTo(Instructors::class, 'instructor_id');
     }
     public function category()
     {

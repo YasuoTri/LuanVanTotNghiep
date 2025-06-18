@@ -12,8 +12,7 @@ class Report extends Model
 
     protected $fillable = [
         'user_id',
-        'reportable_type',
-        'reportable_id',
+        'course_id',
         'reason',
         'report_type',
         'status',
@@ -29,15 +28,12 @@ class Report extends Model
 
     public function course()
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Course::class, 'course_id');
     }
 
     public function admin()
     {
         return $this->belongsTo(Admins::class);
     }
-       public function reportable()
-    {
-        return $this->morphTo();
-    }
+
 }

@@ -137,8 +137,7 @@ class DatabaseSeeder extends Seeder
         
         $educationLevels = ['High School', 'Bachelor', 'Master', 'PhD', 'Associate', 'Unknown'];
         $countries = [
-            'United States', 'India', 'United Kingdom', 'Canada', 'Australia', 
-            'Germany', 'France', 'Brazil', 'Japan', 'China', 'Vietnam', 'Unknown'
+            'United States'
         ];
         $genders = ['Male', 'Female', 'Other', 'Prefer not to say', null];
         

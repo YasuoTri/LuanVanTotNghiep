@@ -136,11 +136,11 @@ class RevenueSessionController extends Controller
                 }
             }
 
-            // Cập nhật số dư tài khoản admin
-            $adminAccount = AdminAccount::first();
-            if ($adminAccount) {
-                $adminAccount->increment('balance', $adminShare);
-            }
+            // // Cập nhật số dư tài khoản admin
+            // $adminAccount = AdminAccount::first();
+            // if ($adminAccount) {
+            //     $adminAccount->increment('balance', $adminShare);
+            // }
 
             // Đánh dấu phiên đã phân phối
             $session->update(['status' => 'distributed']);

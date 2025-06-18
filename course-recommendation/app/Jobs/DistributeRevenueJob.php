@@ -112,19 +112,19 @@ class DistributeRevenueJob implements ShouldQueue
                         'updated_at' => now(),
                     ]);
 
-                    $account = InstructorAccount::firstOrCreate(
-                        ['instructor_id' => $instructor->id],
-                        ['balance' => 0]
-                    );
-                    $account->increment('balance', $instructorAmount);
+                    // $account = InstructorAccount::firstOrCreate(
+                    //     ['instructor_id' => $instructor->id],
+                    //     ['balance' => 0]
+                    // );
+                    // $account->increment('balance', $instructorAmount);
                 }
             }
 
             // Cập nhật AdminAccount
-            $adminAccount = AdminAccount::first();
-            if ($adminAccount) {
-                $adminAccount->update(['balance' => $adminAccount->balance + $adminShare]);
-            }
+            // $adminAccount = AdminAccount::first();
+            // if ($adminAccount) {
+            //     $adminAccount->update(['balance' => $adminAccount->balance + $adminShare]);
+            // }
         }
     }
 }

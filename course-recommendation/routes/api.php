@@ -50,7 +50,12 @@ Route::middleware('jwt_cookie')->group(function () {
     Route::post('/user/profile/update', [AuthController::class, 'updateProfile'])->name('user.profile.update');
 });
 Route::get('/courses', [CourseController::class, 'index']);
-Route::apiResource('/admin/category', CategoryController::class);
+// Route::apiResource('/admin/category', CategoryController::class);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{id}', [CategoryController::class, 'show']);
+Route::post('/categories', [CategoryController::class, 'store']);
+Route::put('/categories/{id}', [CategoryController::class, 'update']);
+Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);

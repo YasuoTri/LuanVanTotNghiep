@@ -84,11 +84,7 @@ class CourseController extends Controller
         $page,
         ['path' => request()->url(), 'query' => request()->query()]
     );
-
-    return response()->json([
-        'courses' => $paginatedCourses,
-        'category_course_counts' => $categoryCourseCounts,
-    ]);
+    return response()->json($paginatedCourses);
 }
 
     public function getAllCoursesForAdmin()

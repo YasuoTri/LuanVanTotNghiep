@@ -44,52 +44,44 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
     
-        $this->seedUsers();
+        // $this->seedUsers();
         
-        // Seed Categories
-        $this->seedCategories();
+        // // Seed Categories
+        // $this->seedCategories();
         
-        // Seed Courses - Create 100 courses
-        $this->seedCourses();
+        // // Seed Courses - Create 100 courses
+        // $this->seedCourses();
         
-        // Seed Course Categories
-        $this->seedCourseCategories();
+        // // Seed Course Categories
+        // $this->seedCourseCategories();
         
-        // Seed Student Categories
-        $this->seedStudentCategories();
+        // // Seed Student Categories
+        // $this->seedStudentCategories();
         
-        // Seed Admins
-        // $this->seedAdmins();
+        // // Seed Admins
+        // // $this->seedAdmins();
         
-        $this->seedInstructors();
+        // $this->seedInstructors();
                 
-        // Seed Instructor Requests
-        $this->seedInstructorRequests();
-        
-        // Seed Course Instructors
-        $this->seedCourseInstructors();
+        // // Seed Instructor Requests
+        // $this->seedInstructorRequests();
         
         // Seed Course Reviews
-        $this->seedCourseReviews();
-        
-        $this->seedInteractions();
+        // $this->seedCourseReviews();
         
         // Seed Enrollments
-        $this->seedEnrollments();
+        // $this->seedEnrollments();
         
-        // Seed Certificates
-        $this->seedCertificates();
+        // // Seed Coupons
+        // $this->seedCoupons();
         
-        // Seed Coupons
-        $this->seedCoupons();
+        // // Seed Payments
+        // $this->seedPayments();
         
-        // Seed Payments
-        $this->seedPayments();
+        // // Seed Revenue Sessions
+        // $this->seedRevenueSessions();
         
-        // Seed Revenue Sessions
-        $this->seedRevenueSessions();
-        
-        $this->seedRevenueDistributions();
+        // $this->seedRevenueDistributions();
 
         $this->seedLessons();
         
@@ -345,7 +337,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding admin_accounts...');
         
-        $admins = Admins::all();
+        $admins =User::where('role', 'admin')->get();
         $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
         
         foreach ($admins as $admin) {
@@ -408,7 +400,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding instructor_requests...');
         
         $students = User::where('role', 'student')->inRandomOrder()->take(5)->get();
-        $admins = Admins::all();
+        $admins = User::where('role', 'admin')->get();
         $statuses = ['pending', 'approved', 'rejected'];
         
         foreach ($students as $student) {
@@ -499,18 +491,14 @@ private function seedCourseInstructors()
         $this->command->info('Seeding course_reviews...');
         
         $courses = Course::where('status', 'pending')->inRandomOrder()->take(20)->get();
-        $admins = Admins::all();
+
         $statuses = ['approved', 'rejected'];
-        
-        if ($admins->isEmpty()) {
-            $this->command->warn('No admins found. Skipping course_reviews seeding.');
-            return;
-        }
+        $admin=User::where('role', 'admin')->get();
         
         foreach ($courses as $course) {
             CourseReview::create([
                 'course_id' => $course->id,
-                'admin_id' => $admins->random()->id,
+                'admin_id' => $admin->id,
                 'status' => $statuses[array_rand($statuses)],
                 'notes' => 'Review notes for course ' . $course->id,
                 'reviewed_at' => now()->subDays(rand(1, 30)),
@@ -702,7 +690,7 @@ private function seedCourseInstructors()
         $this->command->info('Seeding revenue_distributions...');
         
         $revenueSessions = RevenueSession::all();
-        $courseInstructors = Course_Instructors::inRandomOrder()->take(20)->get();
+        $courseInstructors = User::where('role', 'instructor')->get();
         $statuses = ['pending', 'completed', 'failed'];
         
         foreach ($courseInstructors as $courseInstructor) {
@@ -849,7 +837,6 @@ private function seedCourseInstructors()
                         ? ($i === 1 ? 'True' : 'False') 
                         : "Choice $i for Question {$question->id}",
                     'is_correct' => $isCorrect,
-                    'sort_order' => $i,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

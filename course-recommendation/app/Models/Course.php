@@ -42,7 +42,7 @@ public function categories()
     }
    public function instructors()
     {
-        return $this->belongsTo(User::class, 'instructor_id', 'id');
+        return $this->belongsTo(Instructors::class, 'instructor_id');
     }
     public function category()
     {
@@ -80,7 +80,7 @@ public function categories()
 
     public function reviews()
     {
-        return $this->hasMany(Review::class,  'course_id');
+        return $this->hasMany(Review::class, 'course_id');
     }
     public function coursereview()
     {

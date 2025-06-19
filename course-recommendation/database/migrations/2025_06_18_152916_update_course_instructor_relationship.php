@@ -12,11 +12,10 @@ class UpdateCourseInstructorRelationship extends Migration
 
         // Thêm cột instructor_id vào bảng courses
         Schema::table('courses', function (Blueprint $table) {
-            $table->unsignedBigInteger('instructor_id')->nullable()->unique()->after('id');
-
+            $table->unsignedBigInteger('instructor_id')->nullable();
             $table->foreign('instructor_id')
                   ->references('id')
-                  ->on('instructors')
+                  ->on(table: 'instructors')
                   ->onDelete('set null');
         });
     }

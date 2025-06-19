@@ -33,7 +33,7 @@ class Report extends Model
 
     public function admin()
     {
-        return $this->belongsTo(Admins::class);
+        return $this->belongsTo(User::class, 'admin_id');
     }
 
 }

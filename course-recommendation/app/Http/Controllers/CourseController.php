@@ -109,7 +109,7 @@ class CourseController extends Controller
     {
         try {
             // Check if user is admin
-            if (!Auth::user()->admin) {
+            if (!Auth::user()->id) {
                 return response()->json(['message' => 'Unauthorized: Admin access required'], 403);
             }
 
@@ -161,7 +161,7 @@ public function show($id)
             if ($request->hasFile('image')) {
                 $validated['image'] = $this->cloudinaryService->uploadImage($request->file('image'), 'courses');
             }
-
+            
             $course = Course::create($validated);
                         // Gán danh mục cho khóa học
             foreach ($validated['category_ids'] as $categoryId) {
@@ -407,6 +407,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 'course_description' => $validated['course_description'] ?? null,
                 'price' => $validated['price'] ?? 0,
                 'skills' => $validated['skills'] ?? null,
+                'tag' => $validated['tag'] ?? null,
                 'status' => $validated['status'],
             ]);
 
@@ -990,7 +991,6 @@ public function approveCourse(Request $request, $id)
     // Lưu lịch sử duyệt (nếu dùng bảng course_reviews)
     CourseReview::create([
         'course_id' => $course->id,
-        'admin_id' => Auth::user()->admin->id,
         'status' => 'approved',
         'notes' => $request->input('notes'),
     ]);
@@ -1048,7 +1048,6 @@ public function rejectCourse(Request $request, $id)
     // Lưu lịch sử duyệt
     CourseReview::create([
         'course_id' => $course->id,
-        'admin_id' => Auth::user()->admin->id,
         'status' => 'rejected',
         'notes' => $request->notes,
     ]);

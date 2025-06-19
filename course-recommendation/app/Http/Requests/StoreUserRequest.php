@@ -26,14 +26,13 @@ class StoreUserRequest extends FormRequest
     public function rules()
     {
         return [
-            'userid_DI' => 'required|string|max:255|unique:users,userid_DI',
             'email' => 'nullable|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|max:255',
             'avatar' => ['nullable', 'string', 'max:255'],
             'final_cc_cname_DI' => 'required|string|max:100',
             'LoE_DI' => 'required|string|max:50',
-            'YoB' => 'nullable|integer|min:1900|max:' . date('Y'),
-            'gender' => 'nullable|string|max:20',
+            'birthdate' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'gender' => 'required|string|max:20',
             'role' => 'required|in:student,instructor,admin',
             'provider' => 'nullable|string|max:50',
             'provider_id' => 'nullable|string|max:255',

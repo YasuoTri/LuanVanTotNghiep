@@ -39,9 +39,8 @@ class AuthController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'final_cc_cname_DI' => 'nullable|string|max:100',
             'LoE_DI' => 'nullable|string|max:50',
-            'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
+            'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
             'gender' => 'nullable|string|in:Male,Female,other',
             'learning_goals' => 'nullable|string',
             'category_ids' => 'nullable|array',
@@ -70,9 +69,8 @@ class AuthController extends Controller
             'email' => $validatedData['email'],
             'password' => $validatedData['password'],
             'userid_DI' => $validatedData['userid_DI'],
-            'final_cc_cname_DI' => $validatedData['final_cc_cname_DI'] ?? 'Unknown',
             'LoE_DI' => $validatedData['LoE_DI'] ?? 'Unknown',
-            'YoB' => $validatedData['YoB'],
+            'birthdate' => $validatedData['birthdate'] ?? null, // Updated from YoB to birthdate
             'gender' => $validatedData['gender'],
             'role' => 'student',
             'avatar' => $avatarUrl,
@@ -526,18 +524,10 @@ class AuthController extends Controller
         ]);
 
         $instructorRequest = InstructorRequest::findOrFail($requestId);
-
-        $adminInAdminTable = Admins::where('user_id', $admin->id)->first();
-        if (!$adminInAdminTable) {
-            return response()->json([
-                'error' => 'Admin not found in the admin table.',
-            ], 404);
-        }
-
         $instructorRequest->update([
             'status' => $requestData['status'],
             'admin_notes' => $requestData['admin_notes'],
-            'admin_id' => $adminInAdminTable->id,
+            'admin_id' => $admin->id,
             'reviewed_at' => now(),
         ]);
 
@@ -601,16 +591,6 @@ class AuthController extends Controller
                     ], 404);
                 }
                 $user->student = $student;
-            }
-              if ($user->role === 'admin') {
-                $admin = Admins::where('user_id', $user->id)->first();
-                if (!$admin) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Admin not found',
-                    ], 404);
-                }
-                $user->admin = $admin;
             }
             return response()->json([
                 'success' => true,
@@ -762,9 +742,8 @@ class AuthController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'username' =>'required|string|max:50',
-                'final_cc_cname_DI' => 'nullable|string|max:100',
                 'LoE_DI' => 'nullable|string|max:50',
-                'YoB' => 'nullable|integer|min:1900|max:' . (date('Y') - 13),
+                'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
                 'gender' => 'nullable|string|in:Male,Female,other',
                 'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'learning_goals' => 'nullable|string',
@@ -800,7 +779,7 @@ class AuthController extends Controller
 
             // Update user data
             $userDataToUpdate = array_intersect_key($validatedData, array_flip([
-                'username', 'final_cc_cname_DI', 'LoE_DI', 'YoB', 'gender', 'avatar'
+                'username', 'LoE_DI', 'birthdate', 'gender', 'avatar'
             ]));
             $user->fill($userDataToUpdate);
             $userIsDirty = $user->isDirty();

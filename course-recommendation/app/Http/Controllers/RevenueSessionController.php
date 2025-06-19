@@ -128,11 +128,11 @@ class RevenueSessionController extends Controller
                     ]);
 
                     // Cập nhật số dư tài khoản instructor
-                    $instructorAccount = InstructorAccount::firstOrCreate(
-                        ['instructor_id' => $instructor->id],
-                        ['balance' => 0]
-                    );
-                    $instructorAccount->increment('balance', $instructorAmount);
+                    // $instructorAccount = InstructorAccount::firstOrCreate(
+                    //     ['instructor_id' => $instructor->id],
+                    //     ['balance' => 0]
+                    // );
+                    // $instructorAccount->increment('balance', $instructorAmount);
                 }
             }
 
@@ -174,18 +174,17 @@ class RevenueSessionController extends Controller
             ->get();
 
         foreach ($distributions as $distribution) {
-            $instructorAccount = InstructorAccount::where('instructor_id', $distribution->instructor_id)->first();
-            if (!$instructorAccount || !$instructorAccount->bank_account_number) {
-                Log::warning('Instructor account not configured', ['instructor_id' => $distribution->instructor_id]);
-                continue;
-            }
+            // $instructorAccount = InstructorAccount::where('instructor_id', $distribution->instructor_id)->first();
+            // if (!$instructorAccount || !$instructorAccount->bank_account_number) {
+            //     Log::warning('Instructor account not configured', ['instructor_id' => $distribution->instructor_id]);
+            //     continue;
+            // }
 
             // Giả sử tích hợp API VNPay để chuyển khoản
             try {
                 $gateway = new VNPayGateway();
                 $transferResult = $gateway->transfer([
                     'amount' => $distribution->instructor_share,
-                    'bank_account' => $instructorAccount->bank_account_number,
                     'description' => "Revenue share for session {$sessionId}",
                 ]);
 

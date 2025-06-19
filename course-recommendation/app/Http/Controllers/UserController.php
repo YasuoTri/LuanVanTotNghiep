@@ -34,12 +34,10 @@ class UserController extends Controller
         $query = User::query()->select([
             'id',
             'username',
-            'userid_DI',
             'email',
             'avatar',
-            'final_cc_cname_DI',
             'LoE_DI',
-            'YoB',
+            'birthdate',
             'gender',
             'role',
             'created_at',
@@ -75,21 +73,15 @@ class UserController extends Controller
             $query->where('gender', $request->input('gender'));
         }
 
-        // Lọc theo năm sinh (YoB)
-        if ($request->has('yob')) {
-            $query->where('YoB', $request->input('yob'));
+        // Lọc theo năm sinh (birthdate)
+        if ($request->has('birthdate')) {
+            $query->where('birthdate', $request->input('birthdate'));
         }
 
         // Lọc theo trình độ học vấn (LoE_DI)
         if ($request->has('loe_di')) {
             $query->where('LoE_DI', $request->input('loe_di'));
         }
-
-        // Lọc theo quốc gia (final_cc_cname_DI)
-        if ($request->has('country')) {
-            $query->where('final_cc_cname_DI', $request->input('country'));
-        }
-
         // Phân trang (20 user/trang)
         $users = $query->orderBy('created_at', 'desc')->paginate(20);
 
@@ -121,12 +113,10 @@ class UserController extends Controller
         $query = User::onlyTrashed()->select([
             'id',
             'username',
-            'userid_DI',
             'email',
             'avatar',
-            'final_cc_cname_DI',
             'LoE_DI',
-            'YoB',
+            'birthdate',
             'gender',
             'role',
             'created_at',
@@ -152,19 +142,14 @@ class UserController extends Controller
             $query->where('gender', $request->input('gender'));
         }
 
-        // Lọc theo năm sinh (YoB)
-        if ($request->has('yob')) {
-            $query->where('YoB', $request->input('yob'));
+        // Lọc theo năm sinh (birthdate)
+        if ($request->has('birthdate')) {
+            $query->where('birthdate', $request->input('birthdate'));
         }
 
         // Lọc theo trình độ học vấn (LoE_DI)
         if ($request->has('loe_di')) {
             $query->where('LoE_DI', $request->input('loe_di'));
-        }
-
-        // Lọc theo quốc gia (final_cc_cname_DI)
-        if ($request->has('country')) {
-            $query->where('final_cc_cname_DI', $request->input('country'));
         }
 
         // Phân trang (20 user/trang)
@@ -202,12 +187,12 @@ public function show($id): JsonResponse
         'enrollments' => function ($query) {
             $query->select('id', 'user_id', 'course_id', 'status', 'enrolled_at', 'completed_at');
         },
-        'certificates' => function ($query) {
-            $query->select('id', 'user_id', 'course_id', 'certificate_code', 'issued_at');
-        },
-        'forumPosts' => function ($query) {
-            $query->select('id', 'user_id', 'course_id', 'title', 'flagged', 'created_at');
-        },
+        // 'certificates' => function ($query) {
+        //     $query->select('id', 'user_id', 'course_id', 'certificate_code', 'issued_at');
+        // },
+        // 'forumPosts' => function ($query) {
+        //     $query->select('id', 'user_id', 'course_id', 'title', 'flagged', 'created_at');
+        // },
         'payments' => function ($query) {
             $query->select('id', 'user_id', 'course_id', 'amount', 'status', 'payment_date');
         },
@@ -220,19 +205,6 @@ public function show($id): JsonResponse
         'quizResults' => function ($query) {
             $query->select('id', 'user_id', 'quiz_id', 'score', 'attempt_number');
         },
-        'interactions' => function ($query) {
-            $query->select(
-                'id',
-                'user_id',
-                'course_id',
-                'rating',
-                'nevents',
-                'ndays_act',
-                'nplay_video',
-                'nchapters',
-                'nforum_posts'
-            );
-        },
         'student.categories' => function ($query) {
             $query->select('categories.id', 'categories.name');
         },
@@ -242,12 +214,10 @@ public function show($id): JsonResponse
     ])->select([
         'id',
         'username',
-        'userid_DI',
         'email',
         'avatar',
-        'final_cc_cname_DI',
         'LoE_DI',
-        'YoB',
+        'birthdate',
         'gender',
         'role',
         'created_at',
@@ -261,12 +231,12 @@ public function show($id): JsonResponse
     }
 
     // Admin data if user is an admin
-    $adminData = null;
-    if ($user->role === 'admin') {
-        $adminData = Admins::where('user_id', $user->id)
-            ->select('id', 'admin_level', 'activity_log')
-            ->first();
-    }
+    // $adminData = null;
+    // if ($user->role === 'admin') {
+    //     $adminData = Admins::where('user_id', $user->id)
+    //         ->select('id', 'admin_level', 'activity_log')
+    //         ->first();
+    // }
 
     // Instructor revenue data if user is an instructor
     $instructorRevenue = null;
@@ -280,30 +250,19 @@ public function show($id): JsonResponse
     $analytics = [
         'total_courses_enrolled' => $user->enrollments->count(),
         'courses_completed' => $user->enrollments->where('status', 'completed')->count(),
-        'certificates_earned' => $user->certificates->count(),
+        // 'certificates_earned' => $user->certificates->count(),
         'total_payments_made' => $user->payments->where('status', 'completed')->sum('amount'),
         'average_rating_given' => $user->reviews->count() > 0
             ? round($user->reviews->avg('rating'), 2)
             : null,
-        'forum_engagement' => [
-            'total_posts' => $user->forumPosts->count(),
-            'flagged_posts' => $user->forumPosts->where('flagged', 1)->count(),
-        ],
+        // 'forum_engagement' => [
+        //     'total_posts' => $user->forumPosts->count(),
+        //     'flagged_posts' => $user->forumPosts->where('flagged', 1)->count(),
+        // ],
         'lesson_completion_rate' => $this->calculateLessonCompletionRate($user),
         'average_quiz_score' => $user->quizResults->count() > 0
             ? round($user->quizResults->avg('score'), 2)
             : null,
-        'interaction_metrics' => $user->interactions->map(function ($interaction) {
-            return [
-                'course_id' => $interaction->course_id,
-                'rating' => $interaction->rating,
-                'total_events' => $interaction->nevents,
-                'active_days' => $interaction->ndays_act,
-                'video_plays' => $interaction->nplay_video,
-                'chapters_completed' => $interaction->nchapters,
-                'forum_posts' => $interaction->nforum_posts,
-            ];
-        })->toArray(),
         'categories_of_interest' => $user->role === 'student'
             ? $user->student->categories->pluck('name')->toArray()
             : [],
@@ -319,7 +278,6 @@ public function show($id): JsonResponse
         'message' => 'User retrieved successfully',
         'data' => [
             'user' => $user,
-            'admin_data' => $adminData,
             'analytics' => $analytics,
         ]
     ], 200);
@@ -361,12 +319,12 @@ protected function calculateLessonCompletionRate($user)
             $user = User::create($request->validated());
 
             // Nếu role là admin, tạo bản ghi trong bảng admins
-            if ($user->role === 'admin') {
-                Admins::create([
-                    'user_id' => $user->id,
-                    'admin_level' => $request->admin_level,
-                ]);
-            }
+            // if ($user->role === 'admin') {
+            //     Admins::create([
+            //         'user_id' => $user->id,
+            //         'admin_level' => $request->admin_level,
+            //     ]);
+            // }
 
             DB::commit();
 
@@ -410,9 +368,8 @@ protected function calculateLessonCompletionRate($user)
         ],
         'password' => 'sometimes|string|min:8|max:255',
         'avatar' => 'sometimes|string|max:255',
-        'final_cc_cname_DI' => 'sometimes|string|max:100',
         'LoE_DI' => 'sometimes|string|max:50',
-        'YoB' => 'sometimes|integer|min:1900|max:' . date('Y'),
+        'birthdate' => 'sometimes|date',
         'gender' => 'sometimes|string|max:20',
         'role' => 'sometimes|in:student,instructor,admin',
         'admin_level' => 'required_if:role,admin|in:organization,program'
@@ -425,12 +382,11 @@ protected function calculateLessonCompletionRate($user)
             ? bcrypt($validated['password'])
             : $user->password,
         'avatar' => $validated['avatar'] ?? $user->avatar,
-        'final_cc_cname_DI' => $validated['final_cc_cname_DI'] ?? $user->final_cc_cname_DI,
         'LoE_DI' => $validated['LoE_DI'] ?? $user->LoE_DI,
-        'YoB' => $validated['YoB'] ?? $user->YoB,
+        'birthdate' => $validated['birthdate'] ?? $user->birthdate,
         'gender' => $validated['gender'] ?? $user->gender,
         'role' => $validated['role'] ?? $user->role,
-    ], fn($value, $key) => $key === 'YoB' ? (int)$value !== (int)$user->$key : $value !== $user->$key, ARRAY_FILTER_USE_BOTH);
+    ], fn($value, $key) => $key === 'birthdate' ? (int)$value !== (int)$user->$key : $value !== $user->$key, ARRAY_FILTER_USE_BOTH);
 
     // Kiểm tra xem có thay đổi nào không
     if (empty($updateData)) {
@@ -446,18 +402,18 @@ protected function calculateLessonCompletionRate($user)
         $user->update($updateData);
 
         // Cập nhật hoặc tạo bản ghi trong bảng admins nếu role là admin
-        if (isset($validated['role']) && $validated['role'] === 'admin') {
-            Admins::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'admin_level' => $validated['admin_level'],
-                    'updated_at' => now()
-                ]
-            );
-        } elseif ($user->role === 'admin' && (!isset($validated['role']) || $validated['role'] !== 'admin')) {
-            // Xóa bản ghi admin nếu role thay đổi từ admin sang role khác
-            Admins::where('user_id', $user->id)->delete();
-        }
+        // if (isset($validated['role']) && $validated['role'] === 'admin') {
+        //     Admins::updateOrCreate(
+        //         ['user_id' => $user->id],
+        //         [
+        //             'admin_level' => $validated['admin_level'],
+        //             'updated_at' => now()
+        //         ]
+        //     );
+        // } elseif ($user->role === 'admin' && (!isset($validated['role']) || $validated['role'] !== 'admin')) {
+        //     // Xóa bản ghi admin nếu role thay đổi từ admin sang role khác
+        //     Admins::where('user_id', $user->id)->delete();
+        // }
 
         DB::commit();
 
@@ -513,13 +469,14 @@ protected function calculateLessonCompletionRate($user)
             if ($user->role === 'instructor') {
                 // Xóa bản ghi instructor nếu user là instructor
                 $user->instructor()->delete();
-            } elseif ($user->role === 'student') {
-                // Xóa bản ghi student nếu user là student
-                $user->student()->delete();
-            }
+            } 
+            // elseif ($user->role === 'student') {
+            //     // Xóa bản ghi student nếu user là student
+            //     $user->student()->delete();
+            // }
 
             // Xóa bản ghi admin nếu user là admin (vì admins không có soft delete)
-            Admins::where('user_id', $user->id)->delete();
+            // Admins::where('user_id', $user->id)->delete();
 
             // Ghi log hoạt động admin
             // Admins::where('user_id', $admin->id)->update([
@@ -572,10 +529,11 @@ protected function calculateLessonCompletionRate($user)
             if ($user->role === 'instructor') {
                 // Khôi phục bản ghi instructor nếu user là instructor
                 $user->instructor()->restore();
-            } elseif ($user->role === 'student') {
-                // Khôi phục bản ghi student nếu user là student
-                $user->student()->restore();
-            }
+            } 
+            // elseif ($user->role === 'student') {
+            //     // Khôi phục bản ghi student nếu user là student
+            //     $user->student()->restore();
+            // }
 
             // Ghi log hoạt động admin
             // Admins::where('user_id', $admin->id)->update([
@@ -636,10 +594,11 @@ protected function calculateLessonCompletionRate($user)
             if ($user->role === 'instructor') {
                 // Xóa bản ghi instructor nếu user là instructor
                 $user->instructor()->forceDelete();
-            } elseif ($user->role === 'student') {
-                // Xóa bản ghi student nếu user là student
-                $user->student()->forceDelete();
-            }
+            } 
+            // elseif ($user->role === 'student') {
+            //     // Xóa bản ghi student nếu user là student
+            //     $user->student()->forceDelete();
+            // }
 
             // Ghi log hoạt động admin
             // Admins::where('user_id', $admin->id)->update([

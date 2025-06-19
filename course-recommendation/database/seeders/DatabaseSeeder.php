@@ -55,24 +55,14 @@ class DatabaseSeeder extends Seeder
         // Seed Course Categories
         $this->seedCourseCategories();
         
-        // Seed Students
-        $this->seedStudents();
-        
         // Seed Student Categories
         $this->seedStudentCategories();
         
         // Seed Admins
-        $this->seedAdmins();
+        // $this->seedAdmins();
         
-        // Seed Admin Accounts
-        $this->seedAdminAccounts();
-        
-        // Seed Instructors
         $this->seedInstructors();
-        
-        // Seed Instructor Accounts
-        $this->seedInstructorAccounts();
-        
+                
         // Seed Instructor Requests
         $this->seedInstructorRequests();
         
@@ -99,10 +89,8 @@ class DatabaseSeeder extends Seeder
         // Seed Revenue Sessions
         $this->seedRevenueSessions();
         
-        // Seed Revenue Distributions
         $this->seedRevenueDistributions();
-        
-        // Seed Lessons
+
         $this->seedLessons();
         
         // Seed Lesson Progress
@@ -126,8 +114,6 @@ class DatabaseSeeder extends Seeder
         // Seed Reviews
         $this->seedReviews();
         
-        // Seed Forum Posts
-        $this->seedForumPosts();
 
     }
 
@@ -135,41 +121,55 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding 50 users...');
         
-        $educationLevels = ['High School', 'Bachelor', 'Master', 'PhD', 'Associate', 'Unknown'];
-        $countries = [
-            'United States'
-        ];
+        $educationLevels = ['Beginner','Intermediate','Advanced','Unknown'];
         $genders = ['Male', 'Female', 'Other', 'Prefer not to say', null];
         
         // Create 45 student users
-        for ($i = 0; $i < 45; $i++) {
-            $birthYear = rand(1980, 2005);
+        // for ($i = 0; $i < 45; $i++) {
+        //     $birthYear = rand(1980, 2005);
             
-            User::create([
-                'userid_DI' => 'user_' . Str::uuid(),
-                'username' => 'user_' . ($i + 1),
-                'email' => 'user' . ($i + 1) . '@example.com',
-                'password' => Hash::make('password'),
-                'final_cc_cname_DI' => $countries[array_rand($countries)],
-                'LoE_DI' => $educationLevels[array_rand($educationLevels)],
-                'YoB' => $birthYear,
-                'gender' => $genders[array_rand($genders)],
-                'role' => 'student',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        //     User::create([
+        //         'userid_DI' => 'user_' . Str::uuid(),
+        //         'username' => 'user_' . ($i + 1),
+        //         'email' => 'user' . ($i + 1) . '@example.com',
+        //         'password' => Hash::make('password'),
+        //         'LoE_DI' => $educationLevels[array_rand($educationLevels)],
+        //         'birthdate' => $birthYear,
+        //         'gender' => $genders[array_rand($genders)],
+        //         'role' => 'student',
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
+
+    for ($i = 0; $i < 45; $i++) {
+    $birthYear = rand(1980, 2005);
+    $birthMonth = rand(1, 12);
+    $birthDay = rand(1, 28); // để tránh lỗi ngày (tháng 2 an toàn)
+
+    $birthdate = sprintf('%04d-%02d-%02d', $birthYear, $birthMonth, $birthDay);
+
+    User::create([
+        'username' => 'user_' . ($i + 1),
+        'email' => 'user' . ($i + 1) . '@example.com',
+        'password' => Hash::make('password'),
+        'LoE_DI' => $educationLevels[array_rand($educationLevels)],
+        'birthdate' => $birthdate,
+        'gender' => $genders[array_rand($genders)],
+        'role' => 'student',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
 
         // Create 2 admin users
         for ($i = 0; $i < 2; $i++) {
             User::create([
-                'userid_DI' => 'admin_' . ($i + 1),
                 'username' => 'admin_' . ($i + 1),
                 'email' => 'admin' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'final_cc_cname_DI' => 'United States',
-                'LoE_DI' => 'PhD',
-                'YoB' => 1985,
+                'LoE_DI' => 'Advanced',
+                'birthdate' => '1980-01-01', // Fixed date for simplicity
                 'gender' => 'Male',
                 'role' => 'admin',
                 'created_at' => now(),
@@ -180,13 +180,11 @@ class DatabaseSeeder extends Seeder
         // Create 3 instructor users
         for ($i = 0; $i < 3; $i++) {
             User::create([
-                'userid_DI' => 'instructor_' . ($i + 1),
                 'username' => 'instructor_' . ($i + 1),
                 'email' => 'instructor' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'final_cc_cname_DI' => $countries[array_rand($countries)],
                 'LoE_DI' => 'PhD',
-                'YoB' => 1980,
+                'birthdate' => '1980-01-01', // Fixed date for simplicity
                 'gender' => 'Female',
                 'role' => 'instructor',
                 'created_at' => now(),
@@ -221,14 +219,12 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding 100 courses...');
         
-        $universities = ['MIT', 'Stanford', 'Harvard', 'Coursera', 'edX', 'Udemy', 'Local University'];
         $difficulties = ['Beginner', 'Intermediate', 'Advanced'];
         $statuses = ['pending', 'approved', 'rejected', 'unavailable'];
         
         for ($i = 0; $i < 100; $i++) {
             Course::create([
-                'course_name' => 'Course ' . ($i + 1),
-                'university' => $universities[array_rand($universities)],
+                'course_name' => 'Course_' . ($i + 1),
                 'difficulty_level' => $difficulties[array_rand($difficulties)],
                 'course_rating' => 0,
                 'course_url' => 'courses_course_' . ($i + 1),
@@ -236,6 +232,7 @@ class DatabaseSeeder extends Seeder
                 'course_description' => 'Description for course ' . ($i + 1),
                 'price' => rand(0, 1000000),
                 'skills' => 'Skill ' . ($i + 1),
+                'tag'=> 'Tag ' . ($i + 1),
                 'status' => $statuses[array_rand($statuses)],
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -274,27 +271,27 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Course categories seeded successfully!');
     }
 
-    private function seedStudents()
-    {
-        $this->command->info('Seeding students...');
+    // private function seedStudents()
+    // {
+    //     $this->command->info('Seeding students...');
         
-        $users = User::where('role', 'student')->get();
-        $learningGoals = [
-            'Career advancement', 'Skill development', 'Personal growth', 'Academic improvement', 'Certification'
-        ];
+    //     $users = User::where('role', 'student')->get();
+    //     $learningGoals = [
+    //         'Career advancement', 'Skill development', 'Personal growth', 'Academic improvement', 'Certification'
+    //     ];
         
-        foreach ($users as $user) {
-            Student::create([
-                'user_id' => $user->id,
-                'learning_goals' => $learningGoals[array_rand($learningGoals)],
-                'total_courses_completed' => rand(0, 3),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+    //     foreach ($users as $user) {
+    //         Student::create([
+    //             'user_id' => $user->id,
+    //             'learning_goals' => $learningGoals[array_rand($learningGoals)],
+    //             'total_courses_completed' => rand(0, 3),
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]);
+    //     }
         
-        $this->command->info('Students seeded successfully!');
-    }
+    //     $this->command->info('Students seeded successfully!');
+    // }
 
     private function seedStudentCategories()
     {
@@ -813,7 +810,7 @@ private function seedCourseInstructors()
         $this->command->info('Seeding questions...');
         
         $quizzes = Quiz::all();
-        $questionTypes = ['multiple_choice', 'true_false', 'open_ended'];
+        $questionTypes = ['multiple_choice', 'true_false'];
         
         foreach ($quizzes as $quiz) {
             $questionCount = rand(3, 5); // 3-5 questions per quiz
@@ -824,7 +821,6 @@ private function seedCourseInstructors()
                     'title' => "Question $i for Quiz {$quiz->id}",
                     'question_type' => $questionTypes[array_rand($questionTypes)],
                     'points' => rand(1, 5),
-                    'sort_order' => $i,
                     'is_visible' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -945,7 +941,7 @@ private function seedCourseInstructors()
                 'user_id' => $user[$i]->id,
                 'course_id' => Course::inRandomOrder()->first()->id,
                 'rating' => rand(1, 5),
-                'content' => 'This is a review for the course.',
+                'comment' => 'This is a review for the course.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

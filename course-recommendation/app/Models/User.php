@@ -19,9 +19,8 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'password',
         'avatar',
-        'final_cc_cname_DI',
         'LoE_DI',
-        'YoB',
+        'birthdate', // Updated from YoB to birthdate
         'gender',
         'role',
         'provider',
@@ -36,15 +35,15 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     protected $casts = [
-        'YoB' => 'integer',
+        'birthdate' => 'date',
         'password' => 'hashed',
         'deleted_at' => 'datetime',
     ];
 
-    public function admin()
-    {
-        return $this->hasOne(Admins::class, 'user_id');
-    }
+    // public function admin()
+    // {
+    //     return $this->hasOne(Admins::class, 'user_id');
+    // }
 
     public function student()
     {
@@ -61,20 +60,20 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Enrollment::class, 'user_id');
     }
 
-    public function certificates()
-    {
-        return $this->hasMany(Certificate::class, 'user_id');
-    }
+    // public function certificates()
+    // {
+    //     return $this->hasMany(Certificate::class, 'user_id');
+    // }
 
-    public function forumPosts()
-    {
-        return $this->hasMany(ForumPost::class, 'user_id');
-    }
+    // public function forumPosts()
+    // {
+    //     return $this->hasMany(ForumPost::class, 'user_id');
+    // }
 
-    public function interactions()
-    {
-        return $this->hasMany(Interaction::class, 'user_id');
-    }
+    // public function interactions()
+    // {
+    //     return $this->hasMany(Interaction::class, 'user_id');
+    // }
 
     public function lessonProgress()
     {

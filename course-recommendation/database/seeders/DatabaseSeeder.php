@@ -62,15 +62,14 @@ class DatabaseSeeder extends Seeder
         $this->seedStudentCategories();
         
         $this->seedInstructors();
-                
-        // Seed Instructor Requests
-        $this->seedInstructorRequests();
         
         // Seed Course Reviews
         $this->seedCourseReviews();
         
         // Seed Enrollments
         $this->seedEnrollments();
+
+        $this->seedCertificates();
         
         // Seed Coupons
         $this->seedCoupons();
@@ -159,7 +158,6 @@ class DatabaseSeeder extends Seeder
                 'username' => 'admin_' . ($i + 1),
                 'email' => 'admin' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'LoE_DI' => 'Advanced',
                 'birthdate' => '1980-01-01', // Fixed date for simplicity
                 'gender' => 'Male',
                 'role' => 'admin',
@@ -585,14 +583,12 @@ private function seedCourseInstructors()
                 $status = $statuses[array_rand($statuses)];
                 $completedAt = $status === 'completed' ? now()->subDays(rand(1, 60)) : null;
                 $enrolledAt = now()->subDays(rand(30, 90));
-                $expiresAt = $status === 'active' ? now()->addDays(rand(30, 180)) : null;
 
                 Enrollment::create([
                     'user_id' => $student->id,
                     'course_id' => $course->id,
                     'enrolled_at' => $enrolledAt,
                     'completed_at' => $completedAt,
-                    'expires_at' => $expiresAt,
                     'status' => $status,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -612,8 +608,10 @@ private function seedCourseInstructors()
         $enrollments = Enrollment::where('status', 'completed')->get();
         
         foreach ($enrollments as $enrollment) {
+            $instructor_id = $enrollment->course->instructors->id;
             Certificate::create([
                 'user_id' => $enrollment->user_id,
+                'instructor_id' => $instructor_id,
                 'course_id' => $enrollment->course_id,
                 'enrollment_id' => $enrollment->id,
                 'certificate_code' => 'CERT-' . Str::random(10),

@@ -13,6 +13,7 @@ class Certificate extends Model
     public $timestamps = false;
     protected $fillable = [
         'user_id',
+        'instructor_id',
         'course_id',
         'enrollment_id',
         'certificate_code',
@@ -39,5 +40,9 @@ class Certificate extends Model
     public function enrollment()
     {
         return $this->belongsTo(Enrollment::class, 'enrollment_id');
+    }
+    public function instructor()
+    {
+        return $this->belongsTo(Instructors::class, 'instructor_id');
     }
 }

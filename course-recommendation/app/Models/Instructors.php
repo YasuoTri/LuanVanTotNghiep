@@ -11,7 +11,7 @@ class Instructors extends Model
     use HasFactory, SoftDeletes;
     protected $table = 'instructors';
     protected $primaryKey = 'id';
-    protected $fillable = ['user_id', 'name', 'bio', 'avatar', 'organization'];
+    protected $fillable = ['user_id', 'name', 'bio', 'organization','bank_account', 'bank_name'];
     protected $dates = ['deleted_at'];
     public function user()
     {

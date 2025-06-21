@@ -14,6 +14,15 @@ class CategoryController extends Controller
         $categories = Category::all();
         return response()->json($categories);
     }
+public function getCategoryWithSubcategories()
+{
+    $categories = Category::with('children')
+        ->whereNull('parent_id') // Chỉ lấy category cha
+        ->get();
+
+    return $categories;
+}
+
     public function show($id)
     {
         // Fetch a single category by ID

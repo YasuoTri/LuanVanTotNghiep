@@ -13,4 +13,12 @@ public function courses()
     {
         return $this->belongsToMany(Course::class, 'course_category', 'category_id', 'course_id');
     }
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
 }

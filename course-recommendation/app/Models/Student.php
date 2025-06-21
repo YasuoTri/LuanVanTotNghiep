@@ -10,7 +10,7 @@ class Student extends Model
     use SoftDeletes;
     protected $table = 'students';
     protected $primaryKey = 'id';
-    protected $fillable = ['user_id', 'learning_goals', 'interests', 'total_courses_completed','created_at', 'updated_at'];
+    protected $fillable = ['user_id', 'learning_goals', 'LoE_DI', 'total_courses_completed','created_at', 'updated_at'];
     protected $dates = ['deleted_at'];
     public function user()
     {

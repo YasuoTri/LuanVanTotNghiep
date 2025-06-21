@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'student_or_admin' => StudentOrAdmin::class,
             'instructor_or_student' => CheckStudentOrInstructor::class,
             'jwt_cookie' => \App\Http\Middleware\JwtCookieMiddleware::class,
+            'EnsureUserHasRole' => \App\Http\Middleware\EnsureUserHasRole::class,
 
             // 'cors' => Cors::class,
         ]);

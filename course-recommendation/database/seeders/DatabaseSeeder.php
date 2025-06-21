@@ -145,7 +145,6 @@ class DatabaseSeeder extends Seeder
         'username' => 'user_' . ($i + 1),
         'email' => 'user' . ($i + 1) . '@example.com',
         'password' => Hash::make('password'),
-        'LoE_DI' => $educationLevels[array_rand($educationLevels)],
         'birthdate' => $birthdate,
         'gender' => $genders[array_rand($genders)],
         'role' => 'student',
@@ -175,7 +174,6 @@ class DatabaseSeeder extends Seeder
                 'username' => 'instructor_' . ($i + 1),
                 'email' => 'instructor' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'LoE_DI' => 'PhD',
                 'birthdate' => '1980-01-01', // Fixed date for simplicity
                 'gender' => 'Female',
                 'role' => 'instructor',
@@ -285,11 +283,12 @@ class DatabaseSeeder extends Seeder
         $learningGoals = [
             'Career advancement', 'Skill development', 'Personal growth', 'Academic improvement', 'Certification'
         ];
-        
+          $educationLevels = ['Beginner','Intermediate','Advanced','Unknown'];
         foreach ($users as $user) {
             Student::create([
                 'user_id' => $user->id,
                 'learning_goals' => $learningGoals[array_rand($learningGoals)],
+                'LoE_DI' => $educationLevels[array_rand($educationLevels)],
                 'total_courses_completed' => rand(0, 3),
                 'created_at' => now(),
                 'updated_at' => now(),

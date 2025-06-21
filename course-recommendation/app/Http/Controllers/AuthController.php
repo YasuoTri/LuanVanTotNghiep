@@ -33,6 +33,7 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
+    
         // Validation rules
         $validatedData = $request->validate([
             'username' => 'required|string|max:50',
@@ -42,13 +43,18 @@ class AuthController extends Controller
             'LoE_DI' => 'nullable|string|max:50',
             'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
             'gender' => 'nullable|string|in:Male,Female,other',
+            'role' => 'in:student,instructor,admin', // Default role is student
             'learning_goals' => 'nullable|string',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
+            'bio' => 'nullable|string|max:1000',
+            'organization' => 'nullable|string|max:100',
+            'name' => 'nullable|string|max:100',
+            'bank_account' => 'nullable|string|max:50',
+            'bank_name' => 'nullable|string|max:100',
         ]);
 
         // Create a unique userid_DI
-        $validatedData['userid_DI'] = 'user_' . Str::random(10);
         $validatedData['password'] = Hash::make($validatedData['password']);
 
         // Upload avatar to Cloudinary if provided
@@ -62,24 +68,32 @@ class AuthController extends Controller
                 Log::error('Avatar upload error: ' . $e->getMessage());
             }
         }
-
         // Create user with default role as student
         $user = User::create([
             'username' => $validatedData['username'],
             'email' => $validatedData['email'],
             'password' => $validatedData['password'],
-            'userid_DI' => $validatedData['userid_DI'],
-            'LoE_DI' => $validatedData['LoE_DI'] ?? 'Unknown',
             'birthdate' => $validatedData['birthdate'] ?? null, // Updated from YoB to birthdate
             'gender' => $validatedData['gender'],
-            'role' => 'student',
+            'role' => $validatedData['role'] ?? 'student', // Default role is student
             'avatar' => $avatarUrl,
         ]);
-
+        if( $user->role === 'instructor') {
+            // Create instructor record if role is instructor
+            Instructors::create([
+                'user_id' => $user->id,
+                'name' => $validatedData['name'],
+                'bio' =>  $validatedData['bio'] ?? 'No bio provided',
+                'organization' =>  $validatedData['organization'] ?? 'No organization provided',
+                'bank_account' => $validatedData['bank_account'] ?? null,
+                'bank_name' => $validatedData['bank_name'] ?? null,
+            ]);
+        }
         // Create record in students table
         $student = Student::create([
             'user_id' => $user->id,
             'learning_goals' => $validatedData['learning_goals'],
+            'LoE_DI' => $validatedData['LoE_DI'] ?? 'Unknown',
             'total_courses_completed' => 0,
         ]);
 
@@ -357,21 +371,20 @@ class AuthController extends Controller
 
             $user = User::create([
                 'username' => $username,
-                'userid_DI' => 'user_' . Str::random(10),
                 'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.com',
                 'password' => Hash::make('password'), // Placeholder password
                 'avatar' => $avatarUrl,
-                'final_cc_cname_DI' => $socialUser->getName() ?? 'Unknown',
-                'role' => 'student',
+                'role' => null,
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
             ]);
 
-            $student = Student::create([
-                'user_id' => $user->id,
-                'learning_goals' => null,
-                'total_courses_completed' => 0,
-            ]);
+            // $student = Student::create([
+            //     'user_id' => $user->id,
+            //     'learning_goals' => null,
+            //     'LoE_DI' => null,
+            //     'total_courses_completed' => 0,
+            // ]);
         }
 
         $token = JWTAuth::fromUser($user);
@@ -388,23 +401,32 @@ class AuthController extends Controller
         );
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $token,
-            ])->post('http://localhost:8100/recommend-laravel', [
-                'user_id' => $user->id,
-                'course_name' => null,
-            ]);
+            // $response = Http::withHeaders([
+            //     'Authorization' => 'Bearer ' . $token,
+            // ])->post('http://localhost:8100/recommend-laravel', [
+            //     'user_id' => $user->id,
+            //     'course_name' => null,
+            // ]);
 
-            $recommendedCourses = $response->successful()
-                ? $response->json()['courses']
-                : null;
+            // $recommendedCourses = $response->successful()
+            //     ? $response->json()['courses']
+            //     : null;
 
+        if ($user->role === null) {
             return response()->json([
-                'message' => 'Social login successful',
+                'message' => 'Social login successful, but role not set',
+                'require_role_selection' => true,
                 'user' => $user,
                 'token' => $token,
-                'recommended_courses' => $recommendedCourses,
             ])->withCookie($cookie);
+        }
+
+        return response()->json([
+            'message' => 'Social login successful',
+            'user' => $user,
+            'token' => $token,
+        ])->withCookie($cookie);
+
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Social login successful',
@@ -752,6 +774,8 @@ class AuthController extends Controller
                 'bio' => 'nullable|string|max:1000',
                 'organization' => 'nullable|string|max:100',
                 'name' => 'nullable|string|max:100',
+                'bank_account'=>'nullable|string|max:50',
+                'bank_name'=>'nullable|string|max:50',
             ]);
 
             // Handle avatar upload
@@ -779,7 +803,7 @@ class AuthController extends Controller
 
             // Update user data
             $userDataToUpdate = array_intersect_key($validatedData, array_flip([
-                'username', 'LoE_DI', 'birthdate', 'gender', 'avatar'
+                'username', 'birthdate', 'gender', 'avatar'
             ]));
             $user->fill($userDataToUpdate);
             $userIsDirty = $user->isDirty();
@@ -794,7 +818,7 @@ class AuthController extends Controller
            if ($user->role === 'student') {
                 $student = $user->student;
                 if ($student) {
-                    $studentDataToUpdate = array_intersect_key($validatedData, array_flip(['learning_goals']));
+                    $studentDataToUpdate = array_intersect_key($validatedData, array_flip(['learning_goals','LoE_DI']));
                     $student->fill($studentDataToUpdate);
                     $studentIsDirty = $student->isDirty();
 
@@ -809,7 +833,7 @@ class AuthController extends Controller
                 $instructor = $user->instructor;
                 if ($instructor) {
                     $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
-                        'bio', 'organization', 'name'
+                        'bio', 'organization', 'name','bank_account','bank_name'
                     ]));
                     $instructor->fill($instructorDataToUpdate);
                     $instructorIsDirty = $instructor->isDirty();
@@ -865,4 +889,23 @@ class AuthController extends Controller
             ], 500);
         }
     }
+        public function showRoleSelection()
+    {
+        return view('auth.select-role');
+    }
+
+    public function saveRole(Request $request)
+    {
+        $request->validate([
+            'role' => 'required|in:student,instructor'
+        ]);
+
+        $user = Auth::user();
+        $tamp=User::find($user->id);
+        $tamp->role = $request->input('role');
+        $tamp->save();
+        return redirect()->intended('/');
+    }
+
 }
+

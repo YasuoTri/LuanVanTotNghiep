@@ -36,8 +36,8 @@ use Illuminate\Http\Request;
 
 // Existing General Routes
 Route::post('/recommend', [RecommendationController::class, 'recommend']);
-// Route::post('/rate', [RecommendationController::class, 'rate']);
-// Route::post('/users', [RecommendationController::class, 'createUser']);
+Route::get('/select-role', [AuthController::class, 'showRoleSelection'])->name('select-role');
+Route::post('/select-role', [AuthController::class, 'saveRole']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('jwt_cookie');
@@ -51,11 +51,12 @@ Route::middleware('jwt_cookie')->group(function () {
 });
 Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
+Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
 // Student Routes
-Route::middleware(['jwt_cookie', 'instructor_or_student'])->group(function () {
+Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong
@@ -107,7 +108,7 @@ Route::middleware(['jwt_cookie', 'instructor_or_student'])->group(function () {
 });
 
 // Instructor Routes
-Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
+Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(function () {
     // View Lesson Content (Preview Own Courses)
     Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'getCourseLessonsInstructor'])->name('lessons.getCourseLessonsInstructor');//xong
     Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');//xong
@@ -177,7 +178,7 @@ Route::middleware(['jwt_cookie', 'instructor'])->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['jwt_cookie', 'admin'])->group(function () {
+Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/courses', [CourseController::class, 'store']);
     Route::put('/admin/courses/{id}', [CourseController::class, 'update']);
     Route::delete('/admin/courses/{id}', [CourseController::class, 'destroy']);

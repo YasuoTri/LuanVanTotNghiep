@@ -316,10 +316,9 @@ class LessonController extends Controller
 {
     try {
         $user = Auth::user();
-        $instructor = Instructors::where('user_id', $user->id)->first();
         // Kiểm tra xem user hiện tại có phải là instructor của course này không
         $course = Course::where('id', $course_id)
-            ->where('instructor_id', $instructor->id)
+            ->where('instructor_id', $user->instructor->id)
             ->first();
 
         if (!$course) {
@@ -348,16 +347,13 @@ class LessonController extends Controller
 {
     try {
         $user = Auth::user();
-        
-        // Kiểm tra xem user có phải là instructor của course này không
+        // Kiểm tra xem user hiện tại có phải là instructor của course này không
         $course = Course::where('id', $course_id)
-            ->whereHas('instructors', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
+            ->where('instructor_id', $user->instructor->id)
             ->first();
-            
+
         if (!$course) {
-            return response()->json(['message' => 'You are not an instructor for this course'], 403);
+            return response()->json(['message' => 'You are not the instructor for this course'], 403);
         }
 
         $lesson = Lesson::with(['quizzes', 'course'])
@@ -386,15 +382,13 @@ class LessonController extends Controller
 {
     try {
         $user = Auth::user();
-        $instructor = Course_Instructors::where('course_id', $course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
+       $course = Course::where('id', $course_id)
+    ->where('instructor_id', $user->instructor->id) // hoặc 'instructor_id' nếu tên cột khác
+    ->first();
 
-        if (!$instructor) {
-            return response()->json(['message' => 'You are not an instructor for this course'], 403);
-        }
+if (!$course) {
+    return response()->json(['message' => 'You are not an instructor for this course'], 403);
+}
 
         // Kiểm tra trạng thái course
         $course = Course::findOrFail($course_id);
@@ -649,15 +643,13 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
     {
         try {
             $user = Auth::user();
-            $instructor = Course_Instructors::where('course_id', $course_id)
-                ->whereHas('instructor', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                })
-                ->first();
+          $course = Course::where('id', $course_id)
+    ->where('instructor_id', $user->instructor->id) // hoặc 'instructor_id' nếu tên cột khác
+    ->first();
 
-            if (!$instructor) {
-                return response()->json(['message' => 'You are not an instructor for this course'], 403);
-            }
+if (!$course) {
+    return response()->json(['message' => 'You are not an instructor for this course'], 403);
+}
 
             $lesson = Lesson::where('id', $lesson_id)
                 ->where('course_id', $course_id)

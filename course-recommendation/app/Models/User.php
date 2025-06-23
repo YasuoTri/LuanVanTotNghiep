@@ -19,7 +19,6 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'password',
         'avatar',
-        'LoE_DI',
         'birthdate', // Updated from YoB to birthdate
         'gender',
         'role',

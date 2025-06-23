@@ -400,7 +400,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 }
                 
             }
-
+            $user=Auth::user()->instructor;
             // Tạo khóa học
             $course = Course::create([
                 'course_name' => $validated['course_name'],
@@ -411,8 +411,8 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 'course_description' => $validated['course_description'] ?? null,
                 'price' => $validated['price'] ?? 0,
                 'skills' => $validated['skills'] ?? null,
-                'tag' => $validated['tag'] ?? null,
                 'status' => $validated['status'],
+                'instructor_id' => $user->id,
             ]);
 
             // Gán danh mục cho khóa học

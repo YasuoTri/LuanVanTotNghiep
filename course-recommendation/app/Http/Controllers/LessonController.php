@@ -344,39 +344,43 @@ class LessonController extends Controller
     }
 }
 
-
     public function showForInstructor($course_id, $lesson_id): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $instructor = Course_Instructors::where('course_id', $course_id)
-                ->whereHas('instructor', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                })
-                ->first();
-
-            if (!$instructor) {
-                return response()->json(['message' => 'You are not an instructor for this course'], 403);
-            }
-
-            $lesson = Lesson::with(['quizzes','course'])->where('id', $lesson_id)
-                ->where('course_id', $course_id)
-                ->paginate(10);
-
-            if (!$lesson) {
-                return response()->json(['message' => 'Lesson not found'], 404);
-            }
-
-            return response()->json($lesson);
-        } catch (Exception $e) {
-            Log::error('Show lesson for instructor error:', ['message' => $e->getMessage()]);
-            return response()->json([
-                'status' => 500,
-                'error' => 'An error occurred while retrieving the lesson.',
-                'message' => $e->getMessage()
-            ], 500);
+{
+    try {
+        $user = Auth::user();
+        
+        // Kiểm tra xem user có phải là instructor của course này không
+        $course = Course::where('id', $course_id)
+            ->whereHas('instructors', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->first();
+            
+        if (!$course) {
+            return response()->json(['message' => 'You are not an instructor for this course'], 403);
         }
+
+        $lesson = Lesson::with(['quizzes', 'course'])
+            ->where('id', $lesson_id)
+            ->where('course_id', $course_id)
+            ->paginate(10);
+
+        if (!$lesson) {
+            return response()->json(['message' => 'Lesson not found'], 404);
+        }
+
+        return response()->json($lesson);
+        
+    } catch (Exception $e) {
+        Log::error('Show lesson for instructor error:', ['message' => $e->getMessage()]);
+        return response()->json([
+            'status' => 500,
+            'error' => 'An error occurred while retrieving the lesson.',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function storeForInstructor(StoreLessonRequest $request, $course_id): JsonResponse
 {
@@ -853,11 +857,12 @@ public function getCourseLessons($id): JsonResponse
     }
 
 
-      public function getCourseLessonsInstructor(Request $request, $courseId): JsonResponse
-    {
+    public function getCourseLessonsInstructor(Request $request, $courseId): JsonResponse
+{
+    try {
         // Get the authenticated user
         $user = Auth::user();
-
+        
         // Check if the user exists and has the 'instructor' role
         if (!$user || $user->role !== 'instructor') {
             return response()->json([
@@ -873,31 +878,25 @@ public function getCourseLessons($id): JsonResponse
             ], 404);
         }
 
-        // Check if the course exists
-        $course = Course::find($courseId);
+        // Check if the course exists and belongs to this instructor
+        $course = Course::where('id', $courseId)
+            ->where('instructor_id', $instructor->id)
+            ->first();
+            
         if (!$course) {
             return response()->json([
-                'message' => 'Course not found.'
+                'message' => 'Course not found or you are not authorized to view lessons for this course.'
             ], 404);
         }
 
-        // Verify that the instructor is associated with the course
-        $isInstructorOfCourse = Course_Instructors::where('course_id', $courseId)
-            ->where('instructor_id', $instructor->id)
-            ->exists();
-
-        if (!$isInstructorOfCourse) {
-            return response()->json([
-                'message' => 'You are not authorized to view lessons for this course.'
-            ], 403);
-        }
-
-        // Fetch all lessons for the course (only approved lessons)
+        // Fetch all lessons for the course (all statuses for instructor management)
         $lessons = Lesson::where('course_id', $courseId)
-            ->where('status', 'approved')
-            ->select('id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order', 'created_at', 'updated_at')
+            ->select('id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order', 'status', 'created_at', 'updated_at')
             ->orderBy('sort_order', 'asc')
             ->get();
+
+        // Group lessons by status for better management
+        $lessonsByStatus = $lessons->groupBy('status');
 
         // Return the lessons in a JSON response
         return response()->json([
@@ -905,10 +904,32 @@ public function getCourseLessons($id): JsonResponse
             'data' => [
                 'course_id' => $courseId,
                 'course_name' => $course->course_name,
+                'course_status' => $course->status,
+                'total_lessons' => $lessons->count(),
+                'total_duration' => $lessons->sum('duration'),
+                'lessons_by_status' => [
+                    'approved' => $lessonsByStatus->get('approved', collect())->count(),
+                    'pending' => $lessonsByStatus->get('pending', collect())->count(),
+                    'rejected' => $lessonsByStatus->get('rejected', collect())->count(),
+                ],
                 'lessons' => $lessons
             ]
         ], 200);
+        
+    } catch (\Exception $e) {
+        Log::error('Get course lessons for instructor error:', [
+            'course_id' => $courseId,
+            'user_id' => Auth::id(),
+            'message' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'message' => 'An error occurred while retrieving the lessons.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function search(Request $request)
 {

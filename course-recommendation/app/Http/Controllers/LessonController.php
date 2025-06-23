@@ -488,15 +488,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 {
     try {
         $user = Auth::user();
-        $instructor = Course::where('course_id', $course_id)
-            ->whereHas('instructors', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
 
-        if (!$instructor) {
-            return response()->json(['message' => 'You are not an instructor for this course'], 403);
-        }
 
         $lesson = Lesson::where('id', $lesson_id)
             ->where('course_id', $course_id)

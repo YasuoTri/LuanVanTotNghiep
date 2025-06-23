@@ -489,7 +489,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
     try {
         $user = Auth::user();
         $instructor = Course::where('course_id', $course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
+            ->whereHas('instructors', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->first();

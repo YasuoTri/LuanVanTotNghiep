@@ -887,31 +887,32 @@ public function getCourseLessons($id): JsonResponse
             ->paginate($perPage);
 
         // Thống kê theo status (toàn bộ lesson, không paginate)
-        $allLessons = Lesson::where('course_id', $courseId)->get();
-        $lessonsByStatus = $allLessons->groupBy('status');
+        $allLessons = Lesson::where('course_id', $courseId)->paginate(10);
+        return response()->json($allLessons);
+        // $lessonsByStatus = $allLessons->groupBy('status');
 
-        return response()->json([
-            'message' => 'Lessons retrieved successfully.',
-            'data' => [
-                'course_id' => $courseId,
-                'course_name' => $course->course_name,
-                'course_status' => $course->status,
-                'total_lessons' => $allLessons->count(),
-                'total_duration' => $allLessons->sum('duration'),
-                'lessons_by_status' => [
-                    'approved' => $lessonsByStatus->get('approved', collect())->count(),
-                    'pending' => $lessonsByStatus->get('pending', collect())->count(),
-                    'rejected' => $lessonsByStatus->get('rejected', collect())->count(),
-                ],
-                'lessons' => $paginatedLessons->items(), // chỉ nội dung bài học trong trang hiện tại
-                'pagination' => [
-                    'current_page' => $paginatedLessons->currentPage(),
-                    'last_page' => $paginatedLessons->lastPage(),
-                    'per_page' => $paginatedLessons->perPage(),
-                    'total' => $paginatedLessons->total(),
-                ]
-            ]
-        ], 200);
+        // return response()->json([
+        //     'message' => 'Lessons retrieved successfully.',
+        //     'data' => [
+        //         'course_id' => $courseId,
+        //         'course_name' => $course->course_name,
+        //         'course_status' => $course->status,
+        //         'total_lessons' => $allLessons->count(),
+        //         'total_duration' => $allLessons->sum('duration'),
+        //         'lessons_by_status' => [
+        //             'approved' => $lessonsByStatus->get('approved', collect())->count(),
+        //             'pending' => $lessonsByStatus->get('pending', collect())->count(),
+        //             'rejected' => $lessonsByStatus->get('rejected', collect())->count(),
+        //         ],
+        //         'lessons' => $paginatedLessons->items(), // chỉ nội dung bài học trong trang hiện tại
+        //         'pagination' => [
+        //             'current_page' => $paginatedLessons->currentPage(),
+        //             'last_page' => $paginatedLessons->lastPage(),
+        //             'per_page' => $paginatedLessons->perPage(),
+        //             'total' => $paginatedLessons->total(),
+        //         ]
+        //     ]
+        // ], 200);
 
     } catch (\Exception $e) {
         Log::error('Get course lessons for instructor error:', [

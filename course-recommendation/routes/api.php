@@ -146,8 +146,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/instructor/quizzes/{quiz_id}/questions', [QuizController::class, 'storeQuestionForInstructor'])->name('quizzes.questions.store');
     Route::get('/instructor/quizzes/{quiz_id}/analytics', [QuizController::class, 'quizAnalyticsForInstructor'])->name('quizzes.analytics');
     // Manage Lessons
-    Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'indexForInstructor'])->name('lessons.indexForInstructor');
-    Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');
+    // Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'indexForInstructor'])->name('lessons.indexForInstructor');
+    // Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');
     Route::post('/instructor/courses/{course_id}/lessons', [LessonController::class, 'storeForInstructor'])->name('lessons.storeForInstructor');
     Route::put('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'updateForInstructor'])->name('lessons.updateForInstructor');
     Route::delete('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'destroyForInstructor'])->name('lessons.destroyForInstructor');

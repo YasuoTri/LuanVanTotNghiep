@@ -852,17 +852,14 @@ public function getCourseLessons($id): JsonResponse
     public function getCourseLessonsInstructor(Request $request, $courseId): JsonResponse
 {
     try {
-        // Get the authenticated user
         $user = Auth::user();
-        
-        // Check if the user exists and has the 'instructor' role
+
         if (!$user || $user->role !== 'instructor') {
             return response()->json([
                 'message' => 'Unauthorized. Only instructors can access this endpoint.'
             ], 403);
         }
 
-        // Find the instructor record for the user
         $instructor = Instructors::where('user_id', $user->id)->first();
         if (!$instructor) {
             return response()->json([
@@ -870,51 +867,59 @@ public function getCourseLessons($id): JsonResponse
             ], 404);
         }
 
-        // Check if the course exists and belongs to this instructor
         $course = Course::where('id', $courseId)
             ->where('instructor_id', $instructor->id)
             ->first();
-            
+
         if (!$course) {
             return response()->json([
                 'message' => 'Course not found or you are not authorized to view lessons for this course.'
             ], 404);
         }
 
-        // Fetch all lessons for the course (all statuses for instructor management)
-        $lessons = Lesson::where('course_id', $courseId)
+        // Lấy số lượng mỗi trang, mặc định là 10 nếu không có trong request
+        $perPage = $request->input('per_page', 10);
+
+        // Paginate lessons
+        $paginatedLessons = Lesson::where('course_id', $courseId)
             ->select('id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order', 'status', 'created_at', 'updated_at')
             ->orderBy('sort_order', 'asc')
-            ->get();
+            ->paginate($perPage);
 
-        // Group lessons by status for better management
-        $lessonsByStatus = $lessons->groupBy('status');
+        // Thống kê theo status (toàn bộ lesson, không paginate)
+        $allLessons = Lesson::where('course_id', $courseId)->get();
+        $lessonsByStatus = $allLessons->groupBy('status');
 
-        // Return the lessons in a JSON response
         return response()->json([
             'message' => 'Lessons retrieved successfully.',
             'data' => [
                 'course_id' => $courseId,
                 'course_name' => $course->course_name,
                 'course_status' => $course->status,
-                'total_lessons' => $lessons->count(),
-                'total_duration' => $lessons->sum('duration'),
+                'total_lessons' => $allLessons->count(),
+                'total_duration' => $allLessons->sum('duration'),
                 'lessons_by_status' => [
                     'approved' => $lessonsByStatus->get('approved', collect())->count(),
                     'pending' => $lessonsByStatus->get('pending', collect())->count(),
                     'rejected' => $lessonsByStatus->get('rejected', collect())->count(),
                 ],
-                'lessons' => $lessons
+                'lessons' => $paginatedLessons->items(), // chỉ nội dung bài học trong trang hiện tại
+                'pagination' => [
+                    'current_page' => $paginatedLessons->currentPage(),
+                    'last_page' => $paginatedLessons->lastPage(),
+                    'per_page' => $paginatedLessons->perPage(),
+                    'total' => $paginatedLessons->total(),
+                ]
             ]
         ], 200);
-        
+
     } catch (\Exception $e) {
         Log::error('Get course lessons for instructor error:', [
             'course_id' => $courseId,
             'user_id' => Auth::id(),
             'message' => $e->getMessage()
         ]);
-        
+
         return response()->json([
             'message' => 'An error occurred while retrieving the lessons.',
             'error' => $e->getMessage()

@@ -312,12 +312,16 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
         }
 
-        $enrollments = Enrollment::where('user_id', $user->id)
-            ->with('course')
-            ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'expires_at', 'status')
-            ->orderBy('enrolled_at', 'desc')
-            ->paginate(10);
+       $enrollments = Enrollment::where('user_id', $user->id)
+    ->whereHas('course', function ($query) {
+        $query->whereIn('status', ['approved', 'available', 'unavailable']);
+    })
+    ->with('course')
+    ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status')
+    ->orderBy('enrolled_at', 'desc')
+    ->paginate(10);
 
+        
         return response()->json(['data' => $enrollments]);
     }
       public function checkEnrollmentStatus($id): JsonResponse
@@ -468,7 +472,6 @@ class EnrollmentController extends Controller
         return response()->json(['message' => 'Review submitted successfully', 'data' => $review], 201);
     }
 
-
     /**
      * Enroll in a free course.
      */
@@ -479,7 +482,12 @@ class EnrollmentController extends Controller
         // if ($user->role !== 'student') {
         //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
         // }
+         // Tìm khóa học
+        $course = Course::withCount('lessons')->find($course_id);
 
+        if (!$course) {
+            return response()->json(['message' => 'Course dont have lesson'], 404);
+        }
         // Check if course exists and is free
         $course = Course::find($course_id);
         if (!$course) {

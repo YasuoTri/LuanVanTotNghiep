@@ -27,14 +27,6 @@ class QuizResultController extends Controller
 
   public function store(StoreQuizResultRequest $request): JsonResponse
 {
-    // 1. Kiểm tra vai trò của user (phải là student)
-    $user = User::find($request->user_id);
-    if (!$user || $user->role !== 'student') {
-        return response()->json([
-            'message' => 'Only students can submit quiz results'
-        ], 403);
-    }
-
     // 2. Kiểm tra xem quiz có tồn tại không
     $quiz = Quiz::find($request->quiz_id);
     if (!$quiz) {
@@ -49,18 +41,6 @@ class QuizResultController extends Controller
         return response()->json([
             'message' => 'Lesson for this quiz not found'
         ], 404);
-    }
-
-    // 4. Kiểm tra enrollment của user với course
-    $enrollment = Enrollment::where('user_id', $request->user_id)
-        ->where('course_id', $lesson->course_id)
-        ->where('status', 'active')
-        ->first();
-
-    if (!$enrollment) {
-        return response()->json([
-            'message' => 'The student is not enrolled in the course associated with this quiz'
-        ], 403);
     }
 
     // 5. Kiểm tra xem quiz có đang visible không

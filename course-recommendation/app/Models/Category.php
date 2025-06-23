@@ -8,7 +8,7 @@ class Category extends Model
 {
     protected $table = 'categories';
     protected $primaryKey = 'id';
-    protected $fillable = ['name'];
+    protected $fillable = ['name','parent_id'];
 public function courses()
     {
         return $this->belongsToMany(Course::class, 'course_category', 'category_id', 'course_id');

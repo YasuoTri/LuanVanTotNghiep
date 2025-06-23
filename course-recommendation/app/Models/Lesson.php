@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Lesson extends Model
+class Lesson extends Model 
 {
+    use SoftDeletes;
     protected $table = 'lessons';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $fillable = [
+    protected $fillable = ['origin_id','version',
         'course_id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order','status', 'created_at', 'updated_at'
     ];
     protected $casts = [

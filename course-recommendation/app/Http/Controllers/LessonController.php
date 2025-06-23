@@ -20,7 +20,8 @@ use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
 use Pion\Laravel\ChunkUpload\Receiver\FileReceiver;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Exception;
-use Illuminate\Http\Request;;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LessonController extends Controller
 {
@@ -132,7 +133,6 @@ class LessonController extends Controller
         ], 500);
     }
 }
-
     public function update(UpdateLessonRequest $request, $id): JsonResponse
 {
     try {
@@ -312,31 +312,38 @@ class LessonController extends Controller
         }
     }
 
-    public function indexForInstructor($course_id): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $instructor = Course_Instructors::where('course_id', $course_id)
-                ->whereHas('instructor', function ($query) use ($user) {
-                    $query->where('user_id', $user->id);
-                })
-                ->first();
+   public function indexForInstructor($course_id): JsonResponse
+{
+    try {
+        $user = Auth::user();
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        // Kiểm tra xem user hiện tại có phải là instructor của course này không
+        $course = Course::where('id', $course_id)
+            ->where('instructor_id', $instructor->id)
+            ->first();
 
-            if (!$instructor) {
-                return response()->json(['message' => 'You are not an instructor for this course'], 403);
-            }
-
-            $lessons = Lesson::where('course_id', $course_id)->paginate(10);
-            return response()->json($lessons);
-        } catch (Exception $e) {
-            Log::error('Index lessons for instructor error:', ['message' => $e->getMessage()]);
-            return response()->json([
-                'status' => 500,
-                'error' => 'An error occurred while retrieving lessons.',
-                'message' => $e->getMessage()
-            ], 500);
+        if (!$course) {
+            return response()->json(['message' => 'You are not the instructor for this course'], 403);
         }
+
+        // Lấy danh sách bài học (bao gồm soft deleted nếu muốn)
+        $lessons = Lesson::withTrashed() // 👉 nếu bạn muốn instructor thấy cả bài đã xoá mềm
+            ->where('course_id', $course_id)
+            ->orderBy('sort_order') // nếu có
+            ->get();
+
+        return response()->json($lessons);
+
+    } catch (Exception $e) {
+        Log::error('Index lessons for instructor error:', ['message' => $e->getMessage()]);
+        return response()->json([
+            'status' => 500,
+            'error' => 'An error occurred while retrieving lessons.',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     public function showForInstructor($course_id, $lesson_id): JsonResponse
     {
@@ -483,7 +490,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 {
     try {
         $user = Auth::user();
-        $instructor = Course_Instructors::where('course_id', $course_id)
+        $instructor = Course::where('course_id', $course_id)
             ->whereHas('instructor', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
@@ -507,9 +514,36 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
         }
 
+                // 1. Lấy origin ID (nếu là bản gốc thì chính nó)
+        $originId = $lesson->origin_id ?? $lesson->id;
+
+        // 2. Kiểm tra nếu có bản đang chờ duyệt (pending)
+        $hasPending = Lesson::where('origin_id', $originId)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPending) {
+            return response()->json([
+                'message' => 'This lesson has already been edited and is pending approval.'
+            ], 409);
+        }
+
+        // 3. Kiểm tra xem lesson hiện tại có phải là bản mới nhất không
+        $latestLesson = Lesson::where('origin_id', $originId)
+            ->orWhere('id', $originId)
+            ->orderByDesc('version')
+            ->first();
+
+        if ($lesson->id !== $latestLesson->id) {
+            return response()->json([
+                'message' => 'Only the latest version of the lesson can be updated.'
+            ], 400);
+        }
+
         $data = $request->validated();
         $data['course_id'] = $course_id;
-
+        $data['version']= $lesson->version + 1;
+        $data['origin_id']= $lesson->origin_id ?? $lesson->id;
         // Xử lý chunked upload nếu có video mới
         if ($request->hasFile('video')) {
             $receiver = new FileReceiver('video', $request, HandlerFactory::classFromRequest($request));
@@ -587,7 +621,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             $data['status'] = 'pending';
         }
 
-        $lesson->update($data);
+        $lesson->create($data);
         return response()->json([
             'message' => 'Lesson updated successfully' . (isset($data['status']) ? ', awaiting approval' : ''),
             'data' => $lesson
@@ -646,51 +680,102 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         }
     }
 
- public function getCourseLessons($id): JsonResponse
+public function getCourseLessons($id): JsonResponse
 {
     try {
         $user = Auth::user();
-
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
-
-        $enrollment = Enrollment::where('id', $id)
+        $enrollment = Enrollment::with('course.instructors')->where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
 
         $course = Course::where('id', $enrollment->course_id)
-            ->where('status', 'approved')
-            ->first();
+        ->whereIn('status', ['approved', 'unavailable'])
+        ->first();
 
         if (!$course) {
-            return response()->json(['message' => 'Course is not approved yet'], 403);
+            return response()->json(['message' => 'Course is not found '], 403);
         }
         $review= Review::with('user','user.student')->where('course_id', $course->id)->get();
-        $lessons = Lesson::where('course_id', $course->id)
-            ->where('lessons.status', 'approved')
-            ->leftJoin('lesson_progress', function ($join) use ($user) {
-                $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
-                    ->where('lesson_progress.user_id', '=', $user->id);
-            })
-            ->select(
-                'lessons.id',
-                'lessons.title',
-                'lessons.video_url',
-                'lessons.duration',
-                'lessons.is_preview',
-                'lessons.sort_order',
-                'lessons.status as progress_status',
-                'lesson_progress.completed_at'
-            )
-            ->orderBy('lessons.sort_order', 'asc')
+        $baseLessons = Lesson::withTrashed()
+    ->where('course_id', $course->id)
+    ->whereNull('origin_id') // chỉ lấy bài học gốc
+    ->where('lessons.status', 'approved')
+    ->leftJoin('lesson_progress', function ($join) use ($user) {
+        $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
+            ->where('lesson_progress.user_id', '=', $user->id);
+    })
+    ->select(
+        'lessons.id',
+        'lessons.title',
+        'lessons.video_url',
+        'lessons.duration',
+        'lessons.is_preview',
+        'lessons.sort_order',
+        'lessons.deleted_at',
+        'lessons.status as progress_status',
+        'lesson_progress.completed_at',
+        'lesson_progress.status as progress'
+    )
+    ->get();
+
+    $finalLessons = collect();
+
+    foreach ($baseLessons as $lesson) {
+        // 1. Bỏ qua nếu bị xóa sau khi học viên đăng ký và không có progress
+        if ($lesson->deleted_at !== null && $enrollment->enrolled_at > $lesson->deleted_at) {
+            if (!($lesson->progress && $lesson->progress !== 'not_started')) {
+                continue;
+            }
+        }
+
+        // 2. Thêm bài học gốc
+        $finalLessons->push((object)[
+            'id' => $lesson->id,
+            'title' => $lesson->title,
+            'video_url' => $lesson->video_url,
+            'duration' => $lesson->duration,
+            'is_preview' => $lesson->is_preview,
+            'sort_order' => $lesson->sort_order,
+            'version_of' => null, // gốc
+            'progress_status' => $lesson->progress_status,
+            'completed_at' => $lesson->completed_at,
+            'progress' => $lesson->progress
+        ]);
+
+        // 3. Lấy tối đa 2 phiên bản mới nhất đã approved
+        $versions = Lesson::where('origin_id', $lesson->id)
+            ->where('status', 'approved')
+            ->orderByDesc('id')
+            ->limit(2)
             ->get();
 
+        foreach ($versions as $version) {
+            $progress = DB::table('lesson_progress')
+                ->where('lesson_id', $version->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            $finalLessons->push((object)[
+                'id' => $version->id,
+                'title' => $version->title,
+                'video_url' => $version->video_url,
+                'duration' => $version->duration,
+                'is_preview' => $version->is_preview,
+                'sort_order' => $lesson->sort_order, // giữ thứ tự từ bài gốc
+                'version_of' => $lesson->id,
+                'progress_status' => $version->status,
+                'completed_at' => $progress->completed_at ?? null,
+                'progress' => $progress->status ?? null
+            ]);
+        }
+    }
+
+    $finalLessons = $finalLessons->sortBy('sort_order')->values();
         return response()->json([
             'data' => [
                 'enrollment_id' => $enrollment->id,
                 'course' => $course,
-                'lessons' => $lessons,
+                'lessons' => $finalLessons,
                 'reviews' => $review
             ]
         ]);
@@ -894,6 +979,7 @@ public function getPendingLessons(Request $request, $courseId)
             $lesson->updated_at = now();
             $lesson->save();
 
+            
             // Ghi log hoạt động vào activity_log
             $activityLog = json_decode($admin->activity_log, true) ?? [];
             $activityLog[] = [
@@ -902,6 +988,7 @@ public function getPendingLessons(Request $request, $courseId)
                 'new_status' => $newStatus,
                 'timestamp' => now()->toDateTimeString()
             ];
+            
             $admin->activity_log = json_encode($activityLog);
             $admin->save();
 

@@ -16,7 +16,6 @@ return new class extends Migration
             $table->text('details')->nullable()->comment('Chi tiết hành động');
             $table->unsignedBigInteger('user_id')->nullable()->comment('Người thực hiện hành động');
             $table->timestamps();
-
             $table->foreign('payment_id')->references('id')->on('payments')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
         });

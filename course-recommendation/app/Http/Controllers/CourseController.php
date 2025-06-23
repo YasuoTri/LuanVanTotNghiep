@@ -9,6 +9,7 @@ use App\Models\Course_Instructors;
 use App\Models\CourseCategory;
 use App\Models\CourseReview;
 use App\Models\Category;
+use App\Models\Enrollment;
 use App\Models\Instructors;
 use App\Models\Lesson;
 use App\Models\Student;
@@ -41,6 +42,7 @@ class CourseController extends Controller
     // Fetch approved courses with related instructors and reviews
     $courses = Course::with(['instructors', 'reviews', 'lessons'])
         ->where('status', 'approved')
+        ->has('lessons', '>', 1) // Chỉ lấy các khóa học có hơn 1 bài học
         ->get()
         ->map(function ($course) {
             return [
@@ -239,10 +241,16 @@ public function show($id)
             return response()->json(['message' => 'Failed to update course:'.$e->getMessage()], 500);
         }
     }
-public function destroy($id)
+    public function destroy($id)
     {
-        try {
+        try {            
             $course = Course::findOrFail($id);
+              // Kiểm tra xem đã có ai đăng ký khóa học chưa
+            $hasEnrollment = Enrollment::where('course_id', $course->id)->exists();
+
+            if ($hasEnrollment) {
+                return response()->json(['message' => 'Cannot delete course: There are existing enrollments'], 400);
+            }
             if ($course->image) {
                 $this->cloudinaryService->deleteByUrl($course->image);
             }
@@ -267,36 +275,36 @@ public function destroy($id)
 
         return response()->json($stats, 200);
     }
-    // public function indexCourseInstructor()
-    // {
-    //     try {
-    //         $instructor = Auth::user()->instructor;
-    //         $courses = $instructor->courses()
-    //             ->with('coursereview', 'categories')
-    //             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
-    //             ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
-    //             ->paginate(10);
-    //         return response()->json($courses, 200);
-    //     } catch (\Exception $e) {
-    //         Log::error("Failed to fetch instructor courses: {$e->getMessage()}");
-    //         return response()->json(['message' => 'Failed to fetch courses'], 500);
-    //     }
-    // }
     public function indexCourseInstructor()
-{
-    try {
-        $instructor = Auth::user()->instructor;
-        $courses = $instructor->courses()
-            ->with('coursereview', 'categories')
-            ->orderByRaw("CASE WHEN status = 'draft' THEN 0 WHEN status = 'pending' THEN 1 ELSE 2 END")
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-        return response()->json($courses, 200);
-    } catch (\Exception $e) {
-        Log::error("Failed to fetch instructor courses: {$e->getMessage()}");
-        return response()->json(['message' => 'Failed to fetch courses'], 500);
+    {
+        try {
+            $instructor = Auth::user()->instructor;
+            $courses = $instructor->courses()
+                ->with('coursereview', 'categories')
+                ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+                ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
+                ->paginate(10);
+            return response()->json($courses, 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch instructor courses: {$e->getMessage()}");
+            return response()->json(['message' => 'Failed to fetch courses'], 500);
+        }
     }
-}
+//     public function indexCourseInstructor()
+// {
+//     try {
+//         $instructor = Auth::user()->instructor;
+//         $courses = $instructor->courses()
+//             ->with('coursereview', 'categories')
+//             ->orderByRaw("CASE WHEN status = 'draft' THEN 0 WHEN status = 'pending' THEN 1 ELSE 2 END")
+//             ->orderBy('created_at', 'desc')
+//             ->paginate(10);
+//         return response()->json($courses, 200);
+//     } catch (\Exception $e) {
+//         Log::error("Failed to fetch instructor courses: {$e->getMessage()}");
+//         return response()->json(['message' => 'Failed to fetch courses'], 500);
+//     }
+// }
 //     public function indexAvailableCourseInstructor()
 // {
 //     try {
@@ -584,7 +592,6 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
                 }
             }
             $courseCategoryCurrent=CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
-            Log::info("Current course categories: " . json_encode($courseCategoryCurrent));
             // Cập nhật khóa học
             $course->fill($validated);        
             if((!$course->isDirty()) && $courseCategoryCurrent === $courseCategory&&!$flag) {          
@@ -780,37 +787,41 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
 //             return response()->json(['message' => 'Failed to delete course'], 500);
 //         }
 //     }
-//     public function destroyCourseInstructor($id)
-// {
-//     try {
-//         $course = Course::find($id);
-//         if (!$course) {
-//             return response()->json(['message' => 'Course not found'], 404);
-//         }
+   public function destroyCourseInstructor($id)
+{
+    try {
+        $course = Course::find($id);
+        if (!$course) {
+            return response()->json(['message' => 'Course not found'], 404);
+        }
 
-//         if ($course->status === 'draft') {
-//             return response()->json(['message' => 'Cannot delete a draft course'], 422);
-//         }
+        $instructor = Auth::user()->instructor;
 
-//         $instructor = Auth::user()->instructor;
-//         $courseInstructor = Course_Instructors::where('course_id', $id)
-//             ->where('instructor_id', $instructor->id)
-//             ->first();
-//         if (!$courseInstructor) {
-//             return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-//         }
+        // Kiểm tra quyền instructor
+        if ($course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized: You are not the owner of this course'], 403);
+        }
 
-//         if ($course->image) {
-//             $this->cloudinaryService->deleteByUrl($course->image);
-//         }
+        // Kiểm tra nếu có học viên đã đăng ký
+        if (Enrollment::where('course_id', $course->id)->exists()) {
+            return response()->json(['message' => 'Cannot delete course: There are students enrolled'], 400);
+        }
 
-//         $course->delete();
-//         return response()->json(['message' => 'Course deleted successfully'], 200);
-//     } catch (\Exception $e) {
-//         Log::error("Failed to delete course: {$e->getMessage()}");
-//         return response()->json(['message' => 'Failed to delete course'], 500);
-//     }
-// }
+        // Xóa ảnh nếu có
+        if ($course->image) {
+            $this->cloudinaryService->deleteByUrl($course->image);
+        }
+
+        // Soft delete
+        $course->delete();
+
+        return response()->json(['message' => 'Course deleted successfully'], 200);
+    } catch (\Exception $e) {
+        Log::error("Failed to delete course: {$e->getMessage()}");
+        return response()->json(['message' => 'Failed to delete course'], 500);
+    }
+}
+
     public function makeCourseUnavailableInstructor($id)
     {
         try {
@@ -822,9 +833,9 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             $instructor = Auth::user()->instructor;
          $course = Course::findOrFail($id);
 
-if ($course->instructor_id !== $instructor->id) {
-    return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-}
+        if ($course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+        }
 
             $course->update(['status' => 'unavailable']);
             return response()->json(['message' => 'Course marked as unavailable'], 200);

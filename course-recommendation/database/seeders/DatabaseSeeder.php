@@ -45,6 +45,8 @@ class DatabaseSeeder extends Seeder
     {
     
         $this->seedUsers();
+
+        $this->seedAdmins();
         
         $this->seedInstructors();
 
@@ -166,6 +168,7 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+
         // Create 3 instructor users
         for ($i = 0; $i < 3; $i++) {
             User::create([
@@ -183,25 +186,45 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Users seeded successfully!');
     }
 
-    private function seedCategories()
-    {
-        $this->command->info('Seeding categories...');
-        
-        $categories = [
-            'Programming', 'Data Science', 'Business', 'Design', 'Marketing',
-            'Personal Development', 'Health & Fitness', 'Music', 'Photography', 'Language'
-        ];
-        
-        foreach ($categories as $category) {
+  private function seedCategories()
+{
+    $this->command->info('Seeding categories...');
+
+    $categories = [
+        'Programming' => ['Web Development', 'Mobile Development', 'Game Development'],
+        'Data Science' => ['Machine Learning', 'Data Analysis', 'Deep Learning'],
+        'Business' => ['Entrepreneurship', 'Finance', 'Management'],
+        'Design' => ['Graphic Design', 'UI/UX Design', '3D Design'],
+        'Marketing' => ['Digital Marketing', 'SEO', 'Content Marketing'],
+        'Personal Development' => ['Productivity', 'Leadership', 'Career Development'],
+        'Health & Fitness' => ['Nutrition', 'Yoga', 'Workout'],
+        'Music' => ['Instruments', 'Music Theory', 'Songwriting'],
+        'Photography' => ['Portrait Photography', 'Photo Editing', 'Videography'],
+        'Language' => ['English', 'Spanish', 'Chinese'],
+    ];
+
+    foreach ($categories as $parentName => $subcategories) {
+        // Tạo category gốc
+        $parent = Category::create([
+            'name' => $parentName,
+            'parent_id' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Tạo các subcategory
+        foreach ($subcategories as $childName) {
             Category::create([
-                'name' => $category,
+                'name' => $childName,
+                'parent_id' => $parent->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
-        
-        $this->command->info('Categories seeded successfully!');
     }
+
+    $this->command->info('Categories and subcategories seeded successfully!');
+}
 
   private function seedCourses()
 {
@@ -233,7 +256,6 @@ class DatabaseSeeder extends Seeder
             'course_description' => 'Description for course ' . ($i + 1),
             'price' => rand(0, 1000000),
             'skills' => 'Skill ' . ($i + 1),
-            'tag' => 'Tag ' . ($i + 1),
             'status' => $statuses[array_rand($statuses)],
             'created_at' => now(),
             'updated_at' => now(),
@@ -329,7 +351,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding admins...');
         
-        $adminUsers = User::where('role', 'admin')->get();
+        $adminUsers =User::where('role', 'admin')->get();
         
         foreach ($adminUsers as $adminUser) {
             Admins::create([
@@ -348,7 +370,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding admin_accounts...');
         
-        $admins =User::where('role', 'admin')->get();
+        $admins =Admins::first();
         $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
         
         foreach ($admins as $admin) {
@@ -411,7 +433,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Seeding instructor_requests...');
         
         $students = User::where('role', 'student')->inRandomOrder()->take(5)->get();
-        $admins = User::where('role', 'admin')->get();
+        
+        $admins=Admins::first();
         $statuses = ['pending', 'approved', 'rejected'];
         
         foreach ($students as $student) {
@@ -504,7 +527,7 @@ private function seedCourseInstructors()
         $courses = Course::where('status', 'pending')->inRandomOrder()->take(value: 20)->get();
 
         $statuses = ['approved', 'rejected'];
-       $admin = User::where('role', 'admin')->first(); // trả về 1 bản ghi duy nhất
+       $admin = Admins::first();
         foreach ($courses as $course) {
             CourseReview::create([
                 'course_id' => $course->id,
@@ -736,32 +759,55 @@ private function seedCourseInstructors()
 }
 
 
-    private function seedLessons()
-    {
-        $this->command->info('Seeding lessons...');
-        
-        $courses = Course::all();
-        
-        foreach ($courses as $course) {
-            $lessonCount = rand(3, 10);
-            
-            for ($i = 1; $i <= $lessonCount; $i++) {
+   private function seedLessons()
+{
+    $this->command->info('Seeding lessons with versioning...');
+
+    $courses = Course::all();
+
+    foreach ($courses as $course) {
+        $lessonCount = rand(3, 10);
+
+        for ($i = 1; $i <= $lessonCount; $i++) {
+            // Tạo bài học gốc
+            $originalLesson = Lesson::create([
+                'course_id' => $course->id,
+                'title' => "Lesson $i: Topic $i (v1)",
+                'video_url' => 'videos/lesson_' . Str::random(10) . '.mp4',
+                'duration' => rand(5, 30),
+                'is_preview' => rand(0, 100) < 30,
+                'sort_order' => $i,
+                'status' => 'approved',
+                'origin_id' => null,
+                'version' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Tạo 0 đến 2 phiên bản cập nhật
+            $versionCount = rand(0, 2);
+
+            for ($v = 1; $v <= $versionCount; $v++) {
                 Lesson::create([
                     'course_id' => $course->id,
-                    'title' => "Lesson $i: Topic $i",
-                    'video_url' => 'videos/lesson_' . Str::random(10) . '.mp4',
+                    'title' => "Lesson $i: Topic $i (v" . ($v + 1) . ")",
+                    'video_url' => 'videos/lesson_' . Str::random(10) . '_v' . ($v + 1) . '.mp4',
                     'duration' => rand(5, 30),
                     'is_preview' => rand(0, 100) < 30,
-                    'sort_order' => $i,
+                    'sort_order' => $i, // giữ nguyên sort_order như bản gốc
                     'status' => 'approved',
+                    'origin_id' => $originalLesson->id,
+                    'version' => $v + 1,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
         }
-        
-        $this->command->info('Lessons seeded successfully!');
     }
+
+    $this->command->info('Lessons with versioning seeded successfully!');
+}
+
 
     private function seedLessonProgress()
     {

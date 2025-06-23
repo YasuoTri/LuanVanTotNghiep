@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LessonProgress\StoreLessonProgressRequest;
 use App\Http\Requests\LessonProgress\UpdateLessonProgressRequest;
+use App\Models\Course;
 use App\Models\LessonProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -75,13 +76,11 @@ class LessonProgressController extends Controller
     public function indexForInstructor($course_id)
     {
         $user = Auth::user();
-        $instructor = Course_Instructors::where('course_id', $course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
+       $course = Course::where('id', $course_id)
+        ->where('user_id', $user->instructor->id) // hoặc 'instructor_id' nếu tên cột khác
+        ->first();
 
-        if (!$instructor) {
+        if (!$course) {
             return response()->json(['message' => 'You are not an instructor for this course'], 403);
         }
 

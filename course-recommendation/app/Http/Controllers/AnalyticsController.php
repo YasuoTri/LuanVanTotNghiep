@@ -211,7 +211,48 @@ class AnalyticsController extends Controller
         ]);
     }
 
-   public function instructorStatistics($userId)
+//    public function instructorStatistics($userId)
+// {
+//     // Lấy instructor ID theo user
+//     $instructor = DB::table('instructors')->where('user_id', $userId)->first();
+//     if (!$instructor) {
+//         return response()->json(['error' => 'Instructor not found'], 404);
+//     }
+
+//     $instructorId = $instructor->id;
+
+//     // Tổng số khoá học mà instructor giảng dạy
+//     $totalCourses = DB::table('course_instructors')
+//         ->where('instructor_id', $instructorId)
+//         ->count();
+
+//     // Doanh thu theo tháng & năm
+//     $monthlyRevenue = DB::table('revenue_distributions')
+//         ->join('revenue_sessions', 'revenue_distributions.revenue_session_id', '=', 'revenue_sessions.id')
+//         ->where('revenue_distributions.instructor_id', $instructorId)
+//         ->select(
+//             'revenue_sessions.month',
+//             'revenue_sessions.year',
+//             DB::raw('SUM(revenue_distributions.instructor_share) as total_revenue')
+//         )
+//         ->groupBy('revenue_sessions.month', 'revenue_sessions.year')
+//         ->orderByDesc('revenue_sessions.year')
+//         ->orderByDesc('revenue_sessions.month')
+//         ->get();
+
+//     // Tổng doanh thu instructor nhận được
+//     $totalRevenue = DB::table('revenue_distributions')
+//         ->where('instructor_id', $instructorId)
+//         ->sum('instructor_share');
+
+//     return response()->json([
+//         'instructor_id' => $instructorId,
+//         'total_courses' => $totalCourses,
+//         'total_revenue' => $totalRevenue,
+//         'monthly_revenue' => $monthlyRevenue,
+//     ]);
+// }
+public function instructorStatistics($userId)
 {
     // Lấy instructor ID theo user
     $instructor = DB::table('instructors')->where('user_id', $userId)->first();
@@ -221,8 +262,8 @@ class AnalyticsController extends Controller
 
     $instructorId = $instructor->id;
 
-    // Tổng số khoá học mà instructor giảng dạy
-    $totalCourses = DB::table('course_instructors')
+    // Tổng số khoá học mà instructor giảng dạy (KHÔNG dùng course_instructors nữa)
+    $totalCourses = DB::table('courses')
         ->where('instructor_id', $instructorId)
         ->count();
 
@@ -252,5 +293,6 @@ class AnalyticsController extends Controller
         'monthly_revenue' => $monthlyRevenue,
     ]);
 }
+
 
 }

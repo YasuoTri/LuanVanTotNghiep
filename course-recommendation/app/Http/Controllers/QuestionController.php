@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreQuestionRequest;
 use App\Http\Requests\UpdateQuestionRequest;
+use App\Models\Instructors;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\Course_Instructors;
@@ -32,13 +33,17 @@ public function store(StoreQuestionRequest $request)
     $user = Auth::user();
 
     if ($user->role === 'instructor') {
-        $instructor = Course_Instructors::where('course_id', $quiz->lesson->course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
+         $instructor = Instructors::where('user_id', $user->id)->first();
 
         if (!$instructor) {
+            return response()->json(['message' => 'Instructor profile not found.'], 404);
+        }
+
+        // Lấy course từ quiz
+        $course = $quiz->lesson->course;
+
+        // Kiểm tra xem course có thuộc về instructor này không
+        if ($course->instructor_id !== $instructor->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
     }
@@ -52,13 +57,18 @@ public function update(UpdateQuestionRequest $request, Question $question)
     $user = Auth::user();
 
     if ($user->role === 'instructor') {
-        $instructor = Course_Instructors::where('course_id', $question->quiz->lesson->course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
+        // Lấy instructor hiện tại của user
+        $instructor = Instructors::where('user_id', $user->id)->first();
 
         if (!$instructor) {
+            return response()->json(['message' => 'Instructor profile not found.'], 404);
+        }
+
+        // Lấy course thông qua question -> quiz -> lesson -> course
+        $course = $question->quiz->lesson->course;
+
+        // Kiểm tra instructor_id của course có trùng không
+        if (!$course || $course->instructor_id !== $instructor->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
     }
@@ -74,17 +84,20 @@ public function destroy(Question $question)
 {
     $user = Auth::user();
 
-    if ($user->role === 'instructor') {
-        $instructor = Course_Instructors::where('course_id', $question->quiz->lesson->course_id)
-            ->whereHas('instructor', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })
-            ->first();
+     // Lấy instructor hiện tại của user
+        $instructor = Instructors::where('user_id', $user->id)->first();
 
         if (!$instructor) {
+            return response()->json(['message' => 'Instructor profile not found.'], 404);
+        }
+
+        // Lấy course thông qua question -> quiz -> lesson -> course
+        $course = $question->quiz->lesson->course;
+
+        // Kiểm tra instructor_id của course có trùng không
+        if (!$course || $course->instructor_id !== $instructor->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-    }
 
     $question->delete();
     return response()->json(['message' => 'Deleted question successfully'], 201);

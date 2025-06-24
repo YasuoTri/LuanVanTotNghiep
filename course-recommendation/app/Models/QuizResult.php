@@ -18,8 +18,7 @@ protected $fillable = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'started_at' => 'datetime',
-        'snapshot_json' => 'json',
-        
+        'snapshot_json' => 'json',  
     ];
 
 public function user()

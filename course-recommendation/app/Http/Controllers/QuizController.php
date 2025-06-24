@@ -139,8 +139,9 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         $validated = $request->validate([
             'lesson_id' => 'required|exists:lessons,id',
             'title' => 'required|string|max:255',
-            'max_attempts' => 'required|integer|min:1',
-            'time_limit' => 'required|integer|min:1',
+            'max_attempts' => 'nullable|integer|min:3',
+            'time_limit' => 'nullable|integer|min:3',
+            'is_visible' => 'required|boolean',
         ]);
         
         $lesson = Lesson::find($validated['lesson_id']);

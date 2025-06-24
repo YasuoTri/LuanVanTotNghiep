@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1:8200
--- Thời gian đã tạo: Th6 22, 2025 lúc 11:35 AM
+-- Thời gian đã tạo: Th6 24, 2025 lúc 03:42 AM
 -- Phiên bản máy phục vụ: 10.4.27-MariaDB
 -- Phiên bản PHP: 8.2.0
 
@@ -414,9 +414,6 @@ CREATE TABLE `questions` (
   `quiz_id` bigint(20) UNSIGNED NOT NULL,
   `title` text NOT NULL,
   `question_type` enum('multiple_choice','true_false') NOT NULL,
-  `points` decimal(5,2) NOT NULL DEFAULT 1.00,
-  `is_visible` tinyint(1) NOT NULL DEFAULT 1,
-  `flagged` tinyint(1) NOT NULL DEFAULT 0 COMMENT 'Cờ báo cáo câu hỏi',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -432,7 +429,6 @@ CREATE TABLE `question_choices` (
   `question_id` bigint(20) UNSIGNED NOT NULL,
   `content` text NOT NULL,
   `is_correct` tinyint(1) NOT NULL DEFAULT 0,
-  `sort_order` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -450,7 +446,6 @@ CREATE TABLE `quizzes` (
   `max_attempts` int(11) DEFAULT 3,
   `time_limit` int(11) DEFAULT NULL,
   `is_visible` tinyint(1) NOT NULL DEFAULT 1,
-  `status` enum('pending','approved','banned') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -468,6 +463,7 @@ CREATE TABLE `quiz_results` (
   `attempt_number` int(11) NOT NULL DEFAULT 1 COMMENT 'Số lần thử bài kiểm tra',
   `started_at` timestamp NULL DEFAULT NULL COMMENT 'Thời gian bắt đầu làm bài',
   `score` decimal(5,2) NOT NULL,
+  `snapshot_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Lưu cấu trúc quiz tại thời điểm học viên làm bài' CHECK (json_valid(`snapshot_json`)),
   `completed_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -681,9 +677,7 @@ CREATE TABLE `user_answers` (
   `quiz_result_id` bigint(20) UNSIGNED NOT NULL,
   `question_id` bigint(20) UNSIGNED NOT NULL,
   `choice_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `answer_text` text DEFAULT NULL,
   `is_correct` tinyint(1) DEFAULT NULL,
-  `points_earned` decimal(5,2) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

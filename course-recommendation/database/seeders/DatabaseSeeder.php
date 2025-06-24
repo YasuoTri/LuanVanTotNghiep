@@ -877,10 +877,6 @@ private function seedCourseInstructors()
                     'quiz_id' => $quiz->id,
                     'title' => "Question $i for Quiz {$quiz->id}",
                     'question_type' => $questionTypes[array_rand($questionTypes)],
-                    'points' => rand(1, 5),
-                    'is_visible' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ]);
             }
         }
@@ -956,29 +952,22 @@ private function seedCourseInstructors()
             
             foreach ($questions as $question) {
                 $choice = null;
-                $answerText = null;
                 $isCorrect = null;
-                $pointsEarned = null;
                 
                 if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
                     $choices = QuestionChoice::where('question_id', $question->id)->get();
                     $choice = $choices->random();
                     $isCorrect = $choice->is_correct;
-                    $pointsEarned = $isCorrect ? $question->points : 0;
                 } else {
-                    $answerText = 'Sample answer for open-ended question';
                     $isCorrect = rand(0, 1);
-                    $pointsEarned = $isCorrect ? $question->points : 0;
                 }
                 
                 UserAnswer::create([
                     'user_id' => $quizResult->user_id,
                     'quiz_result_id' => $quizResult->id,
-                    'question_id' => $question->id,
-                    'choice_id' => $choice ? $choice->id : null,
-                    'answer_text' => $answerText,
+                    'question_index' => $question->id,
+                    'choice_index' => $choice ? $choice->id : null,
                     'is_correct' => $isCorrect,
-                    'points_earned' => $pointsEarned,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

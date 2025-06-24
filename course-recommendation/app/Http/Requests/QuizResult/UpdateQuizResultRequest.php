@@ -18,6 +18,8 @@ class UpdateQuizResultRequest extends FormRequest
             'quiz_id' => 'sometimes|exists:quizzes,id',
             'score' => 'sometimes|numeric|min:0|max:100',
             'completed_at' => 'nullable|date',
+            'snapshot_json' => 'nullable|string',
+            
         ];
     }
 }

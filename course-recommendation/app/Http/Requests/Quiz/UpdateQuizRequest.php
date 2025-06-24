@@ -19,6 +19,7 @@ class UpdateQuizRequest extends FormRequest
             'max_attempts' => 'sometimes|integer|min:1',
             'time_limit' => 'sometimes|integer|min:1',
             'is_visible' => 'sometimes|boolean',
+            
         ];
     }
     public function messages()

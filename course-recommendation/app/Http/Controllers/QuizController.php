@@ -17,6 +17,7 @@ use App\Models\QuizResult;
 use App\Models\UserAnswer;
 use App\Models\QuestionChoice;
 use App\Models\Question;
+use Illuminate\Support\Facades\Log;
 
 class QuizController extends Controller
 {
@@ -124,8 +125,11 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
-
+          // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         return response()->json($quiz, 200);
     }
 
@@ -135,10 +139,21 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         $validated = $request->validate([
             'lesson_id' => 'required|exists:lessons,id',
             'title' => 'required|string|max:255',
+            'max_attempts' => 'required|integer|min:1',
+            'time_limit' => 'required|integer|min:1',
         ]);
-
+        
         $lesson = Lesson::find($validated['lesson_id']);
+        if (!$lesson) {
+            return response()->json(['message' => 'Lesson not found'], 404);
+        }
 
+        // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        
         $quiz = Quiz::create($validated);
         return response()->json($quiz, 201);
     }
@@ -150,6 +165,11 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
 
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
+        }
+        // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $quiz->fill($request->validated());
@@ -168,9 +188,11 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
-
-
+        // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
         $quiz->delete();
         return response()->json(['message' => 'Quiz deleted successfully'], 200);
     }
@@ -180,18 +202,15 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
     public function studentQuizResults($quiz_id): JsonResponse
     {
         $user = Auth::user();
-        $quiz = Quiz::find($quiz_id);
+        $quiz = Quiz::with(['lesson.course'])->find($quiz_id);
 
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
-
-
         // Get quiz results for all students
         $results = QuizResult::where('quiz_id', $quiz_id)
             ->with(['user' => function ($query) {
-                $query->select('id', 'final_cc_cname_DI');
+                $query->select('id', 'name', 'email');
             }])
             ->select('id', 'user_id', 'quiz_id', 'score', 'completed_at')
             ->orderBy('completed_at', 'desc')
@@ -226,9 +245,6 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
-
-        
         $validated = $request->validate([
             'max_attempts' => 'nullable|integer|min:1',
             'time_limit' => 'nullable|integer|min:1', // In minutes
@@ -253,13 +269,16 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
     public function previewQuiz($quiz_id): JsonResponse
     {
         $user = Auth::user();
-        $quiz = Quiz::with('lesson')->find($quiz_id);
+        $quiz = Quiz::with('lesson.course')->find($quiz_id);
 
         if (!$quiz) {
             return response()->json(['message' => 'Quiz not found'], 404);
         }
-
-
+          // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         // Return quiz details as a student would see (same as showForStudent)
         return response()->json([
@@ -603,9 +622,6 @@ public function gradeOpenEndedAnswer(Request $request, $user_answer_id): JsonRes
     if (!$userAnswer) {
         return response()->json(['message' => 'Answer not found'], 404);
     }
-
-
-
     $validated = $request->validate([
         'is_correct' => 'required|boolean',
         'points_earned' => 'required|numeric|min:0|max:' . $userAnswer->question->points,
@@ -775,60 +791,150 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         ], 200);
     }
 
+    // /**
+    //  * Bắt đầu một phiên làm bài quiz.
+    //  */
+    // public function startQuiz(Request $request, $quiz_id): JsonResponse
+    // {
+    //     $user = Auth::user();
+    //     $quiz = Quiz::with(['lesson'])->find($quiz_id);
+
+    //     if (!$quiz) {
+    //         return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+    //     }
+
+    //     // Kiểm tra đăng ký khóa học
+    //     $lesson = Lesson::find($quiz->lesson_id);
+    //     $enrollment = Enrollment::where('user_id', $user->id)
+    //         ->where('course_id', $lesson->course_id)
+    //         ->where('status', 'active')
+    //         ->first();
+
+    //     if (!$enrollment) {
+    //         return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+    //     }
+
+    //     // Kiểm tra số lần làm bài
+    //     $attempts = QuizResult::where('user_id', $user->id)
+    //         ->where('quiz_id', $quiz_id)
+    //         ->count();
+
+    //     if ($attempts >= $quiz->max_attempts) {
+    //         return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+    //     }
+
+    //     // Kiểm tra quiz có hiển thị không
+    //     if (!$quiz->is_visible) {
+    //         return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+    //     }
+
+    //     // Tạo QuizResult mới
+    //     $quizResult = QuizResult::create([
+    //         'user_id' => $user->id,
+    //         'quiz_id' => $quiz_id,
+    //         'attempt_number' => $attempts + 1,
+    //         'started_at' => now(),
+    //         'score' => 0,
+    //     ]);
+
+    //     return response()->json([
+    //         'message' => 'Bắt đầu quiz thành công',
+    //         'data' => [
+    //             'quiz_result_id' => $quizResult->id,
+    //             'started_at' => $quizResult->started_at,
+    //         ]
+    //     ], 201);
+    // }
+
     /**
-     * Bắt đầu một phiên làm bài quiz.
-     */
-    public function startQuiz(Request $request, $quiz_id): JsonResponse
-    {
-        $user = Auth::user();
-        $quiz = Quiz::find($quiz_id);
+ * Bắt đầu một phiên làm bài quiz.
+ */
+public function startQuiz(Request $request, $quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $quiz = Quiz::with(['lesson', 'questions.choices'])->find($quiz_id);
 
-        if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
-        }
-
-        // Kiểm tra đăng ký khóa học
-        $lesson = Lesson::find($quiz->lesson_id);
-        $enrollment = Enrollment::where('user_id', $user->id)
-            ->where('course_id', $lesson->course_id)
-            ->where('status', 'active')
-            ->first();
-
-        if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
-        }
-
-        // Kiểm tra số lần làm bài
-        $attempts = QuizResult::where('user_id', $user->id)
-            ->where('quiz_id', $quiz_id)
-            ->count();
-
-        if ($attempts >= $quiz->max_attempts) {
-            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
-        }
-
-        // Kiểm tra quiz có hiển thị không
-        if (!$quiz->is_visible) {
-            return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
-        }
-
-        // Tạo QuizResult mới
-        $quizResult = QuizResult::create([
-            'user_id' => $user->id,
-            'quiz_id' => $quiz_id,
-            'attempt_number' => $attempts + 1,
-            'started_at' => now(),
-            'score' => 0,
-        ]);
-
-        return response()->json([
-            'message' => 'Bắt đầu quiz thành công',
-            'data' => [
-                'quiz_result_id' => $quizResult->id,
-                'started_at' => $quizResult->started_at,
-            ]
-        ], 201);
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
     }
+
+    // Kiểm tra đăng ký khóa học
+    $enrollment = Enrollment::where('user_id', $user->id)
+        ->where('course_id', $quiz->lesson->course_id)
+        ->where('status', 'active')
+        ->first();
+
+    if (!$enrollment) {
+        return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+    }
+
+    // Kiểm tra số lần làm bài
+    $attempts = QuizResult::where('user_id', $user->id)
+        ->where('quiz_id', $quiz_id)
+        ->whereNotNull('completed_at') // Chỉ đếm những lần đã hoàn thành
+        ->count();
+
+    if ($attempts >= $quiz->max_attempts) {
+        return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+    }
+
+    // Kiểm tra quiz có hiển thị không
+    if (!$quiz->is_visible) {
+        return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+    }
+
+    // Xóa bản nháp cũ nếu có (chưa hoàn thành)
+    QuizResult::where('user_id', $user->id)
+        ->where('quiz_id', $quiz_id)
+        ->whereNull('completed_at')
+        ->delete();
+
+    // Tạo snapshot toàn bộ quiz tại thời điểm hiện tại
+    $snapshot = [
+        'quiz' => [
+            'id' => $quiz->id,
+            'title' => $quiz->title,
+            'max_attempts' => $quiz->max_attempts,
+            'time_limit' => $quiz->time_limit,
+            'is_visible' => $quiz->is_visible,
+        ],
+        'questions' => $quiz->questions->map(function($question) {
+            return [
+                'id' => $question->id,
+                'title' => $question->title,
+                'question_type' => $question->question_type,
+                'choices' => $question->choices->map(function($choice) {
+                    return [
+                        'id' => $choice->id,
+                        'content' => $choice->content,
+                        'is_correct' => $choice->is_correct,
+                    ];
+                })
+            ];
+        })
+    ];
+
+    // Tạo QuizResult mới với snapshot
+    $quizResult = QuizResult::create([
+        'user_id' => $user->id,
+        'quiz_id' => $quiz_id,
+        'attempt_number' => $attempts + 1,
+        'started_at' => now(),
+        'score' => 0,
+        'snapshot_json' => json_encode($snapshot),
+    ]);
+
+    return response()->json([
+        'message' => 'Bắt đầu quiz thành công',
+        'data' => [
+            'quiz_result_id' => $quizResult->id,
+            'started_at' => $quizResult->started_at,
+            'time_limit' => $quiz->time_limit,
+            'max_attempts' => $quiz->max_attempts,
+            'current_attempt' => $attempts + 1,
+        ]
+    ], 201);
+}
 
     /**
      * Lấy câu hỏi cho sinh viên, hỗ trợ random và giới hạn số lượng.
@@ -841,12 +947,9 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         $page = request()->query('page', 1);
 
         $quiz = Quiz::with(['questions' => function ($query) use ($randomize, $limit, $page) {
-            $query->where('is_visible', true);
             if ($randomize) {
                 $query->inRandomOrder();
-            } else {
-                $query->orderBy('sort_order');
-            }
+            } 
             if ($limit) {
                 $query->forPage($page, $limit);
             }
@@ -866,13 +969,14 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         if (!$enrollment) {
             return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
         }
+        $totalQuestions = $quiz->questions()->count();
 
         return response()->json([
             'data' => $quiz->questions,
             'pagination' => $limit ? [
                 'page' => (int)$page,
                 'per_page' => (int)$limit,
-                'total' => $quiz->questions()->where('is_visible', true)->count(),
+                'total' => $totalQuestions,
             ] : null
         ], 200);
     }
@@ -918,203 +1022,435 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         ], 200);
     }
 
-    /**
-     * Nộp bài quiz với kiểm tra thời gian.
-     */
-    public function submitQuiz(Request $request, $quiz_id): JsonResponse
-    {
-        $user = Auth::user();
-        $quiz = Quiz::with('questions.choices')->find($quiz_id);
+//    /**
+//  * Nộp bài quiz với kiểm tra thời gian và tính điểm từ snapshot.
+//  */
+// public function submitQuiz(Request $request, $quiz_id): JsonResponse
+// {
+//     $user = Auth::user();
+    
+//     // Validate câu trả lời
+//     $validated = $request->validate([
+//         'quiz_result_id' => 'required|exists:quiz_results,id',
+//         'answers' => 'required|array',
+//         'answers.*.question_id' => 'required|integer',
+//         'answers.*.choice_id' => 'nullable|integer',
+//     ]);
+//     Log::info('Received answers:', ['answers' => $validated['answers']]);
+//     // Tìm quiz result đang làm dở
+//     $quizResult = QuizResult::where('id', $validated['quiz_result_id'])
+//         ->where('user_id', $user->id)
+//         ->where('quiz_id', $quiz_id)
+//         ->whereNull('completed_at')
+//         ->first();
 
-        if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
-        }
+//     if (!$quizResult) {
+//         return response()->json(['message' => 'Không tìm thấy phiên làm bài hợp lệ'], 404);
+//     }
 
-        // Kiểm tra đăng ký hoặc quyền giảng viên
-        $lesson = Lesson::find($quiz->lesson_id);
-        $enrollment = Enrollment::where('user_id', $user->id)
-            ->where('course_id', $lesson->course_id)
-            ->where('status', 'active')
-            ->first();
+//     // Lấy snapshot từ quiz result
+//     $snapshot = json_decode($quizResult->snapshot_json, true);
+//     if (!$snapshot) {
+//         return response()->json(['message' => 'Dữ liệu quiz không hợp lệ'], 400);
+//     }
 
+//     // Kiểm tra thời gian (nếu có giới hạn)
+//     if ($snapshot['quiz']['time_limit']) {
+//         // $timeElapsed = $quizResult->started_at->diffInMinutes(now());
+//         $timeElapsed = \Carbon\Carbon::parse($quizResult->started_at)->diffInMinutes(now());
 
+//         if ($timeElapsed > $snapshot['quiz']['time_limit']) {
+//             // Tự động nộp bài khi hết thời gian
+//             $quizResult->update([
+//                 'completed_at' => now(),
+//                 'score' => 0
+//             ]);
+//             return response()->json(['message' => 'Đã vượt quá thời gian cho phép. Bài làm đã được tự động nộp với điểm 0.'], 403);
+//         }
+//     }
 
-        // Kiểm tra số lần làm bài
-        $attempts = QuizResult::where('user_id', $user->id)
-            ->where('quiz_id', $quiz_id)
-            ->count();
+//     // Xử lý câu trả lời dựa trên snapshot
+//     $results = [];
+//     $totalScore = 0;
+//     $totalQuestions = count($snapshot['questions']);
 
-        if ($attempts >= $quiz->max_attempts) {
-            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
-        }
+//     // Tạo map để dễ tìm kiếm
+//     $questionsMap = collect($snapshot['questions'])->keyBy('id');
+//     $answersMap = collect($validated['answers'])->keyBy('question_id');
 
-        // Validate câu trả lời
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
-            'answers.*.choice_id' => 'nullable|exists:question_choices,id',
-            'answers.*.answer_text' => 'nullable|string',
-        ]);
+//     foreach ($snapshot['questions'] as $questionData) {
+//         $questionId = $questionData['id'];
+//         $userAnswer = $answersMap->get($questionId);
+        
+//         $selectedChoice = null;
+//         $correctChoices = collect($questionData['choices'])->where('is_correct', true);
+//         $isCorrect = false;
 
-        // Bắt đầu lần làm bài
-        $quizResult = QuizResult::create([
-            'user_id' => $user->id,
-            'quiz_id' => $quiz_id,
-            'attempt_number' => $attempts + 1,
-            'started_at' => now(),
+//         // Tìm choice được chọn
+//         if ($userAnswer && isset($userAnswer['choice_id'])) {
+//             $selectedChoice = collect($questionData['choices'])->firstWhere('id', $userAnswer['choice_id']);
+//             if ($selectedChoice && $selectedChoice['is_correct']) {
+//                 $isCorrect = true;
+//                 $totalScore++;
+//             }
+//         }
+//         Log::info($questionId, $userAnswer);
+//         // Lưu user answer vào database
+//         UserAnswer::create([
+//             'user_id' => $user->id,
+//             'quiz_result_id' => $quizResult->id,
+//             'question_index' => $questionId,
+//             'choice_index' => $userAnswer['choice_id'] ?? null,
+//             'is_correct' => $isCorrect,
+//         ]);
+
+//         // Chuẩn bị kết quả để trả về
+//         $results[] = [
+//             'question_id' => $questionId,
+//             'question_title' => $questionData['title'],
+//             'question_type' => $questionData['question_type'],
+//             'selected_choice' => $selectedChoice ? [
+//                 'id' => $selectedChoice['id'],
+//                 'content' => $selectedChoice['content'],
+//                 'is_correct' => $selectedChoice['is_correct']
+//             ] : null,
+//             'correct_choices' => $correctChoices->map(function($choice) {
+//                 return [
+//                     'id' => $choice['id'],
+//                     'content' => $choice['content']
+//                 ];
+//             })->values(),
+//             'all_choices' => collect($questionData['choices'])->map(function($choice) {
+//                 return [
+//                     'id' => $choice['id'],
+//                     'content' => $choice['content'],
+//                     'is_correct' => $choice['is_correct']
+//                 ];
+//             }),
+//             'is_correct' => $isCorrect,
+//             'explanation' => $isCorrect ? 'Chính xác!' : 'Sai rồi. Đáp án đúng: ' . $correctChoices->pluck('content')->implode(', ')
+//         ];
+//     }
+
+//     // Tính phần trăm và xác định pass/fail
+//     $percentage = $totalQuestions > 0 ? round(($totalScore / $totalQuestions) * 100, 2) : 0;
+//     $isPassed = $percentage >= 80;
+
+//     // Cập nhật quiz result
+//     $quizResult->update([
+//         'score' => $totalScore,
+//         'completed_at' => now(),
+//     ]);
+
+//     return response()->json([
+//         'message' => 'Nộp bài quiz thành công',
+//         'data' => [
+//             'quiz_result_id' => $quizResult->id,
+//             'quiz_info' => [
+//                 'id' => $snapshot['quiz']['id'],
+//                 'title' => $snapshot['quiz']['title'],
+//                 'total_questions' => $totalQuestions,
+//                 'score' => $totalScore,
+//                 'percentage' => $percentage,
+//                 'is_passed' => $isPassed,
+//                 'pass_threshold' => 80,
+//                 'attempt_number' => $quizResult->attempt_number,
+//                 'time_taken' => $quizResult->started_at->diffInMinutes($quizResult->completed_at),
+//                 'completed_at' => $quizResult->completed_at,
+//             ],
+//             'results' => $results,
+//             'summary' => [
+//                 'total_questions' => $totalQuestions,
+//                 'correct_answers' => $totalScore,
+//                 'incorrect_answers' => $totalQuestions - $totalScore,
+//                 'percentage' => $percentage,
+//                 'status' => $isPassed ? 'PASSED' : 'FAILED',
+//                 'message' => $isPassed ? 'Chúc mừng! Bạn đã vượt qua bài kiểm tra.' : 'Bạn cần đạt ít nhất 80% để vượt qua bài kiểm tra.'
+//             ]
+//         ]
+//     ], 201);
+// }
+
+/**
+ * Nộp bài quiz với kiểm tra thời gian và tính điểm từ snapshot.
+ */
+public function submitQuiz(Request $request, $quiz_id): JsonResponse
+{
+    $user = Auth::user();
+
+    $validated = $this->validateQuizSubmission($request);
+
+    $quizResult = $this->findOngoingQuizResult($validated['quiz_result_id'], $quiz_id, $user->id);
+    if (!$quizResult) {
+        return response()->json(['message' => 'Không tìm thấy phiên làm bài hợp lệ'], 404);
+    }
+
+    $snapshot = $this->getSnapshotFromResult($quizResult);
+    if (!$snapshot) {
+        return response()->json(['message' => 'Dữ liệu quiz không hợp lệ'], 400);
+    }
+
+    if ($this->isTimeLimitExceeded($snapshot, $quizResult)) {
+        $quizResult->update([
+            'completed_at' => now(),
             'score' => 0,
         ]);
+        return response()->json(['message' => 'Đã vượt quá thời gian cho phép. Bài làm đã được tự động nộp với điểm 0.'], 403);
+    }
 
-        // Kiểm tra thời gian tại thời điểm nộp bài
-        if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
-            $quizResult->delete(); // Xóa lần làm bài không hợp lệ
-            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
+    [$results, $totalScore] = $this->processAnswers($snapshot, $validated['answers'], $quizResult, $user->id);
+
+    $totalQuestions = count($snapshot['questions']);
+    $percentage = $totalQuestions > 0 ? round(($totalScore / $totalQuestions) * 100, 2) : 0;
+    $isPassed = $percentage >= 80;
+
+    $quizResult->update([
+        'score' => $totalScore,
+        'completed_at' => now(),
+    ]);
+
+    return response()->json([
+        'message' => 'Nộp bài quiz thành công',
+        'data' => [
+            'quiz_result_id' => $quizResult->id,
+            'quiz_info' => $this->buildQuizInfo($snapshot['quiz'], $quizResult, $totalQuestions, $totalScore, $percentage, $isPassed),
+            'results' => $results,
+            'summary' => $this->buildQuizSummary($totalQuestions, $totalScore, $percentage, $isPassed),
+        ]
+    ], 201);
+}
+
+private function validateQuizSubmission(Request $request): array
+{
+    return $request->validate([
+        'quiz_result_id' => 'required|exists:quiz_results,id',
+        'answers' => 'required|array',
+        'answers.*.question_id' => 'required|integer',
+        'answers.*.choice_id' => 'nullable|integer',
+    ]);
+}
+
+private function findOngoingQuizResult(int $resultId, int $quizId, int $userId): ?QuizResult
+{
+    return QuizResult::where('id', $resultId)
+        ->where('user_id', $userId)
+        ->where('quiz_id', $quizId)
+        ->whereNull('completed_at')
+        ->first();
+}
+
+private function getSnapshotFromResult(QuizResult $quizResult): ?array
+{
+    return json_decode($quizResult->snapshot_json, true);
+}
+
+private function isTimeLimitExceeded(array $snapshot, QuizResult $quizResult): bool
+{
+    if (empty($snapshot['quiz']['time_limit'])) return false;
+
+    $timeElapsed = \Carbon\Carbon::parse($quizResult->started_at)->diffInMinutes(now());
+    return $timeElapsed > $snapshot['quiz']['time_limit'];
+}
+
+private function processAnswers(array $snapshot, array $userAnswers, QuizResult $quizResult, int $userId): array
+{
+    $results = [];
+    $score = 0;
+
+    $questionsMap = collect($snapshot['questions'])->keyBy('id');
+    $answersMap = collect($userAnswers)->keyBy('question_id');
+
+    foreach ($snapshot['questions'] as $questionData) {
+        $questionId = $questionData['id'];
+        $userAnswer = $answersMap->get($questionId);
+        $selectedChoice = null;
+        $isCorrect = false;
+
+        if ($userAnswer && isset($userAnswer['choice_id'])) {
+            $selectedChoice = collect($questionData['choices'])->firstWhere('id', $userAnswer['choice_id']);
+            $isCorrect = $selectedChoice && $selectedChoice['is_correct'];
+            if ($isCorrect) $score++;
         }
 
-        // Xử lý câu trả lời
-        $totalScore = 0;
-        foreach ($validated['answers'] as $answer) {
-            $question = $quiz->questions->find($answer['question_id']);
-            $isCorrect = null;
-            $pointsEarned = 0;
-
-            if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
-                $choice = QuestionChoice::find($answer['choice_id']);
-                if ($choice) {
-                    $isCorrect = $choice->is_correct;
-                    $pointsEarned = $isCorrect ? $question->points : 0;
-                }
-            } elseif ($question->question_type === 'open_ended') {
-                $isCorrect = null;
-                $pointsEarned = null;
-            }
-
-            $totalScore += $pointsEarned ?? 0;
-
-            UserAnswer::create([
-                'user_id' => $user->id,
-                'quiz_result_id' => $quizResult->id,
-                'question_id' => $answer['question_id'],
-                'choice_id' => $answer['choice_id'] ?? null,
-                'answer_text' => $answer['answer_text'] ?? null,
-                'is_correct' => $isCorrect,
-                'points_earned' => $pointsEarned,
-            ]);
-        }
-
-        // Cập nhật kết quả quiz
-        $quizResult->update([
-            'score' => $totalScore,
-            'completed_at' => now(),
+        UserAnswer::create([
+            'user_id' => $userId,
+            'quiz_result_id' => $quizResult->id,
+            'question_index' => $questionId,
+            'choice_index' => $userAnswer['choice_id'] ?? null,
+            'is_correct' => $isCorrect,
         ]);
 
-        return response()->json([
-            'message' => 'Nộp bài quiz thành công',
-            'data' => $quizResult->load('userAnswers'),
-        ], 201);
+        $results[] = $this->buildResultItem($questionData, $selectedChoice, $isCorrect);
     }
+
+    return [$results, $score];
+}
+
+private function buildResultItem(array $questionData, ?array $selectedChoice, bool $isCorrect): array
+{
+    $correctChoices = collect($questionData['choices'])->where('is_correct', true);
+
+    return [
+        'question_id' => $questionData['id'],
+        'question_title' => $questionData['title'],
+        'question_type' => $questionData['question_type'],
+        'selected_choice' => $selectedChoice ? [
+            'id' => $selectedChoice['id'],
+            'content' => $selectedChoice['content'],
+            'is_correct' => $selectedChoice['is_correct']
+        ] : null,
+        'correct_choices' => $correctChoices->map(fn($c) => [
+            'id' => $c['id'],
+            'content' => $c['content']
+        ])->values(),
+        'all_choices' => collect($questionData['choices'])->map(fn($c) => [
+            'id' => $c['id'],
+            'content' => $c['content'],
+            'is_correct' => $c['is_correct']
+        ]),
+        'is_correct' => $isCorrect,
+        'explanation' => $isCorrect ? 'Chính xác!' : 'Sai rồi. Đáp án đúng: ' . $correctChoices->pluck('content')->implode(', ')
+    ];
+}
+
+private function buildQuizInfo(array $quiz, QuizResult $quizResult, int $totalQuestions, int $score, float $percentage, bool $isPassed): array
+{
+    return [
+        'id' => $quiz['id'],
+        'title' => $quiz['title'],
+        'total_questions' => $totalQuestions,
+        'score' => $score,
+        'percentage' => $percentage,
+        'is_passed' => $isPassed,
+        'pass_threshold' => 80,
+        'attempt_number' => $quizResult->attempt_number,
+        'time_taken' => $quizResult->started_at->diffInMinutes($quizResult->completed_at),
+        'completed_at' => $quizResult->completed_at,
+    ];
+}
+
+private function buildQuizSummary(int $totalQuestions, int $score, float $percentage, bool $isPassed): array
+{
+    return [
+        'total_questions' => $totalQuestions,
+        'correct_answers' => $score,
+        'incorrect_answers' => $totalQuestions - $score,
+        'percentage' => $percentage,
+        'status' => $isPassed ? 'PASSED' : 'FAILED',
+        'message' => $isPassed
+            ? 'Chúc mừng! Bạn đã vượt qua bài kiểm tra.'
+            : 'Bạn cần đạt ít nhất 80% để vượt qua bài kiểm tra.'
+    ];
+}
+
 
      public function submitQuizForInstructor(Request $request, $quizId): JsonResponse
-    {
-        $user = Auth::user();
+{
+    $user = Auth::user();
 
-        // Check if user is authenticated and has instructor role
-        if (!$user || $user->role !== 'instructor') {
-            return response()->json(['message' => 'Unauthorized. Only instructors can access this endpoint.'], 403);
-        }
-
-        // Find the quiz with its questions and choices
-        $quiz = Quiz::with('questions.choices')->find($quizId);
-        if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
-        }
-
-        // Check if the instructor is associated with the course
-        $lesson = Lesson::find($quiz->lesson_id);
-        if (!$lesson) {
-            return response()->json(['message' => 'Lesson không tìm thấy'], 404);
-        }
-
-
-
-        // Validate answers
-        $validated = $request->validate([
-            'answers' => 'required|array',
-            'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quizId,
-            'answers.*.choice_id' => 'nullable|exists:question_choices,id',
-            'answers.*.answer_text' => 'nullable|string',
-        ]);
-
-        // Count previous attempts (for attempt_number, no limit enforced)
-        $attempts = QuizResult::where('user_id', $user->id)
-            ->where('quiz_id', $quizId)
-            ->count();
-
-        // Start a new quiz attempt
-        $quizResult = QuizResult::create([
-            'user_id' => $user->id,
-            'quiz_id' => $quizId,
-            'attempt_number' => $attempts + 1,
-            'started_at' => now(),
-            'score' => 0,
-        ]);
-
-        // Check time limit (if applicable)
-        if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
-            $quizResult->delete(); // Delete invalid attempt
-            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
-        }
-
-        // Process answers
-        $totalScore = 0;
-        foreach ($validated['answers'] as $answer) {
-            $question = $quiz->questions->find($answer['question_id']);
-            $isCorrect = null;
-            $pointsEarned = 0;
-
-            if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
-                $choice = QuestionChoice::find($answer['choice_id']);
-                if ($choice) {
-                    $isCorrect = $choice->is_correct;
-                    $pointsEarned = $isCorrect ? $question->points : 0;
-                }
-            } elseif ($question->question_type === 'open_ended') {
-                $isCorrect = null;
-                $pointsEarned = null; // Open-ended questions may require manual grading
-            }
-
-            $totalScore += $pointsEarned ?? 0;
-
-            UserAnswer::create([
-                'user_id' => $user->id,
-                'quiz_result_id' => $quizResult->id,
-                'question_id' => $answer['question_id'],
-                'choice_id' => $answer['choice_id'] ?? null,
-                'answer_text' => $answer['answer_text'] ?? null,
-                'is_correct' => $isCorrect,
-                'points_earned' => $pointsEarned,
-            ]);
-        }
-
-        // Update quiz result
-        $quizResult->update([
-            'score' => $totalScore,
-            'completed_at' => now(),
-        ]);
-
-        return response()->json([
-            'message' => 'Nộp bài quiz thành công',
-            'data' => $quizResult->load('userAnswers'),
-        ], 201);
+    // Check if user is authenticated and has instructor role
+    if (!$user || $user->role !== 'instructor') {
+        return response()->json(['message' => 'Unauthorized. Only instructors can access this endpoint.'], 403);
     }
 
+    // Find the quiz with its questions and choices
+    $quiz = Quiz::with(['questions.choices', 'lesson.course'])->find($quizId);
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+    }
+
+    // Check if the instructor owns this course
+    $instructor = Instructors::where('user_id', $user->id)->first();
+    if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Validate answers
+    $validated = $request->validate([
+        'answers' => 'required|array',
+        'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quizId,
+        'answers.*.choice_id' => 'nullable|exists:question_choices,id',
+    ]);
+
+    // Process answers for preview only (không lưu database)
+    $results = [];
+    $totalScore = 0;
+    $totalQuestions = count($validated['answers']);
+
+    foreach ($validated['answers'] as $answer) {
+        $question = $quiz->questions->find($answer['question_id']);
+        $selectedChoice = null;
+        $correctChoices = [];
+        $isCorrect = false;
+
+        if ($question) {
+            // Lấy tất cả choices của question
+            $allChoices = $question->choices;
+            
+            // Tìm choice được chọn
+            if (isset($answer['choice_id'])) {
+                $selectedChoice = $allChoices->find($answer['choice_id']);
+                if ($selectedChoice && $selectedChoice->is_correct) {
+                    $isCorrect = true;
+                    $totalScore++;
+                }
+            }
+
+            // Lấy tất cả đáp án đúng
+            $correctChoices = $allChoices->where('is_correct', true)->values();
+
+            $results[] = [
+                'question_id' => $question->id,
+                'question_title' => $question->title,
+                'question_type' => $question->question_type,
+                'selected_choice' => $selectedChoice ? [
+                    'id' => $selectedChoice->id,
+                    'content' => $selectedChoice->content,
+                    'is_correct' => $selectedChoice->is_correct
+                ] : null,
+                'correct_choices' => $correctChoices->map(function($choice) {
+                    return [
+                        'id' => $choice->id,
+                        'content' => $choice->content,
+                        'is_correct' => $choice->is_correct
+                    ];
+                }),
+                'all_choices' => $allChoices->map(function($choice) {
+                    return [
+                        'id' => $choice->id,
+                        'content' => $choice->content,
+                        'is_correct' => $choice->is_correct
+                    ];
+                }),
+                'is_correct' => $isCorrect,
+                'explanation' => $isCorrect ? 'Đúng rồi!' : 'Sai rồi. Đáp án đúng là: ' . $correctChoices->pluck('content')->implode(', ')
+            ];
+        }
+    }
+
+    return response()->json([
+        'message' => 'Test quiz thành công',
+        'data' => [
+            'quiz_info' => [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'total_questions' => $totalQuestions,
+                'score' => $totalScore,
+                'percentage' => $totalQuestions > 0 ? round(($totalScore / $totalQuestions) * 100, 2) : 0
+            ],
+            'results' => $results
+        ]
+    ], 200);
+}
+
+
     /**
-     * Thử lại quiz với kiểm tra thời gian.
+     * Thử lại quiz với kiểm tra thời gian. cho student
      */
     public function retryQuiz(Request $request, $quiz_id): JsonResponse
     {
         $user = Auth::user();
-        $quiz = Quiz::with('questions.choices')->find($quiz_id);
+        $quiz = Quiz::with('questions.choices','lesson')->find($quiz_id);
 
         if (!$quiz) {
             return response()->json(['message' => 'Quiz không tìm thấy'], 404);
@@ -1126,7 +1462,9 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             ->where('course_id', $lesson->course_id)
             ->where('status', 'active')
             ->first();
-
+        if (!$enrollment) {
+            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        }
 
         // Kiểm tra số lần làm bài
         $attempts = QuizResult::where('user_id', $user->id)
@@ -1142,7 +1480,6 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             'answers' => 'required|array',
             'answers.*.question_id' => 'required|exists:questions,id,quiz_id,' . $quiz_id,
             'answers.*.choice_id' => 'nullable|exists:question_choices,id',
-            'answers.*.answer_text' => 'nullable|string',
         ]);
 
         // Bắt đầu lần làm bài
@@ -1165,29 +1502,23 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         foreach ($validated['answers'] as $answer) {
             $question = $quiz->questions->find($answer['question_id']);
             $isCorrect = null;
-            $pointsEarned = 0;
 
             if ($question->question_type === 'multiple_choice' || $question->question_type === 'true_false') {
                 $choice = QuestionChoice::find($answer['choice_id']);
                 if ($choice) {
                     $isCorrect = $choice->is_correct;
-                    $pointsEarned = $isCorrect ? $question->points : 0;
+                    if ($isCorrect) {
+                        $totalScore += 1;
+                    }
                 }
-            } elseif ($question->question_type === 'open_ended') {
-                $isCorrect = null;
-                $pointsEarned = null;
             }
-
-            $totalScore += $pointsEarned ?? 0;
 
             UserAnswer::create([
                 'user_id' => $user->id,
                 'quiz_result_id' => $quizResult->id,
                 'question_id' => $answer['question_id'],
                 'choice_id' => $answer['choice_id'] ?? null,
-                'answer_text' => $answer['answer_text'] ?? null,
                 'is_correct' => $isCorrect,
-                'points_earned' => $pointsEarned,
             ]);
         }
 
@@ -1206,13 +1537,16 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
     public function indexQuestionsForInstructor($quiz_id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::with(['questions.choices'])->find($quiz_id);
+    $quiz = Quiz::with(['questions.choices','lesson.course'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
-
-
+    // Check if instructor owns this course
+    $instructor = Instructors::where('user_id', $user->id)->first();
+    if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
     return response()->json([
         'message' => 'Questions retrieved successfully',
         'data' => $quiz->questions
@@ -1222,20 +1556,14 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
 public function storeQuestionForInstructor(Request $request, $quiz_id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::find($quiz_id);
+    $quiz = Quiz::with(['lesson.course'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
-
-
-
     $validated = $request->validate([
         'title' => 'required|string',
-        'question_type' => 'required|in:multiple_choice,true_false,open_ended',
-        'points' => 'required|numeric|min:0',
-        'sort_order' => 'nullable|integer',
-        'is_visible' => 'nullable|boolean',
+        'question_type' => 'required|in:multiple_choice,true_false',
         'choices' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
         'choices.*.content' => 'required|string',
         'choices.*.is_correct' => 'required|boolean',
@@ -1245,9 +1573,6 @@ public function storeQuestionForInstructor(Request $request, $quiz_id): JsonResp
         'quiz_id' => $quiz_id,
         'title' => $validated['title'],
         'question_type' => $validated['question_type'],
-        'points' => $validated['points'],
-        'sort_order' => $validated['sort_order'] ?? 0,
-        'is_visible' => $validated['is_visible'] ?? true,
     ]);
 
     if (in_array($validated['question_type'], ['multiple_choice', 'true_false'])) {
@@ -1255,8 +1580,7 @@ public function storeQuestionForInstructor(Request $request, $quiz_id): JsonResp
             QuestionChoice::create([
                 'question_id' => $question->id,
                 'content' => $choice['content'],
-                'is_correct' => $choice['is_correct'],
-                'sort_order' => $index,
+                'is_correct' => $choice['is_correct']
             ]);
         }
     }
@@ -1270,13 +1594,17 @@ public function storeQuestionForInstructor(Request $request, $quiz_id): JsonResp
 public function quizAnalyticsForInstructor($quiz_id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::with('questions')->find($quiz_id);
+    $quiz = Quiz::with(['questions','lesson.course'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
 
-
+     // Check if instructor owns this course
+    $instructor = Instructors::where('user_id', $user->id)->first();
+    if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
 
     $analytics = [];
     foreach ($quiz->questions as $question) {
@@ -1338,16 +1666,16 @@ public function storeDraftQuiz(Request $request): JsonResponse
     $validated = $request->validate([
         'lesson_id' => 'required|exists:lessons,id',
         'title' => 'required|string|max:255',
-        'status' => 'nullable|in:draft,published',
     ]);
-
     $lesson = Lesson::find($validated['lesson_id']);
-
-
+            // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
     $quiz = Quiz::create([
         'lesson_id' => $validated['lesson_id'],
         'title' => $validated['title'],
-        'status' => $validated['status'] ?? 'draft',
         'max_attempts' => 3,
         'is_visible' => false,
     ]);
@@ -1361,13 +1689,17 @@ public function storeDraftQuiz(Request $request): JsonResponse
 public function restoreQuiz($id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::onlyTrashed()->find($id);
+    $quiz =Quiz::onlyTrashed()->with(['lesson.course'])->find($id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
 
-
+        // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
     $quiz->restore();
     return response()->json([
@@ -1379,14 +1711,16 @@ public function restoreQuiz($id): JsonResponse
 public function viewStudentAnswers($quiz_id, $quiz_result_id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::find($quiz_id);
+    $quiz = Quiz::with(['lesson.course'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
-
-
-
+     // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
     $quizResult = QuizResult::where('id', $quiz_result_id)
         ->where('quiz_id', $quiz_id)
         ->with(['userAnswers' => function ($query) {
@@ -1412,13 +1746,16 @@ public function viewStudentAnswers($quiz_id, $quiz_result_id): JsonResponse
 public function reuseQuestions(Request $request, $quiz_id): JsonResponse
 {
     $user = Auth::user();
-    $quiz = Quiz::find($quiz_id);
+    $quiz = Quiz::with(['lesson.course'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz not found'], 404);
     }
-
-
+    // Check if instructor owns this course
+    $instructor = Instructors::where('user_id', $user->id)->first();
+    if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
 
     $validated = $request->validate([
         'question_ids' => 'required|array',
@@ -1454,11 +1791,10 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
     {
         $user = Auth::user();
         $quiz = Quiz::with([
-            'lesson',
+            'lesson.course',
             'questions' => function ($query) {
-                $query->where('is_visible', true)
-                      ->with('choices')
-                      ->orderBy('sort_order');
+                      $query->with('choices')
+                      ->orderBy('id');
             }
         ])->find($quiz_id);
 
@@ -1466,7 +1802,11 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
             return response()->json(['message' => 'Quiz không tìm thấy'], 404);
         }
 
-
+        // Check if instructor owns this course
+        $instructor = Instructors::where('user_id', $user->id)->first();
+        if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
         return response()->json([
             'message' => 'Lấy thông tin quiz thành công',
@@ -1532,5 +1872,4 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
             ], 500);
         }
     }
-
 }

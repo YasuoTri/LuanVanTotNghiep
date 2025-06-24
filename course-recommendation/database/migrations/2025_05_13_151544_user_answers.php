@@ -21,9 +21,7 @@ return new class extends Migration
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('quiz_result_id')->references('id')->on('quiz_results')->onDelete('cascade');
-            $table->foreign('question_id')->references('id')->on('questions')->onDelete('cascade');
-            $table->foreign('choice_id')->references('id')->on('question_choices')->onDelete('set null');
-            $table->index(['user_id', 'quiz_result_id', 'question_id'], 'idx_user_quiz_question');
+            $table->index(['user_id', 'quiz_result_id'], 'idx_user_quiz_question');
         });
     }
 

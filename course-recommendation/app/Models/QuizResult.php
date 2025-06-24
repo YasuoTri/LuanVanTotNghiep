@@ -10,13 +10,16 @@ class QuizResult extends Model
     protected $table = 'quiz_results';
     protected $primaryKey = 'id';
 protected $fillable = [
-        'user_id', 'quiz_id', 'score', 'completed_at', 'attempt_number', 'started_at',
+        'user_id', 'quiz_id', 'score', 'completed_at', 'attempt_number', 'started_at','snapshot_json',
     ];
     protected $casts = [
         'score' => 'decimal:2',
         'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'started_at' => 'datetime',
+        'snapshot_json' => 'json',
+        
     ];
 
 public function user()

@@ -11,7 +11,7 @@ class Question extends Model
     use HasFactory;
 
     protected $fillable = [
-        'quiz_id', 'title', 'question_type', 'points', 'sort_order', 'is_visible',
+        'quiz_id', 'title', 'question_type'
     ];
 
     public function quiz()

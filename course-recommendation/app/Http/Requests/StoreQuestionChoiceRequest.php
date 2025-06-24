@@ -16,8 +16,7 @@ class StoreQuestionChoiceRequest extends FormRequest
         return [
             'question_id' => 'required|exists:questions,id',
             'content' => 'required|string',
-            'is_correct' => 'boolean',
-            'sort_order' => 'integer|min:0',
+            'is_correct' => 'boolean'
         ];
     }
 }

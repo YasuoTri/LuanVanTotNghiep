@@ -1226,9 +1226,11 @@ private function validateQuizSubmission(Request $request): array
         'quiz_result_id' => 'required|exists:quiz_results,id',
         'answers' => 'required|array',
         'answers.*.question_id' => 'required|integer',
-        'answers.*.choice_id' => 'nullable|integer',
+        'answers.*.choice_ids' => 'required|array',
+        'answers.*.choice_ids.*' => 'integer',
     ]);
 }
+
 
 private function findOngoingQuizResult(int $resultId, int $quizId, int $userId): ?QuizResult
 {
@@ -1251,7 +1253,42 @@ private function isTimeLimitExceeded(array $snapshot, QuizResult $quizResult): b
     $timeElapsed = \Carbon\Carbon::parse($quizResult->started_at)->diffInMinutes(now());
     return $timeElapsed > $snapshot['quiz']['time_limit'];
 }
+//Check chỉ có 1 đáp án đúng thôi
+// private function processAnswers(array $snapshot, array $userAnswers, QuizResult $quizResult, int $userId): array
+// {
+//     $results = [];
+//     $score = 0;
 
+//     $questionsMap = collect($snapshot['questions'])->keyBy('id');
+//     $answersMap = collect($userAnswers)->keyBy('question_id');
+
+//     foreach ($snapshot['questions'] as $questionData) {
+//         $questionId = $questionData['id'];
+//         $userAnswer = $answersMap->get($questionId);
+//         $selectedChoice = null;
+//         $isCorrect = false;
+
+//         if ($userAnswer && isset($userAnswer['choice_id'])) {
+//             $selectedChoice = collect($questionData['choices'])->firstWhere('id', $userAnswer['choice_id']);
+//             $isCorrect = $selectedChoice && $selectedChoice['is_correct'];
+//             if ($isCorrect) $score++;
+//         }
+
+//         UserAnswer::create([
+//             'user_id' => $userId,
+//             'quiz_result_id' => $quizResult->id,
+//             'question_index' => $questionId,
+//             'choice_index' => $userAnswer['choice_id'] ?? null,
+//             'is_correct' => $isCorrect,
+//         ]);
+
+//         $results[] = $this->buildResultItem($questionData, $selectedChoice, $isCorrect);
+//     }
+
+//     return [$results, $score];
+// }
+
+//check nhiều đáp án đúng
 private function processAnswers(array $snapshot, array $userAnswers, QuizResult $quizResult, int $userId): array
 {
     $results = [];
@@ -1263,30 +1300,41 @@ private function processAnswers(array $snapshot, array $userAnswers, QuizResult 
     foreach ($snapshot['questions'] as $questionData) {
         $questionId = $questionData['id'];
         $userAnswer = $answersMap->get($questionId);
-        $selectedChoice = null;
+        $selectedChoices = [];
         $isCorrect = false;
 
-        if ($userAnswer && isset($userAnswer['choice_id'])) {
-            $selectedChoice = collect($questionData['choices'])->firstWhere('id', $userAnswer['choice_id']);
-            $isCorrect = $selectedChoice && $selectedChoice['is_correct'];
+        if ($userAnswer && isset($userAnswer['choice_ids']) && is_array($userAnswer['choice_ids'])) {
+            $correctChoices = collect($questionData['choices'])->filter(fn($c) => $c['is_correct'])->pluck('id')->sort()->values()->all();
+            $userChoiceIds = collect($userAnswer['choice_ids'])->sort()->values()->all();
+
+            $isCorrect = $userChoiceIds === $correctChoices;
+
+            $selectedChoices = collect($questionData['choices'])
+                ->whereIn('id', $userChoiceIds)
+                ->values()
+                ->all();
+
             if ($isCorrect) $score++;
         }
 
-        UserAnswer::create([
-            'user_id' => $userId,
-            'quiz_result_id' => $quizResult->id,
-            'question_index' => $questionId,
-            'choice_index' => $userAnswer['choice_id'] ?? null,
-            'is_correct' => $isCorrect,
-        ]);
+        foreach ($selectedChoices as $choice) {
+            UserAnswer::create([
+                'user_id' => $userId,
+                'quiz_result_id' => $quizResult->id,
+                'question_index' => $questionId,
+                'choice_index' => $choice['id'],
+                'is_correct' => $isCorrect,
+            ]);
+        }
 
-        $results[] = $this->buildResultItem($questionData, $selectedChoice, $isCorrect);
+        $results[] = $this->buildResultItem($questionData, $selectedChoices, $isCorrect);
     }
 
     return [$results, $score];
 }
 
-private function buildResultItem(array $questionData, ?array $selectedChoice, bool $isCorrect): array
+private function buildResultItem(array $questionData, array $selectedChoices, bool $isCorrect): array
+
 {
     $correctChoices = collect($questionData['choices'])->where('is_correct', true);
 
@@ -1294,11 +1342,11 @@ private function buildResultItem(array $questionData, ?array $selectedChoice, bo
         'question_id' => $questionData['id'],
         'question_title' => $questionData['title'],
         'question_type' => $questionData['question_type'],
-        'selected_choice' => $selectedChoice ? [
-            'id' => $selectedChoice['id'],
-            'content' => $selectedChoice['content'],
-            'is_correct' => $selectedChoice['is_correct']
-        ] : null,
+'selected_choices' => collect($selectedChoices)->map(fn($c) => [
+    'id' => $c['id'],
+    'content' => $c['content'],
+    'is_correct' => $c['is_correct'],
+])->values(),
         'correct_choices' => $correctChoices->map(fn($c) => [
             'id' => $c['id'],
             'content' => $c['content']
@@ -1832,44 +1880,58 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
 
     return response()->json($query->paginate(10));
 }
-
 /**
-     * Lấy danh sách quiz theo lesson_id
-     *
-     * @param int $lessonId
-     * @return JsonResponse
-     */
-    public function getQuizzesByLessonId($lessonId): JsonResponse
-    {
-        try {
-            // Truy vấn các quiz theo lesson_id
-            $quizzes = Quiz::where('lesson_id', $lessonId)
-                ->select('id as quiz_id', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at')
-                ->get();
+ * Lấy danh sách quiz theo lesson_id
+ *
+ * @param int $lessonId
+ * @return JsonResponse
+ */
+public function getQuizzesByLessonId($lessonId): JsonResponse
+{
+    try {
+        // Truy vấn các quiz theo lesson_id và đếm số lượng questions
+        $quizzes = Quiz::where('lesson_id', $lessonId)
+            ->withCount('questions')
+            ->get(['id', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at'])
+            ->map(function ($quiz) {
+                return [
+                    'quiz_id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'max_attempts' => $quiz->max_attempts,
+                    'time_limit' => $quiz->time_limit,
+                    'is_visible' => $quiz->is_visible,
+                    'questions_count' => $quiz->questions_count,
+                    'created_at' => $quiz->created_at,
+                    'updated_at' => $quiz->updated_at,
+                ];
+            });
 
-            // Kiểm tra xem có quiz nào hay không
-            if ($quizzes->isEmpty()) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'No quizzes found for this lesson.',
-                    'data' => []
-                ], 200);
-            }
-
-            // Trả về danh sách quiz
+        // Kiểm tra xem có quiz nào hay không
+        if ($quizzes->isEmpty()) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'Quizzes retrieved successfully.',
-                'data' => $quizzes
+                'message' => 'No quizzes found for this lesson.',
+                'data' => []
             ], 200);
-
-        } catch (\Exception $e) {
-            // Xử lý lỗi nếu có
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while retrieving quizzes.',
-                'error' => $e->getMessage()
-            ], 500);
         }
+
+        // Trả về danh sách quiz
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Quizzes retrieved successfully.',
+            'data' => $quizzes
+        ], 200);
+
+    } catch (\Exception $e) {
+        // Xử lý lỗi nếu có
+        return response()->json([
+            'status' => 'error',
+            'message' => 'An error occurred while retrieving quizzes.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
+
+
 }

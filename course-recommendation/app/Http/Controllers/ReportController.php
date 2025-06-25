@@ -26,6 +26,18 @@ class ReportController extends Controller
         if($course->status == 'rejected' || $course->status == 'banned') {
             return response()->json(['message' => 'Can not report course have status invalid'], 403);
         }
+        $userId = Auth::user()->id;
+        $courseId = $request->course_id;
+         $existingReport = Report::where('user_id', $userId)
+        ->where('course_id', $courseId)
+        ->where('status', 'pending')
+        ->first();
+
+        if ($existingReport) {
+            return response()->json([
+                'message' => 'Bạn đã gửi báo cáo cho khóa học này và nó đang chờ duyệt.'
+            ], 409); // Conflict
+        }
         $request->validate([
             'course_id' => 'required|exists:courses,id',
             'reason' => 'required|string|max:1000',

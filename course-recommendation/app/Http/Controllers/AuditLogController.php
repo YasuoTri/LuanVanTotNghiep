@@ -75,5 +75,5 @@ class AuditLogController extends Controller
     public function trashed(){
         return AuditLog::onlyTrashed()->paginate(10);
     }
-
+    
 }

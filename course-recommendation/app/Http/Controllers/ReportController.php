@@ -19,6 +19,13 @@ class ReportController extends Controller
     // Người dùng gửi báo cáo
     public function submitReport(Request $request)
     {
+        $course=Course::find($request->course_id);
+        if (!$course) {
+            return response()->json(['message' => 'Course not found'], 404);
+        }
+        if($course->status == 'rejected' || $course->status == 'banned') {
+            return response()->json(['message' => 'Can not report course have status invalid'], 403);
+        }
         $request->validate([
             'course_id' => 'required|exists:courses,id',
             'reason' => 'required|string|max:1000',
@@ -143,7 +150,7 @@ public function FindviewReports(Request $request)
         }
 
         // Get the instructor (owner) of the course
-        $owner = $course->instructor;
+        $owner = $course->instructors;
         if (!$owner) {
             return response()->json(['message' => 'Instructor (owner) not found'], 404);
         }

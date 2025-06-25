@@ -21,4 +21,16 @@ public function courses()
     {
         return $this->hasMany(Category::class, 'parent_id');
     }
+    public function categories()
+{
+    return $this->belongsToMany(Category::class, 'course_category');
+}
+// Course.php
+public function instructor()
+{
+    return $this->belongsTo(Instructors::class);
+}
+
+
+
 }

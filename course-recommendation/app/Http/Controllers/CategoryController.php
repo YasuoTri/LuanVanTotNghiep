@@ -9,11 +9,11 @@ class CategoryController extends Controller
 {
     use DetectAndUpdateIfChanged;
     public function index()
-    {
-        // Fetch all categories
-        $categories = Category::all();
-        return response()->json($categories);
-    }
+{
+    $categories = Category::withCount('courses')->get();
+
+    return response()->json($categories);
+}
 public function getCategoryWithSubcategories()
 {
     $categories = Category::with('children')

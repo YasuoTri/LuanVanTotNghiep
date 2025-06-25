@@ -131,7 +131,7 @@ public function FindviewReports(Request $request)
         // Update report status
         $report->update([
             'status' => $request->status,
-            'admin_id' => Auth::user()->id,
+            'admin_id' => Auth::user()->admin->id,
             'admin_notes' => $request->admin_notes,
             'reviewed_at' => now(),
         ]);
@@ -207,7 +207,7 @@ public function FindviewReports(Request $request)
         $user->notify(new ViolationNotification($violation, $report));
     }
    public function store(Request $request)
-{
+    {
     $request->validate([
         'course_id' => 'required|exists:courses,id',
         'reason' => 'required|string|max:1000',

@@ -51,6 +51,7 @@ Route::middleware('jwt_cookie')->group(function () {
 });
 Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
+
 Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
@@ -364,6 +365,7 @@ Route::get('/search/reviews', [ReviewController::class, 'search']);
 Route::get('/search/payments', [PaymentController::class, 'search']);
 Route::get('/search/enrollments', [EnrollmentController::class, 'search']);
 Route::get('/search/forum-posts', [ForumPostController::class, 'search']);
+Route::get('/search/courses', [CourseController::class, 'SearchCourse']);
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)

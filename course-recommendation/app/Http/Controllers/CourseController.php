@@ -1230,4 +1230,20 @@ if ($course->instructor_id !== $instructor->id) {
         return response()->json(['message' => 'Failed to submit course for review', 'error' => $e->getMessage()], 500);
     }
 }
+public function SearchCourse(Request $request){
+    $results = Course::with(['instructors', 'categories'])
+    ->where('status', 'approved')
+    ->get()
+    ->map(function ($course) {
+        return [
+            'id' => $course->id,
+            'course_name' => $course->course_name,
+            'course_url' => $course->course_url,
+            'image' => $course->image,
+            'category' => optional($course->categories->first())->name, // lấy category đầu tiên
+            'instructor_name' => optional($course->instructors)->name,
+        ];
+    });
+    return response()->json($results);
+}
 }

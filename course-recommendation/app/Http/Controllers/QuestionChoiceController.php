@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreQuestionChoiceRequest;
 use App\Http\Requests\UpdateQuestionChoiceRequest;
 use App\Models\QuestionChoice;
+use App\Models\QuizResult;
 use Illuminate\Http\Request;
 
 class QuestionChoiceController extends Controller
@@ -32,6 +33,17 @@ class QuestionChoiceController extends Controller
         $choice= QuestionChoice::find($id);
         if (!$choice) {
             return response()->json(['message' => 'Choice not found'], 404);
+        }
+         // Lấy quiz thông qua choice → question → quiz
+        $quiz = $choice->question->quiz;
+
+        // Kiểm tra nếu quiz đã có học viên làm bài
+        $hasAttempt = QuizResult::where('quiz_id', $quiz->id)->exists();
+
+        if ($hasAttempt) {
+            return response()->json([
+                'message' => 'Quiz đã có học viên thực hiện, không thể chỉnh sửa lựa chọn. Vui lòng tạo quiz mới.'
+            ], 403);
         }
         $choice->fill($request->validated());
         if (!$choice->isDirty()) {

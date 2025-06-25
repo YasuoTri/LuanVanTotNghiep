@@ -2,83 +2,67 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\Course;
-use App\Models\Interaction;
-use App\Models\User;
 
 class RecommendationController extends Controller
 {
-    public function getCourses()
+    public function getRecommendations(Request $request)
     {
-        $courses = Course::pluck('course_name')->toArray();
-        return response()->json(['courses' => $courses]);
-    }
-
-    public function recommend(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'nullable|integer|exists:users,id',
-            'course_name' => 'nullable|string|exists:courses,course_name',
-        ]);
-
         $userId = $request->input('user_id');
-        $courseName = $request->input('course_name');
 
-        // Gọi API FastAPI
-        $response = Http::post('http://localhost:8000/recommend', [
-            'user_id' => $userId,
-            'course_name' => $courseName,
-        ]);
+        // Kiểm tra xem user đã enroll khóa học nào chưa
+        $enrolledCourse = $this->checkEnrolledCourse($userId);
 
-        if ($response->successful()) {
-            return response()->json([
-                'recommended_courses' => $response->json()['courses'],
-                'selected_course' => $courseName,
+        $pythonApiUrl = 'http://python-recommendation-service:5000/recommend'; // URL của Python service
+
+        if ($enrolledCourse) {
+            // Nếu đã enroll, dùng course đã enroll để chạy CBF
+            $response = Http::post($pythonApiUrl, [
                 'user_id' => $userId,
+                'course_title' => $enrolledCourse->course_title,
+                'type' => 'cbf_with_course'
+            ]);
+        } else {
+            // Nếu chưa enroll, lấy learning_goal và student_category từ profile
+            $userProfile = $this->getUserProfile($userId);
+            $response = Http::post($pythonApiUrl, [
+                'user_id' => $userId,
+                'learning_goal' => $userProfile->learning_goal ?? null,
+                'user_categories' => $userProfile->student_category ?? null,
+                'type' => 'cold_start'
             ]);
         }
 
-        return response()->json(['error' => $response->json()['detail'] ?? 'Error fetching recommendations'], 400);
-    }
-
-    public function rate(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
-            'course_name' => 'required|string|exists:courses,course_name',
-            'rating' => 'required|numeric|min:1|max:5',
-        ]);
-
-        $course = Course::where('course_name', $request->course_name)->first();
-
-        // Gọi API FastAPI để lưu đánh giá
-        $response = Http::post('http://localhost:8000/rate', [
-            'user_id' => (int)$request->user_id,
-            'course_id' => $course->id,
-            'rating' => (float)$request->rating,
-        ]);
-
         if ($response->successful()) {
-            return response()->json(['message' => 'Rating submitted successfully']);
+            return response()->json($response->json(), 200);
+        } else {
+            return response()->json(['error' => 'Failed to get recommendations'], 500);
         }
-
-        return response()->json(['error' => 'Error submitting rating'], 400);
     }
 
-    public function createUser(Request $request)
+    private function checkEnrolledCourse($userId)
     {
-        $request->validate([
-            'userid_DI' => 'required|string|unique:users,userid_DI',
-            'email' => 'nullable|email|unique:users,email',
-            'final_cc_cname_DI' => 'nullable|string',
-            'LoE_DI' => 'nullable|string',
-            'YoB' => 'nullable|integer',
-            'gender' => 'nullable|string',
-        ]);
+        // Giả lập truy vấn database để kiểm tra enrollment
+        // Thay bằng logic thực tế với Eloquent hoặc query builder
+        $enrollment = \App\Models\Enrollment::where('user_id', $userId)->first();
+        return $enrollment ? $enrollment->course : null;
+    }
 
-        $user = User::create($request->all());
-        return response()->json(['user' => $user], 201);
+    private function getUserProfile($userId)
+    {   
+        $user= User::find($userId);
+        if (!$user) {
+            return null; // Trả về null nếu không tìm thấy người dùng
+        }
+        $learnerProfile=Student::where('user_id', $userId)->first();
+        if (!$learnerProfile) {
+            return null; // Trả về null nếu không tìm thấy profile
+        }
+        // Giả lập lấy thông tin profile từ database
+        // Thay bằng logic thực tế với Eloquent
+        return $learnerProfile; 
     }
 }

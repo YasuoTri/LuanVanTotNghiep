@@ -39,10 +39,10 @@ class User extends Authenticatable implements JWTSubject
         'deleted_at' => 'datetime',
     ];
 
-    // public function admin()
-    // {
-    //     return $this->hasOne(Admins::class, 'user_id');
-    // }
+    public function admin()
+    {
+        return $this->hasOne(Admins::class, 'user_id');
+    }
 
     public function student()
     {

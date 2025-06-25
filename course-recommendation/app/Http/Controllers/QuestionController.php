@@ -54,6 +54,7 @@ public function store(StoreQuestionRequest $request)
 
 public function update(UpdateQuestionRequest $request, Question $question)
 {
+    
     $user = Auth::user();
 
     if ($user->role === 'instructor') {
@@ -72,6 +73,18 @@ public function update(UpdateQuestionRequest $request, Question $question)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
     }
+    // Lấy quiz chứa câu hỏi này
+    $quiz = $question->quiz;
+
+    // Kiểm tra nếu quiz đã có học viên làm bài (có ít nhất 1 kết quả)
+    $hasAttempt = QuizResult::where('quiz_id', $quiz->id)->exists();
+
+    if ($hasAttempt) {
+        return response()->json([
+            'message' => 'Quiz đã có học viên thực hiện, không thể chỉnh sửa. Vui lòng tạo quiz mới.'
+        ], 403);
+    }
+
     $question->fill($request->validated());
     if (!$question->isDirty()) {
         return response()->json(['message' => 'No changes detected'], 200);

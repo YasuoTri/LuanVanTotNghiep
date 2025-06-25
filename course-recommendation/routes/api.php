@@ -106,7 +106,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->
 
     Route::post('/instructor/request', [AuthController::class, 'requestInstructorRole']);
     Route::post('/reports', [ReportController::class, 'submitReport']);
-    Route::get('/lessons/{lesson}/quizzes', [QuizController::class, 'getByLesson']);
+    // Route::get('/lessons/{lesson}/quizzes', [QuizController::class, 'getByLesson']);
 
 });
 

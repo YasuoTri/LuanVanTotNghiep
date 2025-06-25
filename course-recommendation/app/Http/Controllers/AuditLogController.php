@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use Illuminate\Container\Attributes\Log;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log as FacadesLog;
 
 class AuditLogController extends Controller
@@ -75,5 +76,15 @@ class AuditLogController extends Controller
     public function trashed(){
         return AuditLog::onlyTrashed()->paginate(10);
     }
-    
+
+public function logAction($id,$action, $details = null)
+{
+    AuditLog::create([
+        'payment_id' => $id, // hoặc $this->payment_id nếu không có auth()
+        'action' => $action,
+        'details' => $details,
+        'user_id' => Auth::user()->id, // hoặc $this->user_id nếu không có auth()
+    ]);
+}
+
 }

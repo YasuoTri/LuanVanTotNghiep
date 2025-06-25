@@ -27,7 +27,7 @@ class RefundPayments implements ShouldQueue
             ->get()
             ->each(function ($payment) {
                 $payment->update(['status' => 'refunded']);
-                $payment->logAction('refunded', "Refunded due to course ban at " . now()->toDateTimeString());
+                $payment->logAction($payment->id,'refunded', "Refunded due to course ban at " . now()->toDateTimeString());
             });
     }
 }

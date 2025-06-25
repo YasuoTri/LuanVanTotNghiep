@@ -1933,6 +1933,15 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
     }
 }
 
+ public function getByLesson(Lesson $lesson)
+    {
+        // Lấy tất cả quiz thuộc lesson
+        $quizzes = $lesson->quizzes()->get();
 
+        return response()->json([
+            'lesson_id' => $lesson->id,
+            'quizzes' => $quizzes,
+        ]);
+    }
 
 }

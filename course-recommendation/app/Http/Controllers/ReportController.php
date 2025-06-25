@@ -19,6 +19,13 @@ class ReportController extends Controller
     // Người dùng gửi báo cáo
     public function submitReport(Request $request)
     {
+        $userId = Auth::user()->id;
+        $courseId = $request->course_id;
+         $existingReport = Report::where('user_id', $userId)
+        ->where('course_id', $courseId)
+        ->where('status', 'pending')
+        ->first();
+
         $course=Course::find($request->course_id);
         if (!$course) {
             return response()->json(['message' => 'Course not found'], 404);
@@ -36,7 +43,7 @@ class ReportController extends Controller
         if ($existingReport) {
             return response()->json([
                 'message' => 'Bạn đã gửi báo cáo cho khóa học này và nó đang chờ duyệt.'
-            ], 409); // Conflict
+            ], 404); // Conflict
         }
         $request->validate([
             'course_id' => 'required|exists:courses,id',

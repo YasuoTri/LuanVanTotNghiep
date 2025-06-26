@@ -5,10 +5,22 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Certificate\StoreCertificateRequest;
 use App\Http\Requests\Certificate\UpdateCertificateRequest;
 use App\Models\Certificate;
+use App\Models\Course;
+use App\Models\Enrollment;
+use Illuminate\Http\Request;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\Quiz;
+use App\Models\QuizResult;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use App\Services\CloudinaryService;
 use Exception;
+use Illuminate\Support\Facades\Auth;
+
 class CertificateController extends Controller
 {
     protected $cloudinaryService;
@@ -132,4 +144,141 @@ public function destroy($id): JsonResponse
         $enrollment->forceDelete();
         return response()->json(['message' => 'Certificate permanently deleted'], 200);
     }
+
+      public function issue(Request $request)
+    {
+        $request->validate([
+            'course_id' => 'required|exists:courses,id',
+        ]);
+
+        $courseId = $request->input('course_id');
+        $userId = Auth::user()->id; // dùng auth middleware
+
+        return $this->issueCertificate($courseId, $userId);
+    }
+
+
+
+    public function issueCertificate($courseId, $userId)
+{
+    // 1. Lấy tất cả lesson gốc trong course
+    $lessonGroups = Lesson::where('course_id', $courseId)
+        ->selectRaw('COALESCE(origin_id, id) as origin_id, MAX(version) as latest_version')
+        ->groupBy('origin_id')
+        ->get();
+
+    $missingLessons = [];
+
+    foreach ($lessonGroups as $group) {
+        // Lấy lesson version mới nhất
+        $latestLesson = Lesson::where(function ($q) use ($group) {
+                $q->where('origin_id', $group->origin_id)
+                  ->orWhere('id', $group->origin_id);
+            })
+            ->where('version', $group->latest_version)
+            ->first();
+
+        $isCompleted = LessonProgress::where('user_id', $userId)
+            ->where('lesson_id', $latestLesson->id)
+            ->where('status', 'completed')
+            ->exists();
+
+        if (!$isCompleted) {
+            $missingLessons[] = [
+                'lesson_id' => $latestLesson->id,
+                'lesson_title' => $latestLesson->title,
+                'version' => $latestLesson->version,
+                'message' => 'Bạn chưa hoàn thành bài học này.'
+            ];
+        }
+    }
+
+    // 2. Lấy tất cả quiz gốc trong course
+    $lessonIds = Lesson::where('course_id', $courseId)->pluck('id');
+
+    $quizGroups = Quiz::whereIn('lesson_id', $lessonIds)
+        ->selectRaw('COALESCE(origin_id, id) as origin_id, MAX(version) as latest_version')
+        ->groupBy('origin_id')
+        ->get();
+
+    $missingQuizzes = [];
+
+    foreach ($quizGroups as $group) {
+        $latestQuiz = Quiz::where(function ($q) use ($group) {
+                $q->where('origin_id', $group->origin_id)
+                  ->orWhere('id', $group->origin_id);
+            })
+            ->where('version', $group->latest_version)
+            ->first();
+
+        $hasPassed = QuizResult::where('quiz_id', $latestQuiz->id)
+            ->where('user_id', $userId)
+            ->where('score', '>=', 60)
+            ->exists();
+
+        if (!$hasPassed) {
+            $missingQuizzes[] = [
+                'quiz_id' => $latestQuiz->id,
+                'quiz_title' => $latestQuiz->title,
+                'version' => $latestQuiz->version,
+                'message' => 'Bạn cần làm bài kiểm tra này để đủ điều kiện.'
+            ];
+        }
+    }
+
+    // 3. Trả về nếu còn thiếu
+    if (!empty($missingLessons) || !empty($missingQuizzes)) {
+        return response()->json([
+            'eligible' => false,
+            'missing_lessons' => $missingLessons,
+            'missing_quizzes' => $missingQuizzes,
+            'message' => 'Bạn chưa hoàn thành đủ điều kiện để được cấp chứng chỉ.'
+        ], 400);
+    }
+
+    // 4. Kiểm tra enrollment
+    $enrollment = Enrollment::where('user_id', $userId)
+        ->where('course_id', $courseId)
+        ->first();
+
+    if (!$enrollment) {
+        return response()->json([
+            'eligible' => false,
+            'message' => 'Bạn chưa đăng ký khóa học.'
+        ], 400);
+    }
+
+    $existingCertificate = Certificate::where('user_id', $userId)
+        ->where('course_id', $courseId)
+        ->first();
+
+    if ($existingCertificate) {
+        return response()->json([
+            'eligible' => true,
+            'message' => 'Bạn đã có chứng chỉ cho khóa học này.',
+            'certificate_url' => $existingCertificate->download_url
+        ]);
+    }
+
+    // 5. Tạo chứng chỉ nếu chưa có
+    $certificate = Certificate::firstOrCreate(
+        [
+            'user_id' => $userId,
+            'course_id' => $courseId,
+        ],
+        [
+            'enrollment_id' => $enrollment->id,
+            'instructor_id' => Course::find($courseId)->instructor_id,
+            'certificate_code' => strtoupper(Str::random(12)),
+            'download_url' => url("/certificates/{$userId}/{$courseId}/download")
+        ]
+    );
+    Mail::to($certificate->user->email)
+     ->send(new \App\Mail\CertificateIssuedMail($certificate));
+    return response()->json([
+        'eligible' => true,
+        'message' => 'Đã cấp chứng chỉ thành công.',
+        'certificate_url' => $certificate->download_url
+    ]);
+}
 }

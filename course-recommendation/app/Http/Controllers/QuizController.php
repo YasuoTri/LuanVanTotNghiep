@@ -1945,38 +1945,94 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
             'quizzes' => $quizzes,
         ]);
     }
+    // public function clone($id)
+    // {
+    //     try {
+    //         $originalQuiz = Quiz::with('questions.choices')->findOrFail($id);
+
+    //         // Step 1: Clone quiz
+    //         $newQuiz = $originalQuiz->replicate();
+    //         $newQuiz->is_visible = false;
+    //         $newQuiz->created_at = now();
+    //         $newQuiz->updated_at = now();
+    //         $newQuiz->save();
+
+    //         // Step 2: Clone questions and choices
+    //         foreach ($originalQuiz->questions as $question) {
+    //             $newQuestion = $question->replicate();
+    //             $newQuestion->quiz_id = $newQuiz->id;
+    //             $newQuestion->save();
+
+    //             foreach ($question->choices as $choice) {
+    //                 $newChoice = $choice->replicate();
+    //                 $newChoice->question_id = $newQuestion->id;
+    //                 $newChoice->save();
+    //             }
+    //         }
+
+
+    //         return response()->json([
+    //             'message' => 'Quiz cloned successfully',
+    //             'quiz_id' => $newQuiz->id,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
     public function clone($id)
-    {
-        try {
-            $originalQuiz = Quiz::with('questions.choices')->findOrFail($id);
+{
+    try {
+        $originalQuiz = Quiz::with('questions.choices')->findOrFail($id);
 
-            // Step 1: Clone quiz
-            $newQuiz = $originalQuiz->replicate();
-            $newQuiz->is_visible = false;
-            $newQuiz->created_at = now();
-            $newQuiz->updated_at = now();
-            $newQuiz->save();
+        // Bước 1: Xác định origin
+        $originId = $originalQuiz->origin_id ?? $originalQuiz->id;
 
-            // Step 2: Clone questions and choices
-            foreach ($originalQuiz->questions as $question) {
-                $newQuestion = $question->replicate();
-                $newQuestion->quiz_id = $newQuiz->id;
-                $newQuestion->save();
+        // Bước 2: Kiểm tra có phải version mới nhất không
+        $maxVersion = Quiz::where('origin_id', $originId)
+            ->orWhere('id', $originId)
+            ->max('version');
 
-                foreach ($question->choices as $choice) {
-                    $newChoice = $choice->replicate();
-                    $newChoice->question_id = $newQuestion->id;
-                    $newChoice->save();
-                }
-            }
-
-
+        if ($originalQuiz->version < $maxVersion) {
             return response()->json([
-                'message' => 'Quiz cloned successfully',
-                'quiz_id' => $newQuiz->id,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+                'error' => 'You can only clone the latest version of a quiz.',
+                'latest_version' => $maxVersion,
+                'your_version' => $originalQuiz->version
+            ], 400);
         }
+
+        // Bước 3: Tạo version mới
+        $nextVersion = $maxVersion + 1;
+
+        $newQuiz = $originalQuiz->replicate();
+        $newQuiz->is_visible = false;
+        $newQuiz->created_at = now();
+        $newQuiz->updated_at = now();
+        $newQuiz->origin_id = $originId;
+        $newQuiz->version = $nextVersion;
+        $newQuiz->save();
+
+        // Bước 4: Clone question + choice
+        foreach ($originalQuiz->questions as $question) {
+            $newQuestion = $question->replicate();
+            $newQuestion->quiz_id = $newQuiz->id;
+            $newQuestion->save();
+
+            foreach ($question->choices as $choice) {
+                $newChoice = $choice->replicate();
+                $newChoice->question_id = $newQuestion->id;
+                $newChoice->save();
+            }
+        }
+
+        return response()->json([
+            'message' => 'Quiz cloned successfully.',
+            'quiz_id' => $newQuiz->id,
+            'origin_id' => $originId,
+            'version' => $nextVersion
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
 }

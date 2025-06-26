@@ -190,6 +190,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/statistics/{userId}', [AnalyticsController::class, 'instructorStatistics']);
     // Route::put('/instructor/courses/{courseId}/submit-review-course', [CourseController::class, 'submitCourseForReviewInstructor']);
     Route::post('/instructor/quizzes/{quiz}/clone', [QuizController::class, 'clone']);
+    Route::post('/instructor/certificates/issue', [CertificateController::class, 'issue']);
 });
 
 // Admin Routes

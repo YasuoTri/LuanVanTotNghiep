@@ -12,14 +12,21 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Lên lịch cho CreateRevenueSessionJob vào ngày 1 hàng tháng
-        $schedule->job(new \App\Jobs\CreateRevenueSessionJob)->monthlyOn(1, '00:00');
-        //   $schedule->job(new \App\Jobs\CreateRevenueSessionJob)->everyMinute();
+        // // Lên lịch cho CreateRevenueSessionJob vào ngày 1 hàng tháng
+        // $schedule->job(new \App\Jobs\CreateRevenueSessionJob)->monthlyOn(1, '00:00');
+        // //   $schedule->job(new \App\Jobs\CreateRevenueSessionJob)->everyMinute();
 
-        // Lên lịch cho DistributeRevenueJob vào ngày cuối tháng
-        $schedule->job(new \App\Jobs\DistributeRevenueJob)->monthlyOn(28, '23:59')->when(function () {
-            return now()->endOfMonth()->isToday();
-        });
+        // // Lên lịch cho DistributeRevenueJob vào ngày cuối tháng
+        // $schedule->job(new \App\Jobs\DistributeRevenueJob)->monthlyOn(28, '23:59')->when(function () {
+        //     return now()->endOfMonth()->isToday();
+        // });
+        // $schedule->command('certificates:auto-issue')->dailyAt('01:00');
+           $schedule->job(new \App\Jobs\CreateRevenueSessionJob)->monthlyOn(1, '00:00');
+    
+            // Chạy vào ngày cuối tháng (tự động tính)
+            $schedule->job(new \App\Jobs\DistributeRevenueJob)->lastDayOfMonth('23:59');
+            
+            $schedule->command('certificates:auto-issue')->dailyAt('01:00');
     }
 
     /**

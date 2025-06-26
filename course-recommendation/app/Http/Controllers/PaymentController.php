@@ -264,11 +264,11 @@ class PaymentController extends Controller
 
         // Update admin account balance when payment is completed
         if ($result['success'] && $finalAmount > 0) {
-            $adminAccount = AdminAccount::firstOrCreate(
-                ['admin_id' => Admins::first()->id], // Giả sử có 1 admin chính
-                ['balance' => 0]
-            );
-            $adminAccount->increment('balance', $finalAmount);
+            // $adminAccount = AdminAccount::firstOrCreate(
+            //     ['admin_id' => Admins::first()->id], // Giả sử có 1 admin chính
+            //     ['balance' => 0]
+            // );
+            // $adminAccount->increment('balance', $finalAmount);
         }
 
         DB::commit();
@@ -438,10 +438,10 @@ try{
             }
 
             // Cập nhật số dư admin
-            $adminAccount = AdminAccount::first();
-            if ($adminAccount && $payment->amount > 0) {
-                $adminAccount->increment('balance', $payment->amount);
-            }
+            // $adminAccount = AdminAccount::first();
+            // if ($adminAccount && $payment->amount > 0) {
+            //     $adminAccount->increment('balance', $payment->amount);
+            // }
             // Cập nhật lịch sử thanh toán
             AuditLog::create([
                 'payment_id' => $payment->id,

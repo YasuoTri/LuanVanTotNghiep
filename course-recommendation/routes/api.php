@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminInstructorController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuditLogController;
@@ -365,6 +366,9 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::delete('/admin/audit-logs/{id}/force-delete', [AuditLogController::class, 'forceDelete']);
     Route::post('/admin/audit-logs/restore-all', [AuditLogController::class, 'restoreAll']);
     Route::delete('/admin/audit-logs/force-delete-all', [AuditLogController::class, 'forceDeleteAll']);
+
+    Route::get('/admin/allinstructors/summary', [AdminInstructorController::class, 'getSummary']);
+    Route::get('/admin/eachinstructors/{id}/details', [AdminInstructorController::class, 'getInstructorDetail']);
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

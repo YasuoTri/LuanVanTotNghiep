@@ -4,6 +4,8 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CouponController;
+use App\Http\Controllers\ExportController;
+use App\Http\Controllers\ExportRecommendController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\AuthController;
@@ -56,6 +58,14 @@ Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategor
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
+
+Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
+Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
+
+Route::get('/recommend/export-send', [ExportRecommendController::class, 'exportAndSend']);
+
+
+
 // Student Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);

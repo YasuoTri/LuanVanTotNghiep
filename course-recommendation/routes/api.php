@@ -188,6 +188,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/deleted-courses', [CourseController::class, 'getDeletedCoursesForInstructor']);
     Route::get('/instructor/statistics/{userId}', [AnalyticsController::class, 'instructorStatistics']);
     // Route::put('/instructor/courses/{courseId}/submit-review-course', [CourseController::class, 'submitCourseForReviewInstructor']);
+    Route::post('/quizzes/{quiz}/clone', [QuizController::class, 'clone'])->middleware('auth:sanctum');
+
 });
 
 // Admin Routes

@@ -17,6 +17,7 @@ use App\Models\QuizResult;
 use App\Models\UserAnswer;
 use App\Models\QuestionChoice;
 use App\Models\Question;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class QuizController extends Controller
@@ -891,29 +892,29 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         ->delete();
 
     // Tạo snapshot toàn bộ quiz tại thời điểm hiện tại
-    $snapshot = [
-        'quiz' => [
-            'id' => $quiz->id,
-            'title' => $quiz->title,
-            'max_attempts' => $quiz->max_attempts,
-            'time_limit' => $quiz->time_limit,
-            'is_visible' => $quiz->is_visible,
-        ],
-        'questions' => $quiz->questions->map(function($question) {
-            return [
-                'id' => $question->id,
-                'title' => $question->title,
-                'question_type' => $question->question_type,
-                'choices' => $question->choices->map(function($choice) {
-                    return [
-                        'id' => $choice->id,
-                        'content' => $choice->content,
-                        'is_correct' => $choice->is_correct,
-                    ];
-                })
-            ];
-        })
-    ];
+    // $snapshot = [
+    //     'quiz' => [
+    //         'id' => $quiz->id,
+    //         'title' => $quiz->title,
+    //         'max_attempts' => $quiz->max_attempts,
+    //         'time_limit' => $quiz->time_limit,
+    //         'is_visible' => $quiz->is_visible,
+    //     ],
+    //     'questions' => $quiz->questions->map(function($question) {
+    //         return [
+    //             'id' => $question->id,
+    //             'title' => $question->title,
+    //             'question_type' => $question->question_type,
+    //             'choices' => $question->choices->map(function($choice) {
+    //                 return [
+    //                     'id' => $choice->id,
+    //                     'content' => $choice->content,
+    //                     'is_correct' => $choice->is_correct,
+    //                 ];
+    //             })
+    //         ];
+    //     })
+    // ];
 
     // Tạo QuizResult mới với snapshot
     $quizResult = QuizResult::create([
@@ -922,7 +923,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         'attempt_number' => $attempts + 1,
         'started_at' => now(),
         'score' => 0,
-        'snapshot_json' => json_encode($snapshot),
+        // 'snapshot_json' => json_encode($snapshot),
     ]);
 
     return response()->json([
@@ -1175,6 +1176,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
 /**
  * Nộp bài quiz với kiểm tra thời gian và tính điểm từ snapshot.
  */
+
 public function submitQuiz(Request $request, $quiz_id): JsonResponse
 {
     $user = Auth::user();
@@ -1943,5 +1945,41 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
             'quizzes' => $quizzes,
         ]);
     }
+    public function clone($id)
+    {
+        DB::beginTransaction();
+        try {
+            $originalQuiz = Quiz::with('questions.choices')->findOrFail($id);
 
+            // Step 1: Clone quiz
+            $newQuiz = $originalQuiz->replicate();
+            $newQuiz->is_visible = false;
+            $newQuiz->created_at = now();
+            $newQuiz->updated_at = now();
+            $newQuiz->save();
+
+            // Step 2: Clone questions and choices
+            foreach ($originalQuiz->questions as $question) {
+                $newQuestion = $question->replicate();
+                $newQuestion->quiz_id = $newQuiz->id;
+                $newQuestion->save();
+
+                foreach ($question->choices as $choice) {
+                    $newChoice = $choice->replicate();
+                    $newChoice->question_id = $newQuestion->id;
+                    $newChoice->save();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Quiz cloned successfully',
+                'quiz_id' => $newQuiz->id,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

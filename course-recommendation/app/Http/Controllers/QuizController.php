@@ -1947,7 +1947,6 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
     }
     public function clone($id)
     {
-        DB::beginTransaction();
         try {
             $originalQuiz = Quiz::with('questions.choices')->findOrFail($id);
 
@@ -1971,14 +1970,12 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
                 }
             }
 
-            DB::commit();
 
             return response()->json([
                 'message' => 'Quiz cloned successfully',
                 'quiz_id' => $newQuiz->id,
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

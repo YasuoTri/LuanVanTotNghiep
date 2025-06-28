@@ -110,7 +110,6 @@ class UserController extends Controller
             'username',
             'email',
             'avatar',
-            'LoE_DI',
             'birthdate',
             'gender',
             'role',
@@ -142,10 +141,6 @@ class UserController extends Controller
             $query->where('birthdate', $request->input('birthdate'));
         }
 
-        // Lọc theo trình độ học vấn (LoE_DI)
-        if ($request->has('loe_di')) {
-            $query->where('LoE_DI', $request->input('loe_di'));
-        }
 
         // Phân trang (20 user/trang)
         $users = $query->orderBy('deleted_at', 'desc')->paginate(10);
@@ -211,7 +206,6 @@ public function show($id): JsonResponse
         'username',
         'email',
         'avatar',
-        'LoE_DI',
         'birthdate',
         'gender',
         'role',
@@ -363,7 +357,6 @@ protected function calculateLessonCompletionRate($user)
         ],
         'password' => 'sometimes|string|min:8|max:255',
         'avatar' => 'sometimes|string|max:255',
-        'LoE_DI' => 'sometimes|string|max:50',
         'birthdate' => 'sometimes|date',
         'gender' => 'sometimes|string|max:20',
         'role' => 'sometimes|in:student,instructor,admin',
@@ -377,7 +370,6 @@ protected function calculateLessonCompletionRate($user)
             ? bcrypt($validated['password'])
             : $user->password,
         'avatar' => $validated['avatar'] ?? $user->avatar,
-        'LoE_DI' => $validated['LoE_DI'] ?? $user->LoE_DI,
         'birthdate' => $validated['birthdate'] ?? $user->birthdate,
         'gender' => $validated['gender'] ?? $user->gender,
         'role' => $validated['role'] ?? $user->role,

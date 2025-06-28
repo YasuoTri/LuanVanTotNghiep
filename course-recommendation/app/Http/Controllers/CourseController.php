@@ -1280,6 +1280,7 @@ public function searchCourseAdmin(Request $request)
         ->when($request->is_certificate_enabled !== null, function ($q) use ($request) {
             $q->where('is_certificate_enabled', $request->is_certificate_enabled);
         })
+        ->where('status', '!=', 'draft') // thêm dòng này để bỏ draft
         ->orderBy('created_at', 'desc')
         ->paginate(10);
 

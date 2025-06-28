@@ -36,7 +36,6 @@ class UserController extends Controller
             'username',
             'email',
             'avatar',
-            'LoE_DI',
             'birthdate',
             'gender',
             'role',
@@ -78,10 +77,6 @@ class UserController extends Controller
             $query->where('birthdate', $request->input('birthdate'));
         }
 
-        // Lọc theo trình độ học vấn (LoE_DI)
-        if ($request->has('loe_di')) {
-            $query->where('LoE_DI', $request->input('loe_di'));
-        }
         // Phân trang (20 user/trang)
         $users = $query->orderBy('created_at', 'desc')->paginate(20);
 

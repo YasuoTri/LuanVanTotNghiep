@@ -995,6 +995,9 @@ if ($course->instructor_id !== $instructor->id) {
 public function approveCourse(Request $request, $id)
 {
     $course = Course::findOrFail($id);
+    if ($course->status !== 'pending') {
+        return response()->json(['message' => 'Only pending courses can be approved'], 422);
+    }
     $course->status = 'approved';
     $course->save();
 
@@ -1002,6 +1005,7 @@ public function approveCourse(Request $request, $id)
     CourseReview::create([
         'course_id' => $course->id,
         'status' => 'approved',
+        'admin_id' => Auth::user()->admin->id, // Giả sử admin_id là ID của người dùng đang đăng nhập
         'notes' => $request->input('notes'),
     ]);
 

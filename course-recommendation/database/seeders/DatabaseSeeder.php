@@ -8,7 +8,6 @@ use App\Models\CourseCategory;
 use App\Models\CourseReview;
 use App\Models\InstructorAccount;
 use App\Models\InstructorRequest;
-
 use App\Models\Media;
 use App\Models\Question;
 use App\Models\QuestionChoice;
@@ -24,6 +23,7 @@ use App\Models\Instructors;
 use App\Models\Interaction;
 use App\Models\Enrollment;
 use App\Models\Certificate;
+use App\Models\CertificateRule;
 use App\Models\Coupon;
 use App\Models\Payment;
 use App\Models\Lesson;
@@ -34,6 +34,8 @@ use App\Models\Review;
 use App\Models\ForumPost;
 use App\Models\SimilarityMatrix;
 use App\Models\User;
+use App\Models\AuditLog;
+use App\Models\Report;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -43,116 +45,61 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-    
         $this->seedUsers();
-
         $this->seedAdmins();
-        
         $this->seedInstructors();
-
         $this->seedStudents();
-        // Seed Categories
         $this->seedCategories();
-        
-        // Seed Courses - Create 100 courses
         $this->seedCourses();
-        
-        // Seed Course Categories
         $this->seedCourseCategories();
-        
-        // Seed Student Categories
         $this->seedStudentCategories();
-        
-        $this->seedInstructors();
-        
-        // Seed Course Reviews
         $this->seedCourseReviews();
-        
-        // Seed Enrollments
         $this->seedEnrollments();
-
         $this->seedCertificates();
-        
-        // Seed Coupons
+        $this->seedCertificateRules();
         $this->seedCoupons();
-        
-        // Seed Payments
         $this->seedPayments();
-        
-        // Seed Revenue Sessions
+        $this->seedAuditLogs();
         $this->seedRevenueSessions();
-        
         $this->seedRevenueDistributions();
-
         $this->seedLessons();
-        
-        // Seed Lesson Progress
         $this->seedLessonProgress();
-        
-        // Seed Quizzes
         $this->seedQuizzes();
-        
-        // Seed Questions
         $this->seedQuestions();
-        
-        // Seed Question Choices
         $this->seedQuestionChoices();
-        
-        // Seed Quiz Results
         $this->seedQuizResults();
-        
-        // Seed User Answers
         $this->seedUserAnswers();
-        
-        // Seed Reviews
         $this->seedReviews();
-        
-
+        $this->seedForumPosts();
+        $this->seedReports();
     }
 
     private function seedUsers()
     {
         $this->command->info('Seeding 50 users...');
         
-        $educationLevels = ['Beginner','Intermediate','Advanced','Unknown'];
         $genders = ['Male', 'Female', 'Other', 'Prefer not to say', null];
         
         // Create 45 student users
-        // for ($i = 0; $i < 45; $i++) {
-        //     $birthYear = rand(1980, 2005);
-            
-        //     User::create([
-        //         'userid_DI' => 'user_' . Str::uuid(),
-        //         'username' => 'user_' . ($i + 1),
-        //         'email' => 'user' . ($i + 1) . '@example.com',
-        //         'password' => Hash::make('password'),
-        //         'LoE_DI' => $educationLevels[array_rand($educationLevels)],
-        //         'birthdate' => $birthYear,
-        //         'gender' => $genders[array_rand($genders)],
-        //         'role' => 'student',
-        //         'created_at' => now(),
-        //         'updated_at' => now(),
-        //     ]);
-        // }
+        for ($i = 0; $i < 45; $i++) {
+            $birthYear = rand(1980, 2005);
+            $birthMonth = rand(1, 12);
+            $birthDay = rand(1, 28);
 
-    for ($i = 0; $i < 45; $i++) {
-    $birthYear = rand(1980, 2005);
-    $birthMonth = rand(1, 12);
-    $birthDay = rand(1, 28); // để tránh lỗi ngày (tháng 2 an toàn)
+            $birthdate = sprintf('%04d-%02d-%02d', $birthYear, $birthMonth, $birthDay);
 
-    $birthdate = sprintf('%04d-%02d-%02d', $birthYear, $birthMonth, $birthDay);
-
-    User::create([
-        'username' => 'user_' . ($i + 1),
-        'email' => 'user' . ($i + 1) . '@example.com',
-        'password' => Hash::make('password'),
-        'birthdate' => $birthdate,
-        'gender' => $genders[array_rand($genders)],
-        'role' => 'student',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-}
+            User::create([
+                'username' => 'user_' . ($i + 1),
+                'email' => 'user' . ($i + 1) . '@example.com',
+                'password' => Hash::make('password'),
+                'birthdate' => $birthdate,
+                'gender' => $genders[array_rand($genders)],
+                'role' => 'student',
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         // Create 2 admin users
         for ($i = 0; $i < 2; $i++) {
@@ -160,14 +107,14 @@ class DatabaseSeeder extends Seeder
                 'username' => 'admin_' . ($i + 1),
                 'email' => 'admin' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'birthdate' => '1980-01-01', // Fixed date for simplicity
+                'birthdate' => '1980-01-01',
                 'gender' => 'Male',
                 'role' => 'admin',
+                'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
-
 
         // Create 3 instructor users
         for ($i = 0; $i < 3; $i++) {
@@ -175,9 +122,10 @@ class DatabaseSeeder extends Seeder
                 'username' => 'instructor_' . ($i + 1),
                 'email' => 'instructor' . ($i + 1) . '@example.com',
                 'password' => Hash::make('password'),
-                'birthdate' => '1980-01-01', // Fixed date for simplicity
+                'birthdate' => '1980-01-01',
                 'gender' => 'Female',
                 'role' => 'instructor',
+                'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -186,85 +134,80 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Users seeded successfully!');
     }
 
-  private function seedCategories()
-{
-    $this->command->info('Seeding categories...');
+    private function seedCategories()
+    {
+        $this->command->info('Seeding categories...');
 
-    $categories = [
-        'Programming' => ['Web Development', 'Mobile Development', 'Game Development'],
-        'Data Science' => ['Machine Learning', 'Data Analysis', 'Deep Learning'],
-        'Business' => ['Entrepreneurship', 'Finance', 'Management'],
-        'Design' => ['Graphic Design', 'UI/UX Design', '3D Design'],
-        'Marketing' => ['Digital Marketing', 'SEO', 'Content Marketing'],
-        'Personal Development' => ['Productivity', 'Leadership', 'Career Development'],
-        'Health & Fitness' => ['Nutrition', 'Yoga', 'Workout'],
-        'Music' => ['Instruments', 'Music Theory', 'Songwriting'],
-        'Photography' => ['Portrait Photography', 'Photo Editing', 'Videography'],
-        'Language' => ['English', 'Spanish', 'Chinese'],
-    ];
+        $categories = [
+            'Programming' => ['Web Development', 'Mobile Development', 'Game Development'],
+            'Data Science' => ['Machine Learning', 'Data Analysis', 'Deep Learning'],
+            'Business' => ['Entrepreneurship', 'Finance', 'Management'],
+            'Design' => ['Graphic Design', 'UI/UX Design', '3D Design'],
+            'Marketing' => ['Digital Marketing', 'SEO', 'Content Marketing'],
+            'Personal Development' => ['Productivity', 'Leadership', 'Career Development'],
+            'Health & Fitness' => ['Nutrition', 'Yoga', 'Workout'],
+            'Music' => ['Instruments', 'Music Theory', 'Songwriting'],
+            'Photography' => ['Portrait Photography', 'Photo Editing', 'Videography'],
+            'Language' => ['English', 'Spanish', 'Chinese'],
+        ];
 
-    foreach ($categories as $parentName => $subcategories) {
-        // Tạo category gốc
-        $parent = Category::create([
-            'name' => $parentName,
-            'parent_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        foreach ($categories as $parentName => $subcategories) {
+            $parent = Category::create([
+                'name' => $parentName,
+                'parent_id' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        // Tạo các subcategory
-        foreach ($subcategories as $childName) {
-            Category::create([
-                'name' => $childName,
-                'parent_id' => $parent->id,
+            foreach ($subcategories as $childName) {
+                Category::create([
+                    'name' => $childName,
+                    'parent_id' => $parent->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        $this->command->info('Categories and subcategories seeded successfully!');
+    }
+
+    private function seedCourses()
+    {
+        $this->command->info('Seeding 100 courses...');
+
+        $difficulties = ['Beginner', 'Intermediate', 'Advanced'];
+        $statuses = ['pending', 'approved', 'rejected', 'unavailable', 'draft'];
+
+        $instructors = Instructors::all();
+
+        if ($instructors->isEmpty()) {
+            $this->command->error('No instructors found. Please seed instructors first.');
+            return;
+        }
+
+        for ($i = 0; $i < 100; $i++) {
+            $instructor = $instructors->random();
+
+            Course::create([
+                'instructor_id' => $instructor->id,
+                'course_name' => 'Course_' . ($i + 1),
+                'difficulty_level' => $difficulties[array_rand($difficulties)],
+                'course_rating' => 0,
+                'course_url' => 'courses/course_' . ($i + 1),
+                'image' => 'images/course_' . ($i + 1) . '.jpg',
+                'course_description' => 'Description for course ' . ($i + 1),
+                'price' => rand(0, 1000000),
+                'skills' => 'Skill ' . ($i + 1),
+                'status' => $statuses[array_rand($statuses)],
+                'is_certificate_enabled' => rand(0, 1),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
+
+        $this->command->info('Courses seeded successfully!');
     }
-
-    $this->command->info('Categories and subcategories seeded successfully!');
-}
-
-  private function seedCourses()
-{
-    $this->command->info('Seeding 100 courses...');
-
-    $difficulties = ['Beginner', 'Intermediate', 'Advanced'];
-    $statuses = ['pending', 'approved', 'rejected', 'unavailable'];
-
-    // Lấy tất cả instructors (users có role = 'instructor')
-    $instructors = Instructors::all();
-
-    // Nếu chưa có instructor thì dừng lại để tránh lỗi foreign key
-    if ($instructors->isEmpty()) {
-        $this->command->error('No instructors found. Please seed instructors first.');
-        return;
-    }
-
-    for ($i = 0; $i < 100; $i++) {
-        // Chọn instructor ngẫu nhiên
-        $instructor = $instructors->random();
-
-        Course::create([
-            'instructor_id' => $instructor->id,
-            'course_name' => 'Course_' . ($i + 1),
-            'difficulty_level' => $difficulties[array_rand($difficulties)],
-            'course_rating' => 0,
-            'course_url' => 'courses_course_' . ($i + 1),
-            'image' => 'images/course_' . ($i + 1) . '.jpg',
-            'course_description' => 'Description for course ' . ($i + 1),
-            'price' => rand(0, 1000000),
-            'skills' => 'Skill ' . ($i + 1),
-            'status' => $statuses[array_rand($statuses)],
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    $this->command->info('Courses seeded successfully!');
-}
-
 
     private function seedCourseCategories()
     {
@@ -279,7 +222,6 @@ class DatabaseSeeder extends Seeder
         }
         
         foreach ($courses as $course) {
-            // Assign 1-3 categories per course
             $selectedCategories = $categories->random(rand(1, 3));
             
             foreach ($selectedCategories as $category) {
@@ -303,7 +245,8 @@ class DatabaseSeeder extends Seeder
         $learningGoals = [
             'Career advancement', 'Skill development', 'Personal growth', 'Academic improvement', 'Certification'
         ];
-          $educationLevels = ['Beginner','Intermediate','Advanced','Unknown'];
+        $educationLevels = ['Beginner', 'Intermediate', 'Advanced', 'Unknown'];
+        
         foreach ($users as $user) {
             Student::create([
                 'user_id' => $user->id,
@@ -331,7 +274,6 @@ class DatabaseSeeder extends Seeder
         }
         
         foreach ($students as $student) {
-            // Assign 1-3 categories per student
             $selectedCategories = $categories->random(rand(1, 3));
             
             foreach ($selectedCategories as $category) {
@@ -351,12 +293,13 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('Seeding admins...');
         
-        $adminUsers =User::where('role', 'admin')->get();
+        $adminUsers = User::where('role', 'admin')->get();
+        $adminLevels = ['organization', 'program'];
         
         foreach ($adminUsers as $adminUser) {
             Admins::create([
                 'user_id' => $adminUser->id,
-                'admin_level' => 'organization',
+                'admin_level' => $adminLevels[array_rand($adminLevels)],
                 'activity_log' => 'Initial setup for admin ' . $adminUser->id,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -366,32 +309,12 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Admins seeded successfully!');
     }
 
-    private function seedAdminAccounts()
-    {
-        $this->command->info('Seeding admin_accounts...');
-        
-        $admins =Admins::first();
-        $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
-        
-        foreach ($admins as $admin) {
-            AdminAccount::create([
-                'admin_id' => $admin->id,
-                'balance' => rand(1000000, 5000000),
-                'bank_name' => $banks[array_rand($banks)],
-                'bank_account_number' => 'ACC' . rand(1000000, 9999999),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        $this->command->info('Admin accounts seeded successfully!');
-    }
-
     private function seedInstructors()
     {
         $this->command->info('Seeding instructors...');
         
         $instructorUsers = User::where('role', 'instructor')->get();
+        $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
         
         foreach ($instructorUsers as $user) {
             Instructors::create([
@@ -399,6 +322,8 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Instructor ' . $user->id,
                 'bio' => 'Expert in various fields with years of experience.',
                 'organization' => 'Online Learning Platform',
+                'bank_account' => 'ACC' . rand(1000000, 9999999),
+                'bank_name' => $banks[array_rand($banks)],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -407,127 +332,68 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Instructors seeded successfully!');
     }
 
-    private function seedInstructorAccounts()
+    private function seedCourseInstructors()
     {
-        $this->command->info('Seeding instructor_accounts...');
-        
+        $this->command->info('Seeding course_instructors...');
+
         $instructors = Instructors::all();
-        $banks = ['Bank of America', 'HSBC', 'Vietcombank', 'Techcombank'];
-        
-        foreach ($instructors as $instructor) {
-            InstructorAccount::create([
-                'instructor_id' => $instructor->id,
-                'balance' => rand(500000, 2000000),
-                'bank_name' => $banks[array_rand($banks)],
-                'bank_account_number' => 'ACC' . rand(1000000, 9999999),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        $this->command->info('Instructor accounts seeded successfully!');
-    }
+        $courses = Course::all();
 
-    private function seedInstructorRequests()
-    {
-        $this->command->info('Seeding instructor_requests...');
-        
-        $students = User::where('role', 'student')->inRandomOrder()->take(5)->get();
-        
-        $admins=Admins::first();
-        $statuses = ['pending', 'approved', 'rejected'];
-        
-        foreach ($students as $student) {
-            $status = $statuses[array_rand($statuses)];
-            $admin = $admins->isNotEmpty() && $status !== 'pending' ? $admins->random() : null;
-            
-            InstructorRequest::create([
-                'user_id' => $student->id,
-                'name' => 'Instructor Applicant ' . $student->id,
-                'phone_number' => '+1' . rand(1000000000, 9999999999),
-                'professional_links' => 'https://linkedin.com/in/user' . $student->id,
-                'bio' => 'Professional with expertise in teaching.',
-                'organization' => 'Freelance Educator',
-                'qualifications' => 'PhD in Education, 5 years teaching experience.',
-                'teaching_experience' => 'Taught at various online platforms.',
-                'expertise' => 'Programming, Data Science',
-                'course_proposal' => 'Propose a course on Python for Beginners.',
-                'motivation' => 'Passionate about sharing knowledge.',
-                'document_urls' => 'https://example.com/documents/user' . $student->id,
-                'status' => $status,
-                'admin_notes' => $status === 'rejected' ? 'Insufficient experience.' : null,
-                'reviewed_at' => $status !== 'pending' ? now()->subDays(rand(1, 30)) : null,
-                'admin_id' => $admin ? $admin->id : null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-        
-        $this->command->info('Instructor requests seeded successfully!');
-    }
-
-private function seedCourseInstructors()
-{
-    $this->command->info('Seeding course_instructors...');
-
-    $instructors = Instructors::all();
-    $courses = Course::all();
-
-    if ($instructors->isEmpty() || $courses->isEmpty()) {
-        $this->command->warn('No instructors or courses found. Skipping course_instructors seeding.');
-        return;
-    }
-
-    $instructorCount = $instructors->count();
-    $seededCount = 0;
-    $skippedCourses = [];
-
-    // Shuffle courses to randomize instructor assignment
-    $courses = $courses->shuffle();
-
-    foreach ($courses as $index => $course) {
-        // Skip if course already has an instructor
-        if (Course_Instructors::where('course_id', $course->id)->exists()) {
-            $skippedCourses[] = $course->course_name;
-            continue;
+        if ($instructors->isEmpty() || $courses->isEmpty()) {
+            $this->command->warn('No instructors or courses found. Skipping course_instructors seeding.');
+            return;
         }
 
-        // Assign instructor using modulo to cycle through instructors
-        $instructorIndex = $index % $instructorCount;
-        $instructor = $instructors[$instructorIndex];
+        $instructorCount = $instructors->count();
+        $seededCount = 0;
+        $skippedCourses = [];
 
-        try {
-            DB::transaction(function () use ($course, $instructor, &$seededCount) {
-                Course_Instructors::create([
-                    'course_id' => $course->id,
-                    'instructor_id' => $instructor->id,
-                ]);
-                $seededCount++;
-            });
-        } catch (\Illuminate\Database\QueryException $e) {
-            $this->command->error("Failed to assign instructor ID {$instructor->id} to course ID {$course->id}: {$e->getMessage()}");
-            $skippedCourses[] = $course->course_name;
+        $courses = $courses->shuffle();
+
+        foreach ($courses as $index => $course) {
+            if (Course_Instructors::where('course_id', $course->id)->exists()) {
+                $skippedCourses[] = $course->course_name;
+                continue;
+            }
+
+            $instructorIndex = $index % $instructorCount;
+            $instructor = $instructors[$instructorIndex];
+
+            try {
+                DB::transaction(function () use ($course, $instructor, &$seededCount) {
+                    Course_Instructors::create([
+                        'course_id' => $course->id,
+                        'instructor_id' => $instructor->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $seededCount++;
+                });
+            } catch (\Illuminate\Database\QueryException $e) {
+                $this->command->error("Failed to assign instructor ID {$instructor->id} to course ID {$course->id}: {$e->getMessage()}");
+                $skippedCourses[] = $course->course_name;
+            }
+        }
+
+        if ($seededCount > 0) {
+            $this->command->info("Successfully seeded {$seededCount} course-instructor relationships.");
+        } else {
+            $this->command->warn('No course-instructor relationships were seeded.');
+        }
+
+        if (!empty($skippedCourses)) {
+            $this->command->warn('The following courses were skipped: ' . implode(', ', $skippedCourses));
         }
     }
 
-    if ($seededCount > 0) {
-        $this->command->info("Successfully seeded {$seededCount} course-instructor relationships.");
-    } else {
-        $this->command->warn('No course-instructor relationships were seeded.');
-    }
-
-    if (!empty($skippedCourses)) {
-        $this->command->warn('The following courses were skipped: ' . implode(', ', $skippedCourses));
-    }
-}
     private function seedCourseReviews()
     {
         $this->command->info('Seeding course_reviews...');
         
-        $courses = Course::where('status', 'pending')->inRandomOrder()->take(value: 20)->get();
-
+        $courses = Course::where('status', 'pending')->inRandomOrder()->take(20)->get();
         $statuses = ['approved', 'rejected'];
-       $admin = Admins::first();
+        $admin = Admins::first();
+
         foreach ($courses as $course) {
             CourseReview::create([
                 'course_id' => $course->id,
@@ -543,86 +409,41 @@ private function seedCourseInstructors()
         $this->command->info('Course reviews seeded successfully!');
     }
 
-    private function seedInteractions()
+    private function seedEnrollments()
     {
-        $this->command->info('Seeding interactions...');
-        
+        $this->command->info('Seeding enrollments...');
+
         $students = User::where('role', 'student')->get();
         $courses = Course::all();
-        
+        $statuses = ['active', 'completed'];
+
         foreach ($students as $student) {
-            // Each student interacts with 1-5 courses
-            $interactionCount = rand(1, 5);
-            $selectedCourses = $courses->random($interactionCount);
-            
-            foreach ($selectedCourses as $course) {
-                $viewed = rand(0, 100) < 80;
-                $explored = $viewed ? (rand(0, 100) < 60) : false;
-                $certified = $explored ? (rand(0, 100) < 40) : false;
-                
-                $startTime = now()->subDays(rand(1, 180));
-                $lastEvent = $viewed ? $startTime->copy()->addDays(rand(1, 30)) : null;
-                
-                
-                Interaction::create([
-                    'user_id' => $student->id,
-                    'course_id' => $course->id,
-                    'viewed' => $viewed,
-                    'explored' => $explored,
-                    'certified' => $certified,
-                    'start_time' => $startTime,
-                    'last_event' => $lastEvent,
-                    'nevents' => $viewed ? rand(1, 50) : 0,
-                    'ndays_act' => $viewed ? rand(1, 15) : 0,
-                    'nplay_video' => $viewed ? rand(0, 20) : 0,
-                    'nforum_posts' => $viewed ? rand(0, 5) : 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            $enrolledCourses = $courses->random(rand(3, 5));
+
+            foreach ($enrolledCourses as $course) {
+                if (!Enrollment::where('user_id', $student->id)
+                    ->where('course_id', $course->id)
+                    ->exists()) {
+
+                    $status = $statuses[array_rand($statuses)];
+                    $completedAt = $status === 'completed' ? now()->subDays(rand(1, 60)) : null;
+                    $enrolledAt = now()->subDays(rand(30, 90));
+
+                    Enrollment::create([
+                        'user_id' => $student->id,
+                        'course_id' => $course->id,
+                        'enrolled_at' => $enrolledAt,
+                        'completed_at' => $completedAt,
+                        'status' => $status,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
-        
-        $this->command->info('Interactions seeded successfully!');
+
+        $this->command->info('Enrollments seeded successfully!');
     }
-
-   private function seedEnrollments()
-{
-    $this->command->info('Seeding enrollments...');
-
-    $students = User::where('role', 'student')->get();
-    $courses = Course::all();
-    $statuses = ['active', 'completed'];
-
-    foreach ($students as $student) {
-        // Mỗi học viên sẽ đăng ký 3-5 khóa học
-        $enrolledCourses = $courses->random(rand(3, 5));
-
-        foreach ($enrolledCourses as $course) {
-            // Tránh trùng lặp
-            if (!Enrollment::where('user_id', $student->id)
-                ->where('course_id', $course->id)
-                ->exists()) {
-
-                $status = $statuses[array_rand($statuses)];
-                $completedAt = $status === 'completed' ? now()->subDays(rand(1, 60)) : null;
-                $enrolledAt = now()->subDays(rand(30, 90));
-
-                Enrollment::create([
-                    'user_id' => $student->id,
-                    'course_id' => $course->id,
-                    'enrolled_at' => $enrolledAt,
-                    'completed_at' => $completedAt,
-                    'status' => $status,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-    }
-
-    $this->command->info('Enrollments seeded successfully!');
-}
-
 
     private function seedCertificates()
     {
@@ -631,21 +452,48 @@ private function seedCourseInstructors()
         $enrollments = Enrollment::where('status', 'completed')->get();
         
         foreach ($enrollments as $enrollment) {
-            $instructor_id = $enrollment->course->instructors->id;
-            Certificate::create([
-                'user_id' => $enrollment->user_id,
-                'instructor_id' => $instructor_id,
-                'course_id' => $enrollment->course_id,
-                'enrollment_id' => $enrollment->id,
-                'certificate_code' => 'CERT-' . Str::random(10),
-                'issued_at' => $enrollment->completed_at,
-                'download_url' => 'certificates/' . Str::random(20) . '.pdf',
+            $course = Course::find($enrollment->course_id);
+            if ($course && $course->is_certificate_enabled) {
+                $instructor_id = $course->instructor_id;
+                
+                Certificate::create([
+                    'user_id' => $enrollment->user_id,
+                    'instructor_id' => $instructor_id,
+                    'course_id' => $enrollment->course_id,
+                    'enrollment_id' => $enrollment->id,
+                    'certificate_code' => 'CERT-' . Str::random(10),
+                    'issued_at' => $enrollment->completed_at,
+                    'download_url' => 'certificates/' . Str::random(20) . '.pdf',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        
+        $this->command->info('Certificates seeded successfully!');
+    }
+
+    private function seedCertificateRules()
+    {
+        $this->command->info('Seeding certificate_rules...');
+        
+        $courses = Course::where('is_certificate_enabled', 1)->get();
+        $versionRules = ['latest', 'any'];
+        
+        foreach ($courses as $course) {
+            CertificateRule::create([
+                'course_id' => $course->id,
+                'instructor_id' => $course->instructor_id,
+                'lesson_completion_percent' => rand(80, 100),
+                'lesson_version_rule' => $versionRules[array_rand($versionRules)],
+                'quiz_min_score' => rand(60, 80),
+                'quiz_version_rule' => $versionRules[array_rand($versionRules)],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
         
-        $this->command->info('Certificates seeded successfully!');
+        $this->command->info('Certificate rules seeded successfully!');
     }
 
     private function seedCoupons()
@@ -682,11 +530,13 @@ private function seedCourseInstructors()
         $this->command->info('Seeding payments...');
         
         $enrollments = Enrollment::inRandomOrder()->take(30)->get();
-        $methods = ['momo', 'zalopay', 'bank_transfer', 'vnpay'];
+        $methods = ['momo', 'zalopay', 'bank_transfer', 'vnpay', 'paypal'];
         $coupons = Coupon::all();
+        $revenueSessions = RevenueSession::all();
         
         foreach ($enrollments as $enrollment) {
             $couponId = rand(0, 100) < 20 ? $coupons->random()->id : null;
+            $revenueSessionId = $revenueSessions->isNotEmpty() ? $revenueSessions->random()->id : null;
             
             Payment::create([
                 'user_id' => $enrollment->user_id,
@@ -695,6 +545,7 @@ private function seedCourseInstructors()
                 'method' => $methods[array_rand($methods)],
                 'transaction_code' => 'TXN-' . Str::random(10),
                 'coupon_id' => $couponId,
+                'revenue_session_id' => $revenueSessionId,
                 'status' => 'completed',
                 'payment_date' => $enrollment->enrolled_at,
                 'created_at' => now(),
@@ -705,11 +556,32 @@ private function seedCourseInstructors()
         $this->command->info('Payments seeded successfully!');
     }
 
+    private function seedAuditLogs()
+    {
+        $this->command->info('Seeding audit_logs...');
+        
+        $payments = Payment::all();
+        $actions = ['created', 'status_updated', 'refunded'];
+        
+        foreach ($payments as $payment) {
+            AuditLog::create([
+                'payment_id' => $payment->id,
+                'action' => $actions[array_rand($actions)],
+                'details' => 'Action performed on payment ' . $payment->id,
+                'user_id' => $payment->user_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        
+        $this->command->info('Audit logs seeded successfully!');
+    }
+
     private function seedRevenueSessions()
     {
         $this->command->info('Seeding revenue_sessions...');
         
-        $months = [1, 2, 3]; // Seed for first 3 months of 2025
+        $months = [1, 2, 3];
         $year = 2025;
         $statuses = ['open', 'closed', 'distributed'];
         
@@ -729,85 +601,81 @@ private function seedCourseInstructors()
         $this->command->info('Revenue sessions seeded successfully!');
     }
 
-   private function seedRevenueDistributions()
-{
-    $this->command->info('Seeding revenue_distributions...');
+    private function seedRevenueDistributions()
+    {
+        $this->command->info('Seeding revenue_distributions...');
 
-    $revenueSessions = RevenueSession::all();
-    $courses = Course::whereNotNull('instructor_id')->get(); // chỉ lấy các khóa có instructor
-    $statuses = ['pending', 'completed', 'failed'];
+        $revenueSessions = RevenueSession::all();
+        $courses = Course::whereNotNull('instructor_id')->get();
+        $statuses = ['pending', 'completed', 'failed'];
 
-    foreach ($courses as $course) {
-        // Mỗi course chỉ tạo 1 bản ghi phân phối ngẫu nhiên
-        $revenueSession = $revenueSessions->random();
+        foreach ($courses as $course) {
+            $revenueSession = $revenueSessions->random();
 
-        RevenueDistribution::create([
-            'revenue_session_id' => $revenueSession->id,
-            'instructor_id' => $course->instructor_id,
-            'course_id' => $course->id,
-            'revenue_amount' => rand(500000, 5000000),
-            'instructor_share' => rand(350000, 3500000),
-            'status' => $statuses[array_rand($statuses)],
-            'transaction_code' => 'TXN-' . Str::upper(Str::random(10)),
-            'distributed_at' => now()->subDays(rand(1, 30)),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-    }
-
-    $this->command->info('Revenue distributions seeded successfully!');
-}
-
-
-   private function seedLessons()
-{
-    $this->command->info('Seeding lessons with versioning...');
-
-    $courses = Course::all();
-
-    foreach ($courses as $course) {
-        $lessonCount = rand(3, 10);
-
-        for ($i = 1; $i <= $lessonCount; $i++) {
-            // Tạo bài học gốc
-            $originalLesson = Lesson::create([
+            RevenueDistribution::create([
+                'revenue_session_id' => $revenueSession->id,
+                'instructor_id' => $course->instructor_id,
                 'course_id' => $course->id,
-                'title' => "Lesson $i: Topic $i (v1)",
-                'video_url' => 'videos/lesson_' . Str::random(10) . '.mp4',
-                'duration' => rand(5, 30),
-                'is_preview' => rand(0, 100) < 30,
-                'sort_order' => $i,
-                'status' => 'approved',
-                'origin_id' => null,
-                'version' => 1,
+                'revenue_amount' => rand(500000, 5000000),
+                'instructor_share' => rand(350000, 3500000),
+                'status' => $statuses[array_rand($statuses)],
+                'transaction_code' => 'TXN-' . Str::upper(Str::random(10)),
+                'distributed_at' => now()->subDays(rand(1, 30)),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+        }
 
-            // Tạo 0 đến 2 phiên bản cập nhật
-            $versionCount = rand(0, 2);
+        $this->command->info('Revenue distributions seeded successfully!');
+    }
 
-            for ($v = 1; $v <= $versionCount; $v++) {
-                Lesson::create([
+    private function seedLessons()
+    {
+        $this->command->info('Seeding lessons with versioning...');
+
+        $courses = Course::all();
+        $statuses = ['pending', 'approved'];
+
+        foreach ($courses as $course) {
+            $lessonCount = rand(3, 10);
+
+            for ($i = 1; $i <= $lessonCount; $i++) {
+                $originalLesson = Lesson::create([
                     'course_id' => $course->id,
-                    'title' => "Lesson $i: Topic $i (v" . ($v + 1) . ")",
-                    'video_url' => 'videos/lesson_' . Str::random(10) . '_v' . ($v + 1) . '.mp4',
+                    'title' => "Lesson $i: Topic $i (v1)",
+                    'video_url' => 'videos/lesson_' . Str::random(10) . '.mp4',
                     'duration' => rand(5, 30),
                     'is_preview' => rand(0, 100) < 30,
-                    'sort_order' => $i, // giữ nguyên sort_order như bản gốc
-                    'status' => 'approved',
-                    'origin_id' => $originalLesson->id,
-                    'version' => $v + 1,
+                    'sort_order' => $i,
+                    'status' => $statuses[array_rand($statuses)],
+                    'origin_id' => null,
+                    'version' => 1,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                $versionCount = rand(0, 2);
+
+                for ($v = 1; $v <= $versionCount; $v++) {
+                    Lesson::create([
+                        'course_id' => $course->id,
+                        'title' => "Lesson $i: Topic $i (v" . ($v + 1) . ")",
+                        'video_url' => 'videos/lesson_' . Str::random(10) . '_v' . ($v + 1) . '.mp4',
+                        'duration' => rand(5, 30),
+                        'is_preview' => rand(0, 100) < 30,
+                        'sort_order' => $i,
+                        'status' => $statuses[array_rand($statuses)],
+                        'origin_id' => $originalLesson->id,
+                        'version' => $v + 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
+
+        $this->command->info('Lessons with versioning seeded successfully!');
     }
-
-    $this->command->info('Lessons with versioning seeded successfully!');
-}
-
 
     private function seedLessonProgress()
     {
@@ -844,7 +712,7 @@ private function seedCourseInstructors()
         $lessons = Lesson::all();
         
         foreach ($lessons as $lesson) {
-            $quizCount = rand(0, 2); // 0-2 quizzes per lesson
+            $quizCount = rand(0, 2);
             
             for ($i = 1; $i <= $quizCount; $i++) {
                 Quiz::create([
@@ -853,6 +721,8 @@ private function seedCourseInstructors()
                     'max_attempts' => 3,
                     'time_limit' => rand(10, 30),
                     'is_visible' => true,
+                    'version' => 1,
+                    'origin_id' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -870,13 +740,15 @@ private function seedCourseInstructors()
         $questionTypes = ['multiple_choice', 'true_false'];
         
         foreach ($quizzes as $quiz) {
-            $questionCount = rand(3, 5); // 3-5 questions per quiz
+            $questionCount = rand(3, 5);
             
             for ($i = 1; $i <= $questionCount; $i++) {
                 Question::create([
                     'quiz_id' => $quiz->id,
                     'title' => "Question $i for Quiz {$quiz->id}",
                     'question_type' => $questionTypes[array_rand($questionTypes)],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
@@ -894,7 +766,7 @@ private function seedCourseInstructors()
             $choiceCount = $question->question_type === 'multiple_choice' ? 4 : 2;
             
             for ($i = 1; $i <= $choiceCount; $i++) {
-                $isCorrect = $i === 1; // First choice is correct for simplicity
+                $isCorrect = $i === 1;
                 
                 QuestionChoice::create([
                     'question_id' => $question->id,
@@ -965,8 +837,8 @@ private function seedCourseInstructors()
                 UserAnswer::create([
                     'user_id' => $quizResult->user_id,
                     'quiz_result_id' => $quizResult->id,
-                    'question_index' => $question->id,
-                    'choice_index' => $choice ? $choice->id : null,
+                    'question_id' => $question->id,
+                    'choice_id' => $choice ? $choice->id : null,
                     'is_correct' => $isCorrect,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -980,17 +852,22 @@ private function seedCourseInstructors()
     private function seedReviews()
     {
         $this->command->info('Seeding reviews...');
-        $user= User::where('role', 'student')->inRandomOrder()->take(20)->get();
-        for($i=0;$i<$user->count();$i++){
+        
+        $users = User::where('role', 'student')->inRandomOrder()->take(20)->get();
+        $feedbackTypes = ['content_quality', 'instructor', 'platform_issue', 'not_interested'];
+        
+        foreach ($users as $user) {
             Review::create([
-                'user_id' => $user[$i]->id,
+                'user_id' => $user->id,
                 'course_id' => Course::inRandomOrder()->first()->id,
                 'rating' => rand(1, 5),
                 'comment' => 'This is a review for the course.',
+                'feedback_type' => $feedbackTypes[array_rand($feedbackTypes)],
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
+        
         $this->command->info('Reviews seeded successfully!');
     }
 
@@ -998,18 +875,20 @@ private function seedCourseInstructors()
     {
         $this->command->info('Seeding forum_posts...');
         
-        $interactions = Interaction::where('nforum_posts', '>', 0)->get();
+        $enrollments = Enrollment::all();
+        $statuses = ['pending', 'approved', 'banned'];
         
-        foreach ($interactions as $interaction) {
-            $postCount = min($interaction->nforum_posts, 3); // Limit to 3 posts per interaction
+        foreach ($enrollments as $enrollment) {
+            $postCount = rand(0, 3);
             
             for ($i = 1; $i <= $postCount; $i++) {
                 ForumPost::create([
-                    'user_id' => $interaction->user_id,
-                    'course_id' => $interaction->course_id,
+                    'user_id' => $enrollment->user_id,
+                    'course_id' => $enrollment->course_id,
                     'title' => "Discussion Topic $i",
-                    'content' => "This is a discussion post about topic $i for course {$interaction->course_id}.",
-                    'flagged' => rand(0, 100) < 5, // 5% chance of being flagged
+                    'content' => "This is a discussion post about topic $i for course {$enrollment->course_id}.",
+                    'status' => $statuses[array_rand($statuses)],
+                    'flagged' => rand(0, 100) < 5,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -1019,41 +898,40 @@ private function seedCourseInstructors()
         $this->command->info('Forum posts seeded successfully!');
     }
 
-    // private function seedMedia()
-    // {
-    //     $this->command->info('Seeding media...');
+    private function seedReports()
+    {
+        $this->command->info('Seeding reports...');
         
-    //     $courses = Course::inRandomOrder()->take(50)->get();
-    //     $lessons = Lesson::inRandomOrder()->take(50)->get();
+        $users = User::where('role', 'student')->inRandomOrder()->take(10)->get();
+        $courses = Course::all();
+        $admins = Admins::all();
+        $reportTypes = ['inappropriate_content', 'technical_issue', 'copyright_violation', 'spam', 'other'];
+        $statuses = ['pending', 'reviewed', 'resolved'];
         
-    //     foreach ($courses as $course) {
-    //         Media::create([
-    //             'medially_type' => Course::class,
-    //             'medially_id' => $course->id,
-    //             'file_url' => $course->image,
-    //             'file_name' => basename($course->image),
-    //             'file_type' => 'image/jpeg',
-    //             'size' => rand(100000, 500000),
-    //             'created_at' => now(),
-    //             'updated_at' => now(),
-    //         ]);
-    //     }
+        foreach ($users as $user) {
+            $reportCount = rand(0, 2);
+            
+            for ($i = 1; $i <= $reportCount; $i++) {
+                $status = $statuses[array_rand($statuses)];
+                $adminId = $status !== 'pending' && $admins->isNotEmpty() ? $admins->random()->id : null;
+                
+                Report::create([
+                    'user_id' => $user->id,
+                    'course_id' => $courses->random()->id,
+                    'reason' => 'Report reason ' . $i,
+                    'report_type' => $reportTypes[array_rand($reportTypes)],
+                    'status' => $status,
+                    'admin_id' => $adminId,
+                    'admin_notes' => $status !== 'pending' ? 'Admin notes for report ' . $i : null,
+                    'reviewed_at' => $status !== 'pending' ? now()->subDays(rand(1, 30)) : null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
         
-    //     foreach ($lessons as $lesson) {
-    //         Media::create([
-    //             'medially_type' => Lesson::class,
-    //             'medially_id' => $lesson->id,
-    //             'file_url' => $lesson->video_url,
-    //             'file_name' => basename($lesson->video_url),
-    //             'file_type' => 'video/mp4',
-    //             'size' => rand(1000000, 5000000),
-    //             'created_at' => now(),
-    //             'updated_at' => now(),
-    //         ]);
-    //     }
-        
-    //     $this->command->info('Media seeded successfully!');
-    // }
+        $this->command->info('Reports seeded successfully!');
+    }
 
     private function seedSimilarityMatrix()
     {
@@ -1063,11 +941,13 @@ private function seedCourseInstructors()
         
         foreach ($courses as $course1) {
             foreach ($courses as $course2) {
-                if ($course1->id < $course2->id) { // Avoid duplicates and self-similarity
+                if ($course1->id < $course2->id) {
                     SimilarityMatrix::create([
                         'course_id_1' => $course1->id,
                         'course_id_2' => $course2->id,
                         'similarity_score' => rand(10, 90) / 100,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
             }

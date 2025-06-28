@@ -3,16 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\SoftDeletes;
 class Quiz extends Model
 {
-    
+    use SoftDeletes;
     protected $table = 'quizzes';
     protected $primaryKey = 'id';
     protected $fillable = ['lesson_id', 'title', 'max_attempts', 'time_limit', 'is_visible'];
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function lesson()

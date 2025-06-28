@@ -13,7 +13,11 @@ class Course extends Model
     protected $primaryKey = 'id';
     protected $fillable = ['id','instructor_id',
         'course_name', 'difficulty_level', 'course_rating',
-        'course_url','image', 'price','skills','tag','status',
+        'course_url','image', 'price','skills','tag','status','is_certificate_enabled'
+    ];
+    protected $casts = [
+        'course_rating' => 'float',
+        'is_certificate_enabled' => 'boolean',
     ];
     protected $dates = ['deleted_at'];
 
@@ -98,6 +102,14 @@ public function categories()
     public function getHasPendingReportAttribute()
 {
     return $this->course->reports->firstWhere('status', 'pending') ? true : false;
+}
+public function questions()
+{
+    return $this->hasMany(Question::class, 'quiz_id');
+}
+public function choices()
+{
+    return $this->hasMany(QuestionChoice::class, 'question_id');
 }
 
 }

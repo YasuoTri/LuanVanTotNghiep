@@ -21,11 +21,12 @@ class Question extends Model
 
     public function choices()
     {
-        return $this->hasMany(QuestionChoice::class);
+        return $this->hasMany(QuestionChoice::class,'question_id');
     }
 
     public function userAnswers()
     {
-        return $this->hasMany(UserAnswer::class);
+        return $this->hasMany(UserAnswer::class,'question_id');
     }
+    
 }

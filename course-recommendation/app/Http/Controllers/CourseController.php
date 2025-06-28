@@ -12,6 +12,9 @@ use App\Models\Category;
 use App\Models\Enrollment;
 use App\Models\Instructors;
 use App\Models\Lesson;
+use App\Models\Question;
+use App\Models\QuestionChoice;
+use App\Models\Quiz;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -390,7 +393,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
 
             $instructor = Auth::user()->instructor;
             $validated['course_url'] = Str::slug($validated['course_name']);
-            $validated['status'] = 'draft'; // Khóa học mới tạo ở trạng thái pending
+            $validated['status'] = 'draft';
 
             // Xử lý upload hình ảnh
             if ($request->hasFile('image')) {
@@ -412,6 +415,7 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 'price' => $validated['price'] ?? 0,
                 'skills' => $validated['skills'] ?? null,
                 'status' => $validated['status'],
+                'is_certificate_enabled' => $validated['is_certificate_enabled'] ?? false,
                 'instructor_id' => $user->id,
             ]);
 
@@ -1245,5 +1249,106 @@ public function SearchCourse(Request $request){
         ];
     });
     return response()->json($results);
+}
+
+public function searchCourseAdmin(Request $request)
+{
+    $query = Course::with(['instructors.user', 'categories'])
+        ->when($request->q, function ($q) use ($request) {
+            $keyword = $request->q;
+            $q->where('course_name', 'like', "%{$keyword}%")
+              ->orWhere('course_description', 'like', "%{$keyword}%")
+              ->orWhereHas('instructor.user', function ($instructor) use ($keyword) {
+                  $instructor->where('username', 'like', "%{$keyword}%");
+              })
+              ->orWhereHas('categories', function ($cat) use ($keyword) {
+                  $cat->where('name', 'like', "%{$keyword}%");
+              });
+        })
+        ->when($request->status, function ($q) use ($request) {
+            $q->where('status', $request->status);
+        })
+        ->when($request->difficulty_level, function ($q) use ($request) {
+            $q->where('difficulty_level', $request->difficulty_level);
+        })
+        ->when($request->price_min, function ($q) use ($request) {
+            $q->where('price', '>=', $request->price_min);
+        })
+        ->when($request->price_max, function ($q) use ($request) {
+            $q->where('price', '<=', $request->price_max);
+        })
+        ->when($request->is_certificate_enabled !== null, function ($q) use ($request) {
+            $q->where('is_certificate_enabled', $request->is_certificate_enabled);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(10);
+
+    return response()->json($query);
+}
+public function CourseClone($courseId)
+{ $user = Auth::user();
+
+    $originalCourse = Course::findOrFail($courseId);
+
+    if ($originalCourse->instructor_id !== $user->instructor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // clone course
+        $clonedCourse = $originalCourse->replicate();
+        $clonedCourse->status = 'draft';
+        $clonedCourse->course_name = $originalCourse->course_name . ' (Clone)';
+        $clonedCourse->save();
+
+        // clone lessons
+        $originalLessons = Lesson::where('course_id', $originalCourse->id)->get();
+
+        foreach ($originalLessons as $originalLesson) {
+            $clonedLesson = $originalLesson->replicate();
+            $clonedLesson->course_id = $clonedCourse->id;
+            $clonedLesson->save();
+
+            // clone quizzes in this lesson
+            $originalQuizzes = Quiz::where('lesson_id', $originalLesson->id)->get();
+            foreach ($originalQuizzes as $originalQuiz) {
+                $clonedQuiz = $originalQuiz->replicate();
+                $clonedQuiz->lesson_id = $clonedLesson->id;
+                $clonedQuiz->save();
+
+                // clone questions
+                $originalQuestions = Question::where('quiz_id', $originalQuiz->id)->get();
+                foreach ($originalQuestions as $originalQuestion) {
+                    $clonedQuestion = $originalQuestion->replicate();
+                    $clonedQuestion->quiz_id = $clonedQuiz->id;
+                    $clonedQuestion->save();
+
+                    // clone choices
+                    $originalChoices = QuestionChoice::where('question_id', $originalQuestion->id)->get();
+                    foreach ($originalChoices as $originalChoice) {
+                        $clonedChoice = $originalChoice->replicate();
+                        $clonedChoice->question_id = $clonedQuestion->id;
+                        $clonedChoice->save();
+                    }
+                }
+            }
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Course cloned successfully',
+            'new_course_id' => $clonedCourse->id
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Clone failed',
+            'error' => $e->getMessage()
+        ], 500);
+    }
 }
 }

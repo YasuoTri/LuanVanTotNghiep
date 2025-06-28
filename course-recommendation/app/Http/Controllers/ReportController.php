@@ -71,10 +71,23 @@ class ReportController extends Controller
             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderBy('created_at', 'desc')
             ->paginate(10);
-
         return response()->json($reports);
     }
+public function searchCourseWithReportSummary($courseId)
+{
+    $course = Course::with('instructors.user')->findOrFail($courseId);
 
+    // lấy thống kê report
+    $reportSummary = Report::where('course_id', $course->id)
+        ->selectRaw('report_type, COUNT(*) as total')
+        ->groupBy('report_type')
+        ->get();
+
+    return response()->json([
+        'course' =>$course,
+        'report_summary' => $reportSummary,
+    ]);
+}
 public function FindviewReports(Request $request)
     {
         // Validate input
@@ -138,9 +151,62 @@ public function FindviewReports(Request $request)
 
     //     return response()->json(['message' => 'Report handled successfully']);
     // }
-   public function handleReport(Request $request, Report $report)
+//    public function handleReport(Request $request, Report $report)
+// {
+//     // Validate input
+//     $request->validate([
+//         'status' => 'required|in:reviewed,resolved',
+//         'admin_notes' => 'nullable|string|max:1000',
+//         'action' => 'nullable|in:ban,delete,ignore',
+//     ]);
+
+//     try {
+//         // Update report status
+//         $report->update([
+//             'status' => $request->status,
+//             'admin_id' => Auth::user()->admin->id,
+//             'admin_notes' => $request->admin_notes,
+//             'reviewed_at' => now(),
+//         ]);
+
+//         // Get the reported course
+//         $course = $report->course;
+//         if (!$course) {
+//             return response()->json(['message' => 'Reported course not found'], 404);
+//         }
+
+//         // Get the instructor (owner) of the course
+//         $owner = $course->instructors;
+//         if (!$owner) {
+//             return response()->json(['message' => 'Instructor (owner) not found'], 404);
+//         }
+
+//         // Handle action on course
+//         if ($request->action === 'ban') {
+
+//         } elseif ($request->action === 'delete') {
+//             $course->delete(); // soft delete
+//         }
+//         if ($request->action === 'ignore') {
+//             // Do nothing, just ignore the report
+//             return response()->json(['message' => 'Report ignored successfully']);
+//         }
+//         // Handle user violation if action is not "ignore"
+//         if ($request->action && $request->action !== 'ignore') {
+//             $this->handleUserViolation($owner->user, $report, $request->admin_notes);
+//         }
+
+//         return response()->json(['message' => 'Report handled successfully']);
+//     } catch (\Exception $e) {
+//         Log::error('Error in handleReport: ' . $e->getMessage());
+//         return response()->json([
+//             'message' => 'Error: ' . $e->getMessage(),
+//             'data' => [],
+//         ], 500);
+//     }
+// }
+public function handleReport(Request $request, Report $report)
 {
-    // Validate input
     $request->validate([
         'status' => 'required|in:reviewed,resolved',
         'admin_notes' => 'nullable|string|max:1000',
@@ -148,39 +214,48 @@ public function FindviewReports(Request $request)
     ]);
 
     try {
-        // Update report status
-        $report->update([
-            'status' => $request->status,
-            'admin_id' => Auth::user()->admin->id,
+        // Cập nhật trạng thái report
+        // $report->update([
+        //     'status' => $request->status,
+        //     'admin_id' => Auth::user()->admin->id,
+        //     'admin_notes' => $request->admin_notes,
+        //     'reviewed_at' => now(),
+        //     'instructor_confirmed_at' => null, // Reset instructor confirmation
+        // ]);
+        Report::where('course_id', $report->course_id)
+        ->where('status', 'pending')
+        ->update([
+            'status' =>  $request->status,
             'admin_notes' => $request->admin_notes,
+            'admin_id' => Auth::user()->id,
             'reviewed_at' => now(),
         ]);
 
-        // Get the reported course
+
         $course = $report->course;
+
         if (!$course) {
             return response()->json(['message' => 'Reported course not found'], 404);
         }
 
-        // Get the instructor (owner) of the course
-        $owner = $course->instructors;
-        if (!$owner) {
-            return response()->json(['message' => 'Instructor (owner) not found'], 404);
-        }
+        // Tùy hành động
+        switch ($request->action) {
+            case 'ban':
+                $course->update(values: [
+                    'status' => 'unavailable',
+                ]);
+                $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);
+                break;
 
-        // Handle action on course
-        if ($request->action === 'ban') {
-            $course->update(['status' => 'banned']);
-        } elseif ($request->action === 'delete') {
-            $course->delete(); // soft delete
-        }
-        if ($request->action === 'ignore') {
-            // Do nothing, just ignore the report
-            return response()->json(['message' => 'Report ignored successfully']);
-        }
-        // Handle user violation if action is not "ignore"
-        if ($request->action && $request->action !== 'ignore') {
-            $this->handleUserViolation($owner->user, $report, $request->admin_notes);
+            case 'delete':
+                $course->delete(); // soft delete
+                $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);
+                break;
+
+            case 'ignore':
+            default:
+                // Không làm gì thêm
+                break;
         }
 
         return response()->json(['message' => 'Report handled successfully']);
@@ -191,6 +266,15 @@ public function FindviewReports(Request $request)
             'data' => [],
         ], 500);
     }
+}
+
+public function confirmFix(Report $report)
+{
+    $report->update([
+        'instructor_confirmed_at' => now(),
+    ]);
+
+    return response()->json(['message' => 'Instructor confirmed fix, please review again']);
 }
 
     protected function handleUserViolation($user, $report, $adminNotes)
@@ -311,5 +395,17 @@ public function FindviewReports(Request $request)
         $reports = $query->paginate(10);
         return response()->json($reports);
     }
+public function reportSummary($courseId)
+{
+    $summary = Report::where('course_id', $courseId)
+        ->selectRaw('report_type, COUNT(*) as total')
+        ->groupBy('report_type')
+        ->get();
+
+    return response()->json([
+        'message' => 'Report statistics by type',
+        'data' => $summary
+    ]);
+}
 
 }

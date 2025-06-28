@@ -25,6 +25,7 @@ class UpdateCourseRequest extends FormRequest
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'nullable|array|exists:categories,id',
             'instructor_id' => 'nullable|exists:instructors,id',
+            'status' => 'nullable|string|in:pending,draft',
         ];
     }
 }

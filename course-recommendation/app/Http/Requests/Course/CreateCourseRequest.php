@@ -25,6 +25,7 @@ class CreateCourseRequest extends FormRequest
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'required|array|exists:categories,id',
             'instructor_id' => 'nullable|exists:instructors,id',
+            'is_certificate_enabled' => 'boolean',
         ];
     }
 }

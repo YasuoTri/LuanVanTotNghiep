@@ -1176,52 +1176,173 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
 /**
  * Nộp bài quiz với kiểm tra thời gian và tính điểm từ snapshot.
  */
+//Dùng snapshot
+// public function submitQuiz(Request $request, $quiz_id): JsonResponse
+// {
+//     $user = Auth::user();
 
-public function submitQuiz(Request $request, $quiz_id): JsonResponse
+//     $validated = $this->validateQuizSubmission($request);
+
+//     $quizResult = $this->findOngoingQuizResult($validated['quiz_result_id'], $quiz_id, $user->id);
+//     if (!$quizResult) {
+//         return response()->json(['message' => 'Không tìm thấy phiên làm bài hợp lệ'], 404);
+//     }
+
+//     $snapshot = $this->getSnapshotFromResult($quizResult);
+//     if (!$snapshot) {
+//         return response()->json(['message' => 'Dữ liệu quiz không hợp lệ'], 400);
+//     }
+
+//     if ($this->isTimeLimitExceeded($snapshot, $quizResult)) {
+//         $quizResult->update([
+//             'completed_at' => now(),
+//             'score' => 0,
+//         ]);
+//         return response()->json(['message' => 'Đã vượt quá thời gian cho phép. Bài làm đã được tự động nộp với điểm 0.'], 403);
+//     }
+
+//     [$results, $totalScore] = $this->processAnswers($snapshot, $validated['answers'], $quizResult, $user->id);
+
+//     $totalQuestions = count($snapshot['questions']);
+//     $percentage = $totalQuestions > 0 ? round(($totalScore / $totalQuestions) * 100, 2) : 0;
+//     $isPassed = $percentage >= 80;
+
+//     $quizResult->update([
+//         'score' => $totalScore,
+//         'completed_at' => now(),
+//     ]);
+
+//     return response()->json([
+//         'message' => 'Nộp bài quiz thành công',
+//         'data' => [
+//             'quiz_result_id' => $quizResult->id,
+//             'quiz_info' => $this->buildQuizInfo($snapshot['quiz'], $quizResult, $totalQuestions, $totalScore, $percentage, $isPassed),
+//             'results' => $results,
+//             'summary' => $this->buildQuizSummary($totalQuestions, $totalScore, $percentage, $isPassed),
+//         ]
+//     ], 201);
+// }
+
+//Không dùng snapshot
+public function submitQuiz(Request $request, $quizId)
 {
     $user = Auth::user();
 
-    $validated = $this->validateQuizSubmission($request);
+    $quiz = Quiz::findOrFail($quizId);
 
-    $quizResult = $this->findOngoingQuizResult($validated['quiz_result_id'], $quiz_id, $user->id);
-    if (!$quizResult) {
-        return response()->json(['message' => 'Không tìm thấy phiên làm bài hợp lệ'], 404);
+    $questions = Question::where('quiz_id', $quiz->id)
+        ->with('choices')
+        ->get();
+
+    $answers = $request->input('answers'); // dạng [question_id => [choice_id1, choice_id2]]
+
+    $correctCount = 0;
+    $totalQuestions = $questions->count();
+    $passThreshold = 80; // giả định
+    $results = [];
+
+    foreach ($questions as $question) {
+        $correctChoices = $question->choices->where('is_correct', 1)->values();
+        $submittedChoiceIds = collect($answers[$question->id] ?? []);
+
+        // check đúng sai
+        $correctChoiceIds = $correctChoices->pluck('id')->sort()->values();
+        $submittedSorted = $submittedChoiceIds->sort()->values();
+        $isCorrect = $correctChoiceIds->toArray() === $submittedSorted->toArray();
+
+        if ($isCorrect) {
+            $correctCount++;
+        }
+
+        // build selected choice data
+        $selectedChoicesData = $question->choices
+            ->whereIn('id', $submittedChoiceIds)
+            ->map(function ($c) {
+                return [
+                    'id' => $c->id,
+                    'content' => $c->content,
+                    'is_correct' => $c->is_correct
+                ];
+            })->values();
+
+        $correctChoicesData = $correctChoices->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'content' => $c->content
+            ];
+        })->values();
+
+        $allChoicesData = $question->choices->map(function ($c) {
+            return [
+                'id' => $c->id,
+                'content' => $c->content,
+                'is_correct' => $c->is_correct
+            ];
+        })->values();
+
+        // explanation text
+        $explanation = $isCorrect
+            ? "Chính xác!"
+            : "Sai rồi. Đáp án đúng: " . $correctChoices->pluck('content')->implode(', ');
+
+        $results[] = [
+            'question_id' => $question->id,
+            'question_title' => $question->title,
+            'question_type' => $question->question_type,
+            'selected_choices' => $selectedChoicesData,
+            'correct_choices' => $correctChoicesData,
+            'all_choices' => $allChoicesData,
+            'is_correct' => $isCorrect,
+            'explanation' => $explanation
+        ];
     }
 
-    $snapshot = $this->getSnapshotFromResult($quizResult);
-    if (!$snapshot) {
-        return response()->json(['message' => 'Dữ liệu quiz không hợp lệ'], 400);
-    }
+    $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
+    $isPassed = $score >= $passThreshold;
 
-    if ($this->isTimeLimitExceeded($snapshot, $quizResult)) {
-        $quizResult->update([
-            'completed_at' => now(),
-            'score' => 0,
-        ]);
-        return response()->json(['message' => 'Đã vượt quá thời gian cho phép. Bài làm đã được tự động nộp với điểm 0.'], 403);
-    }
-
-    [$results, $totalScore] = $this->processAnswers($snapshot, $validated['answers'], $quizResult, $user->id);
-
-    $totalQuestions = count($snapshot['questions']);
-    $percentage = $totalQuestions > 0 ? round(($totalScore / $totalQuestions) * 100, 2) : 0;
-    $isPassed = $percentage >= 80;
-
-    $quizResult->update([
-        'score' => $totalScore,
+    $quizResult = QuizResult::create([
+        'user_id' => $user->id,
+        'quiz_id' => $quiz->id,
+        'attempt_number' => 1,
+        'score' => $score,
+        'started_at' => now(),
         'completed_at' => now(),
     ]);
+
+    $timeTaken = 0.1666; // nếu muốn thực đo thì bạn lưu start_time / end_time
 
     return response()->json([
         'message' => 'Nộp bài quiz thành công',
         'data' => [
             'quiz_result_id' => $quizResult->id,
-            'quiz_info' => $this->buildQuizInfo($snapshot['quiz'], $quizResult, $totalQuestions, $totalScore, $percentage, $isPassed),
+            'quiz_info' => [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'total_questions' => $totalQuestions,
+                'score' => $correctCount,
+                'percentage' => $score,
+                'is_passed' => $isPassed,
+                'pass_threshold' => $passThreshold,
+                'attempt_number' => 1,
+                'time_taken' => $timeTaken,
+                'completed_at' => now()->toISOString(),
+            ],
             'results' => $results,
-            'summary' => $this->buildQuizSummary($totalQuestions, $totalScore, $percentage, $isPassed),
+            'summary' => [
+                'total_questions' => $totalQuestions,
+                'correct_answers' => $correctCount,
+                'incorrect_answers' => $totalQuestions - $correctCount,
+                'percentage' => $score,
+                'status' => $isPassed ? 'PASSED' : 'FAILED',
+                'message' => $isPassed
+                    ? "Bạn đã vượt qua bài kiểm tra."
+                    : "Bạn cần đạt ít nhất {$passThreshold}% để vượt qua bài kiểm tra."
+            ]
         ]
-    ], 201);
+    ]);
 }
+
+
 
 private function validateQuizSubmission(Request $request): array
 {
@@ -2035,5 +2156,54 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+public function showAnalyticOfQuiz($quizId)
+{
+    $quiz = Quiz::with('lesson')->findOrFail($quizId);
+
+    $questions = Question::where('quiz_id', $quizId)
+        ->with(['choices'])
+        ->get()
+        ->map(function ($question) {
+            $totalAnswers = $question->userAnswers()->count();
+
+            $correctAnswers = $question->userAnswers()->where('is_correct', 1)->count();
+
+            $incorrectAnswers = $totalAnswers - $correctAnswers;
+
+            $choiceStats = $question->choices->map(function ($choice) use ($question, $totalAnswers) {
+                $count = \App\Models\UserAnswer::where('question_id', $question->id)
+                    ->where('choice_id', $choice->id)
+                    ->count();
+
+                $percent = $totalAnswers > 0 ? round($count * 100 / $totalAnswers, 2) : 0;
+
+                return [
+                    'choice_id' => $choice->id,
+                    'content' => $choice->content,
+                    'times_selected' => $count,
+                    'percent_selected' => $percent,
+                    'is_correct' => $choice->is_correct,
+                ];
+            });
+
+            return [
+                'question_id' => $question->id,
+                'title' => $question->title,
+                'total_answers' => $totalAnswers,
+                'correct_answers' => $correctAnswers,
+                'correct_percent' => $totalAnswers > 0 ? round($correctAnswers * 100 / $totalAnswers, 2) : 0,
+                'incorrect_answers' => $incorrectAnswers,
+                'incorrect_percent' => $totalAnswers > 0 ? round($incorrectAnswers * 100 / $totalAnswers, 2) : 0,
+                'choices' => $choiceStats,
+            ];
+        });
+
+    return response()->json([
+        'quiz_id' => $quiz->id,
+        'quiz_title' => $quiz->title,
+        'lesson' => $quiz->lesson->title ?? null,
+        'questions' => $questions,
+    ]);
 }
 }

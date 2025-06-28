@@ -17,6 +17,7 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\QuizResultController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ForumPostController;
+use App\Http\Controllers\InstructorCertificateRuleController;
 use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\InstructorRequestController;
 use App\Http\Controllers\InteractionController;
@@ -188,14 +189,18 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     // Route::put('/instructor/courses/{courseId}/submit-review-course', [CourseController::class, 'submitCourseForReviewInstructor']);
     Route::post('/instructor/quizzes/{quiz}/clone', [QuizController::class, 'clone']);
     Route::post('/instructor/certificates/issue', [CertificateController::class, 'issue']);
+    Route::get('/instructor/quiz-statistics/{quiz}', [QuizController::class, 'showAnalyticOfQuiz']);
+    Route::post('/instructor/certificate-rule', [InstructorCertificateRuleController::class, 'store']);
+    Route::post('/instructor/course/{course}/clone', [CourseController::class, 'CourseClone']);
+    Route::post('/reports/{report}/confirm-fix', [ReportController::class, 'confirmFix']);
+ 
 });
-
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {
     Route::post('/admin/courses', [CourseController::class, 'store']);
     Route::put('/admin/courses/{id}', [CourseController::class, 'update']);
     Route::delete('/admin/courses/{id}', [CourseController::class, 'destroy']);
-    Route::delete('/admin/force-delete/{id}', [CourseController::class, 'forceDelete']);
+    Route::delete('/admin/force-delete/{id}', [CourseController::class, 'forceDelete']);    
     Route::get('/admin/courses/{id}/admin-stats', [CourseController::class, 'adminStats']);
     Route::get('/admin/courses/pending', [CourseController::class, 'getPendingCourses']);
     Route::put('/courses/{id}/approve', [CourseController::class, 'approveCourse']);
@@ -367,6 +372,10 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
 
     Route::get('/admin/allinstructors/summary', [AdminInstructorController::class, 'getSummary']);
     Route::get('/admin/eachinstructors/{id}/details', [AdminInstructorController::class, 'getInstructorDetail']);
+    Route::get('/admin/courses/search', [CourseController::class, 'searchCourseAdmin']);
+    Route::get('/admin/courses/{course}/report-summary', [ReportController::class, 'searchCourseWithReportSummary']);
+
+
 });
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);

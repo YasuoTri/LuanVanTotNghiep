@@ -10,7 +10,7 @@ class CategoryController extends Controller
     use DetectAndUpdateIfChanged;
     public function index()
 {
-    $categories = Category::withCount('courses')->get();
+    $categories = Category::withCount('courses')->where('parent_id','!=',NULL)->get();
 
     return response()->json($categories);
 }

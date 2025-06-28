@@ -428,7 +428,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                     'updated_at' => now(),
                 ]);
             }
-
             // Gán instructor cho khóa học
             // Course_Instructors::create([
             //     'course_id' => $course->id,
@@ -1258,7 +1257,7 @@ public function searchCourseAdmin(Request $request)
             $keyword = $request->q;
             $q->where('course_name', 'like', "%{$keyword}%")
               ->orWhere('course_description', 'like', "%{$keyword}%")
-              ->orWhereHas('instructor.user', function ($instructor) use ($keyword) {
+              ->orWhereHas('instructors.user', function ($instructor) use ($keyword) {
                   $instructor->where('username', 'like', "%{$keyword}%");
               })
               ->orWhereHas('categories', function ($cat) use ($keyword) {

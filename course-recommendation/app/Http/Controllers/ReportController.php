@@ -33,12 +33,6 @@ class ReportController extends Controller
         if($course->status == 'rejected' || $course->status == 'banned') {
             return response()->json(['message' => 'Can not report course have status invalid'], 403);
         }
-        $userId = Auth::user()->id;
-        $courseId = $request->course_id;
-         $existingReport = Report::where('user_id', $userId)
-        ->where('course_id', $courseId)
-        ->where('status', 'pending')
-        ->first();
 
         if ($existingReport) {
             return response()->json([
@@ -180,7 +174,10 @@ public function FindviewReports(Request $request)
         } elseif ($request->action === 'delete') {
             $course->delete(); // soft delete
         }
-
+        if ($request->action === 'ignore') {
+            // Do nothing, just ignore the report
+            return response()->json(['message' => 'Report ignored successfully']);
+        }
         // Handle user violation if action is not "ignore"
         if ($request->action && $request->action !== 'ignore') {
             $this->handleUserViolation($owner->user, $report, $request->admin_notes);

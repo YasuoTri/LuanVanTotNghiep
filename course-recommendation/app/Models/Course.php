@@ -93,6 +93,11 @@ public function categories()
     }
     public function reports()
     {
-        return $this->morphMany(Report::class, 'reportable');
+        return $this->hasMany(Report::class, 'course_id');
     }
+    public function getHasPendingReportAttribute()
+{
+    return $this->course->reports->firstWhere('status', 'pending') ? true : false;
+}
+
 }

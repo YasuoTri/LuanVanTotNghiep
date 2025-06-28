@@ -64,9 +64,6 @@ Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
 Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
 
 Route::get('/recommend/export-send', [ExportRecommendController::class, 'exportAndSend']);
-
-
-
 // Student Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);

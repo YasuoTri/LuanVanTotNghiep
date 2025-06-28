@@ -304,26 +304,55 @@ class EnrollmentController extends Controller
             ], 500);
         }
     }
+    // public function getStudentEnrollments(): JsonResponse
+    // {
+    //     $user = Auth::user();
+        
+    //     if ($user->role !== 'student') {
+    //         return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
+    //     }
+
+    //    $enrollments = Enrollment::where('user_id', $user->id)
+    // ->whereHas('course', function ($query) {
+    //     $query->whereIn('status', ['approved', 'available', 'unavailable']);
+    // })
+    // ->with('course','course.reports')
+    // ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status')
+    // ->orderBy('enrolled_at', 'desc')
+    // ->paginate(10);
+
+        
+    //     return response()->json(['data' => $enrollments]);
+    // }
     public function getStudentEnrollments(): JsonResponse
-    {
-        $user = Auth::user();
-        
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
+{
+    $user = Auth::user();
 
-       $enrollments = Enrollment::where('user_id', $user->id)
-    ->whereHas('course', function ($query) {
-        $query->whereIn('status', ['approved', 'available', 'unavailable']);
-    })
-    ->with('course')
-    ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status')
-    ->orderBy('enrolled_at', 'desc')
-    ->paginate(10);
-
-        
-        return response()->json(['data' => $enrollments]);
+    if ($user->role !== 'student') {
+        return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
     }
+
+    $enrollments = Enrollment::where('user_id', $user->id)
+        ->whereHas('course', function ($query) {
+            $query->whereIn('status', ['approved', 'available', 'unavailable']);
+        })
+        ->with(['course', 'course.reports' => function($query) use ($user) {
+            $query->where('user_id', $user->id); // chỉ lấy report của user này
+        }])
+        ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status')
+        ->orderBy('enrolled_at', 'desc')
+        ->paginate(10);
+
+    // Thêm biến has_pending_report
+    $enrollments->getCollection()->transform(function ($enrollment) use ($user) {
+        $pendingReport = $enrollment->course->reports->firstWhere('status', 'pending');
+        $enrollment->has_pending_report = $pendingReport ? true : false;
+        return $enrollment;
+    });
+
+    return response()->json(['data' => $enrollments]);
+}
+
       public function checkEnrollmentStatus($id): JsonResponse
     {
         $user = Auth::user();

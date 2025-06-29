@@ -16,12 +16,18 @@ class CategoryController extends Controller
 }
 public function getCategoryWithSubcategories()
 {
-    $categories = Category::with('children')->withCount('courses')
-        ->whereNull('parent_id') // Chỉ lấy category cha
+    $categories = Category::with([
+            'children' => function ($query) {
+                $query->withCount('courses');
+            }
+        ])
+        ->withCount('courses', 'children')
+        ->whereNull('parent_id')
         ->get();
 
     return $categories;
 }
+
 public function getSubcategories()
 {
     $categories = Category::withCount('courses')

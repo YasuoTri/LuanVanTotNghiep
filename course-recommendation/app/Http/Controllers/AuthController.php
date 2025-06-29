@@ -88,20 +88,30 @@ class AuthController extends Controller
                 'bank_account' => $validatedData['bank_account'] ?? null,
                 'bank_name' => $validatedData['bank_name'] ?? null,
             ]);
-        }
-        // Create record in students table
+        }else if ($user->role === 'admin') {
+            // Create admin record if role is admin
+            Admins::create([
+                'user_id' => $user->id,
+                'name' => $validatedData['name'] ?? 'Admin',
+            ]);
+        }else if ($user->role === 'student') {
+            // Create student record if role is student
+            // Create record in students table
         $student = Student::create([
             'user_id' => $user->id,
             'learning_goals' => $validatedData['learning_goals'],
             'LoE_DI' => $validatedData['LoE_DI'] ?? 'Unknown',
             'total_courses_completed' => 0,
         ]);
+            // Sync categories if provided
+            if (isset($validatedData['category_ids']) && !empty($validatedData['category_ids'])) {
+                $student->categories()->sync($validatedData['category_ids']);
+            }
 
-        // Sync categories if provided
-        if (isset($validatedData['category_ids']) && !empty($validatedData['category_ids'])) {
-            $student->categories()->sync($validatedData['category_ids']);
         }
+       
 
+     
         // Generate JWT token
         $token = JWTAuth::fromUser($user);
 

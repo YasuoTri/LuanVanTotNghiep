@@ -10,19 +10,26 @@ class CategoryController extends Controller
     use DetectAndUpdateIfChanged;
     public function index()
 {
-    $categories = Category::withCount('courses')->where('parent_id','!=',NULL)->get();
+    $categories = Category::withCount('courses')->get();
 
     return response()->json($categories);
 }
 public function getCategoryWithSubcategories()
 {
-    $categories = Category::with('children')
+    $categories = Category::with('children')->withCount('courses')
         ->whereNull('parent_id') // Chỉ lấy category cha
         ->get();
 
     return $categories;
 }
+public function getSubcategories()
+{
+    $categories = Category::withCount('courses')
+        ->where('parent_id','!=',NULL) // Chỉ lấy category cha
+        ->get();
 
+    return $categories;
+}
     public function show($id)
     {
         // Fetch a single category by ID

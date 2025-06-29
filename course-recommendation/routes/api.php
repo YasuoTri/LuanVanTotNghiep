@@ -57,6 +57,7 @@ Route::get('/courses', [CourseController::class, 'index']);
 Route::apiResource('/admin/category', CategoryController::class);
 
 Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategories']);
+Route::get('/subcategories', [CategoryController::class, 'getSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);

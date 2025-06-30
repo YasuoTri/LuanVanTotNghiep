@@ -8,34 +8,75 @@ use App\Traits\DetectAndUpdateIfChanged;
 class CategoryController extends Controller
 {
     use DetectAndUpdateIfChanged;
-    public function index()
+public function index()
 {
-    $categories = Category::withCount('courses')->get();
+    $categories = Category::withCount([
+        'courses as courses_count' => function ($query) {
+            $query->where('status', 'approved');
+        }
+    ])->get();
 
     return response()->json($categories);
 }
+
+// public function getCategoryWithSubcategories()
+// {
+//     $categories = Category::with([
+//             'children' => function ($query) {
+//                 $query->withCount('courses');
+//             }
+//         ])
+//         ->withCount('courses', 'children')
+//         ->whereNull('parent_id')
+//         ->get();
+
+//     return $categories;
+// }
 public function getCategoryWithSubcategories()
 {
     $categories = Category::with([
-            'children' => function ($query) {
-                $query->withCount('courses');
-            }
-        ])
-        ->withCount('courses', 'children')
-        ->whereNull('parent_id')
-        ->get();
+        'children' => function ($query) {
+            $query->withCount([
+                'courses as courses_count' => function ($q) {
+                    $q->where('status', 'approved');
+                }
+            ]);
+        }
+    ])
+    ->withCount([
+        'courses as courses_count' => function ($query) {
+            $query->where('status', 'approved');
+        },
+        'children'
+    ])
+    ->whereNull('parent_id')
+    ->get();
 
     return $categories;
 }
 
+
+// public function getSubcategories()
+// {
+//     $categories = Category::withCount('courses')
+//         ->where('parent_id','!=',NULL) // Chỉ lấy category cha
+//         ->get();
+
+//     return $categories;
+// }
 public function getSubcategories()
 {
-    $categories = Category::withCount('courses')
-        ->where('parent_id','!=',NULL) // Chỉ lấy category cha
-        ->get();
+    $categories = Category::withCount([
+        'courses as courses_count' => function ($query) {
+            $query->where('status', 'approved');
+        }
+    ])
+    ->whereNotNull('parent_id') // chỉ lấy subcategory
+    ->get();
 
     return $categories;
 }
+
     public function show($id)
     {
         // Fetch a single category by ID

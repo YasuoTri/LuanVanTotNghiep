@@ -36,6 +36,7 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'password' => 'hashed',
         'deleted_at' => 'datetime',
+        'birthdate' => 'date', // Ensure birthdate is cast to date
     ];
 
     public function admin()

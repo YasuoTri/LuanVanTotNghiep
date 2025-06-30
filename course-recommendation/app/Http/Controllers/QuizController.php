@@ -2144,9 +2144,9 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
                 $newChoice->save();
             }
         }   
-        $originalQuiz->update([
-            'is_visible' => false, // Đặt quiz gốc thành không hiển thị
-        ]);
+        // $originalQuiz->update([
+        //     'is_visible' => false, // Đặt quiz gốc thành không hiển thị
+        // ]);
         return response()->json([
             'message' => 'Quiz cloned successfully.',
             'quiz_id' => $newQuiz->id,

@@ -364,6 +364,36 @@ public function confirmFix(Report $report)
         $report->delete();
         return response()->json(['message' => 'Report deleted successfully']);
     }
+ public function cancelReport(Request $request, int $reportId)
+{
+    try {
+        $userId = Auth::id();
+
+        $report = Report::where('id', $reportId)
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$report) {
+            return response()->json([
+                'message' => 'Report not found or cannot be canceled'
+            ], 404);
+        }
+
+        // soft delete
+        $report->delete();
+
+        return response()->json([
+            'message' => 'Report has been canceled successfully.'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'An error occurred while canceling the report.',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
     public function forcedelete($id)
     {
         $report = Report::withTrashed()->findOrFail($id);

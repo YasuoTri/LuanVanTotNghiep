@@ -41,7 +41,7 @@ class AuthController extends Controller
             'password' => 'required|min:6|confirmed',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'LoE_DI' => 'nullable|string|max:50',
-            'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
+            'birthdate' => 'nullable' , // Updated from YoB to birthdate
             'gender' => 'nullable|string|in:Male,Female,other',
             'role' => 'in:student,instructor,admin', // Default role is student
             'learning_goals' => 'nullable|string',

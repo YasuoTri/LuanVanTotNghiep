@@ -447,20 +447,48 @@ protected function calculateLessonCompletionRate($user)
                 'message' => 'Admins cannot delete themselves'
             ], 422);
         }
+          // Kiểm tra instructor có courses hay không
+        if ($user->role === 'instructor') {
+            $hasCourses = DB::table('courses')
+                ->where('instructor_id', $user->instructor->id ?? 0)
+                ->whereNull('deleted_at')
+                ->exists();
 
+            if ($hasCourses) {
+                return response()->json([
+                    'message' => 'Cannot delete instructor who still has courses'
+                ], 422);
+            }
+        }
+
+        // Kiểm tra student có enrollments hay không
+        if ($user->role === 'student') {
+            $hasEnrollments = DB::table('enrollments')
+                ->where('user_id', $user->id)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($hasEnrollments) {
+                return response()->json([
+                    'message' => 'Cannot delete student who has enrollments'
+                ], 422);
+            }
+        }
         // Bắt đầu transaction
         DB::beginTransaction();
         try {
+
             // Soft delete user
             $user->delete();
             if ($user->role === 'instructor') {
+                
                 // Xóa bản ghi instructor nếu user là instructor
                 $user->instructor()->delete();
             } 
-            // elseif ($user->role === 'student') {
-            //     // Xóa bản ghi student nếu user là student
-            //     $user->student()->delete();
-            // }
+            elseif ($user->role === 'student') {
+                // Xóa bản ghi student nếu user là student
+                $user->student()->delete();
+            }
 
             // Xóa bản ghi admin nếu user là admin (vì admins không có soft delete)
             // Admins::where('user_id', $user->id)->delete();

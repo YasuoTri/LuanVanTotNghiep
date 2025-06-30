@@ -50,7 +50,7 @@ class CourseController extends Controller
         ->map(function ($course) {
             return [
                 'id' => $course->id,
-                'name' => $course->course_name,
+                'course_name' => $course->course_name,
                 'difficulty_level' => $course->difficulty_level,
                 'course_rating' => $course->course_rating,
                 'course_url' => $course->course_url,

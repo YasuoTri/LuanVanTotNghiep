@@ -441,6 +441,19 @@ public function destroy($id): JsonResponse
         'certificate_url' => $certificate->download_url
     ]);
 }
+public function instructorIssue(Request $request)
+{
+    $request->validate([
+        'course_id' => 'required|exists:courses,id',
+        'user_id'   => 'required|exists:users,id',
+    ]);
+
+    $courseId = $request->input('course_id');
+    $userId   = $request->input('user_id');
+
+    // instructor vẫn gọi lại logic giống learner
+    return $this->issueCertificate($courseId, $userId);
+}
 
 
 }

@@ -347,6 +347,7 @@ class EnrollmentController extends Controller
     $enrollments->getCollection()->transform(function ($enrollment) use ($user) {
         $pendingReport = $enrollment->course->reports->firstWhere('status', 'pending');
         $enrollment->has_pending_report = $pendingReport ? true : false;
+        $enrollment->pending_report_id = $pendingReport ? $pendingReport->id : null;
         return $enrollment;
     });
 

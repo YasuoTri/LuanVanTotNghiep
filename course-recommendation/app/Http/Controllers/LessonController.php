@@ -12,6 +12,7 @@ use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\Enrollment;
 use App\Models\Instructors;
+use App\Models\LessonProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -488,8 +489,6 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 {
     try {
         $user = Auth::user();
-
-
         $lesson = Lesson::where('id', $lesson_id)
             ->where('course_id', $course_id)
             ->first();
@@ -611,7 +610,22 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             $data['status'] = 'pending';
         }
 
-        $lesson->create($data);
+        $newLesson = $lesson->create($data);
+         // thêm lesson_progress not_started cho tất cả user đã enroll
+        $enrolledUsers = Enrollment::where('course_id', $course_id)
+            ->pluck('user_id');
+
+        foreach ($enrolledUsers as $userId) {
+            LessonProgress::firstOrCreate(
+                [
+                    'user_id' => $userId,
+                    'lesson_id' => $newLesson->id,
+                ],
+                [
+                    'status' => 'not_started'
+                ]
+            );
+        }
         return response()->json([
             'message' => 'Lesson updated successfully' . (isset($data['status']) ? ', awaiting approval' : ''),
             'data' => $lesson

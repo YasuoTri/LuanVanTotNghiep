@@ -192,6 +192,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     // Route::put('/instructor/courses/{courseId}/submit-review-course', [CourseController::class, 'submitCourseForReviewInstructor']);
     Route::post('/instructor/quizzes/{quiz}/clone', [QuizController::class, 'clone']);
     Route::post('/instructor/certificates/issue', [CertificateController::class, 'issue']);
+    Route::post('/instructor/issue-certificate-manual', [CertificateController::class, 'instructorIssue']);
     Route::get('/instructor/quiz-statistics/{quiz}', [QuizController::class, 'showAnalyticOfQuiz']);
     Route::post('/instructor/certificate-rule', [InstructorCertificateRuleController::class, 'store']);
     Route::post('/instructor/course/{course}/clone', [CourseController::class, 'CourseClone']);

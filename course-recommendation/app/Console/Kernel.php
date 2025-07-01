@@ -10,6 +10,11 @@ class Kernel extends ConsoleKernel
     /**
      * Define the application's command schedule.
      */
+     protected $commands = [
+        Commands\TestPayPalPayout::class,
+        Commands\TestPayPalConnection::class,
+        Commands\RunRevenueDistribution::class,
+    ];
     protected function schedule(Schedule $schedule): void
     {
         // // Lên lịch cho CreateRevenueSessionJob vào ngày 1 hàng tháng
@@ -27,6 +32,12 @@ class Kernel extends ConsoleKernel
             $schedule->job(new \App\Jobs\DistributeRevenueJob)->lastDayOfMonth('23:59');
             
             $schedule->command('certificates:auto-issue')->dailyAt('01:00');
+
+                    // Chạy revenue distribution vào ngày 1 hàng tháng lúc 2:00 AM
+            $schedule->job(new \App\Jobs\DistributeRevenueJob)
+                 ->monthlyOn(1, '02:00')
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     /**

@@ -1298,11 +1298,23 @@ public function submitQuiz(Request $request, $quizId)
 
     $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
     $isPassed = $score >= $passThreshold;
+    // Đếm số lần đã làm quiz này của user
+    $previousAttempts = QuizResult::where('user_id', $user->id)
+        ->where('quiz_id', $quiz->id)
+        ->count();
 
+    $attemptNumber = $previousAttempts + 1;
+    
+    // (Optionally: kiểm tra vượt quá max_attempts)
+    if ($quiz->max_attempts && $attemptNumber > $quiz->max_attempts) {
+        return response()->json([
+            'message' => "Bạn đã vượt quá số lần làm lại cho phép ({$quiz->max_attempts})"
+        ], 400);
+    }
     $quizResult = QuizResult::create([
         'user_id' => $user->id,
         'quiz_id' => $quiz->id,
-        'attempt_number' => 1,
+        'attempt_number' => $attemptNumber,
         'score' => $score,
         'started_at' => now(),
         'completed_at' => now(),
@@ -1322,7 +1334,7 @@ public function submitQuiz(Request $request, $quizId)
                 'percentage' => $score,
                 'is_passed' => $isPassed,
                 'pass_threshold' => $passThreshold,
-                'attempt_number' => 1,
+                'attempt_number' => $attemptNumber,
                 'time_taken' => $timeTaken,
                 'completed_at' => now()->toISOString(),
             ],

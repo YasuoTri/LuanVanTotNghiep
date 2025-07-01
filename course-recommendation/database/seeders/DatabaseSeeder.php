@@ -188,7 +188,8 @@ class DatabaseSeeder extends Seeder
 
         for ($i = 0; $i < 100; $i++) {
             $instructor = $instructors->random();
-
+            $base = rand(1, 10) * 10; // 10,20,30..100
+            $decimal = rand(0,1) ? 0.49 : 0.99;
             Course::create([
                 'instructor_id' => $instructor->id,
                 'course_name' => 'Course_' . ($i + 1),
@@ -197,7 +198,7 @@ class DatabaseSeeder extends Seeder
                 'course_url' => 'course_' . ($i + 1),
                 'image' => 'images/course_' . ($i + 1) . '.jpg',
                 'course_description' => 'Description for course ' . ($i + 1),
-                'price' => rand(0, 1000000),
+                'price' => $base + $decimal,
                 'skills' => 'Skill ' . ($i + 1),
                 'status' => $statuses[array_rand($statuses)],
                 'is_certificate_enabled' => rand(0, 1),

@@ -60,7 +60,6 @@ Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategor
 Route::get('/subcategories', [CategoryController::class, 'getSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
-Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
 
 Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
 Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
@@ -68,6 +67,7 @@ Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile
 Route::get('/recommend/export-send', [ExportRecommendController::class, 'exportAndSend']);
 // Student Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {
+    Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong
     Route::get('/enrollments/student', [EnrollmentController::class, 'getStudentEnrollments']);//xong

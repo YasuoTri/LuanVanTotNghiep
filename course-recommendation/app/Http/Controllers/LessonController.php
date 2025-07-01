@@ -893,7 +893,7 @@ public function getCourseLessons($id): JsonResponse
             ->paginate($perPage);
 
         // Thống kê theo status (toàn bộ lesson, không paginate)
-        $allLessons = Lesson::where('course_id', $courseId)->get();
+        $allLessons = Lesson::where('course_id', $courseId)->paginate(10);
         return response()->json($allLessons);
         // $lessonsByStatus = $allLessons->groupBy('status');
 

@@ -26,6 +26,7 @@ use App\Http\Controllers\LessonProgressController;
 use App\Http\Controllers\QuestionChoiceController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RevenueDistributePaypal;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StudentController;
@@ -343,6 +344,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::get('/admin/instructor-requests/search', [InstructorRequestController::class, 'searchRequests'])
     ->name('api.instructor-requests.search');
     Route::post('/admin/revenue-sessions/{id}/distribute', [RevenueSessionController::class, 'distributeRevenue']);
+    Route::post('/admin/revenue-sessions/paypal/{id}/distribute', [RevenueDistributePaypal::class, 'distributeRevenue']);
     Route::post('/admin/revenue-sessions', [RevenueSessionController::class, 'createMonthlySession']);
 
     Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);

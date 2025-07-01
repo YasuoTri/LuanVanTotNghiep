@@ -84,9 +84,9 @@ class RevenueDistributePaypal extends Controller
                 ->selectRaw('course_id, SUM(amount) as total_amount')
                 ->get();
 
-            $distributionResults = [];
-            $successCount = 0;
-            $failCount = 0;
+                $distributionResults = [];
+                $successCount = 0;
+                $failCount = 0;
 
             foreach ($instructorsRevenue as $revenue) {
                 $course = Course::with('instructors.user')->find($revenue->course_id);
@@ -129,7 +129,7 @@ class RevenueDistributePaypal extends Controller
                         'course_title' => $course->title,
                         'amount_vnd' => $instructorAmount,
                         'amount_usd' => round($instructorAmount / 24000, 2),
-                        'paypal_email' => $instructor->paypal_email ?? $instructor->user->paypal_email ?? $instructor->user->email,
+                        'paypal_email' => "sb-iqclf44276453@personal.example.com",
                         'success' => $payoutResult['success'],
                         'message' => $payoutResult['message'],
                         'batch_id' => $payoutResult['batch_id'] ?? null

@@ -523,7 +523,12 @@ class EnrollmentController extends Controller
         if (!$course) {
             return response()->json(['message' => 'Course not found'], 404);
         }
-
+         // Kiểm tra nếu user là instructor của course này thì không cho đăng ký
+        if ($course->instructor_id == $user->instructor->id ?? null) {
+            return response()->json([
+                'message' => 'Instructors cannot enroll in their own courses.'
+            ], 403);
+        }
         // Check if the course is free (price == 0)
         if ($course->price > 0) {
             return response()->json(['message' => 'This course requires payment. Please use the payment process.'], 400);
@@ -562,11 +567,18 @@ class EnrollmentController extends Controller
         // if ($user->role !== 'student') {
         //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
         // }
-
+            
         // Check if course exists and is paid
         $course = Course::find($course_id);
         if (!$course) {
             return response()->json(['message' => 'Course not found'], 404);
+        }
+
+        // Kiểm tra nếu user là instructor của course này thì không cho đăng ký
+        if ($course->instructor_id == $user->instructor->id ?? null) {
+            return response()->json([
+                'message' => 'Instructors cannot enroll in their own courses.'
+            ], 403);
         }
 
         if ($course->price <= 0) {

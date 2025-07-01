@@ -67,8 +67,8 @@ class DatabaseSeeder extends Seeder
         $this->seedQuizzes();
         $this->seedQuestions();
         $this->seedQuestionChoices();
-        $this->seedQuizResults();
-        $this->seedUserAnswers();
+        // $this->seedQuizResults();
+        // $this->seedUserAnswers();
         $this->seedReviews();
         $this->seedForumPosts();
         $this->seedReports();

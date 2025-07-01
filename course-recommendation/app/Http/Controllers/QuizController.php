@@ -965,7 +965,6 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         // Kiểm tra đăng ký khóa học
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $quiz->lesson->course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {

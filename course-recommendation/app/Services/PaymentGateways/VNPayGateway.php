@@ -56,7 +56,7 @@ class VNPayGateway implements PaymentGateway
     $vnp_TxnRef = date("YmdHis"); //Mã đơn hàng. Trong thực tế Merchant cần insert đơn hàng vào DB và gửi mã này sang VNPAY
     $vnp_OrderInfo = "thanhtoantest";
     $vnp_OrderType ="BarBerShop";
-    $vnp_Amount = $data['amount'] * 100;
+    $vnp_Amount = $data['final_amount'] * 100;
     $vnp_Locale = 'VN';
   
     $vnp_IpAddr = $_SERVER['REMOTE_ADDR'];

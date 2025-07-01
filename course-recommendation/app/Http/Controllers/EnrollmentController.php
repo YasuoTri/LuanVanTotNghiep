@@ -520,7 +520,7 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'Course not found'], 404);
         }
          // Kiểm tra nếu user là instructor của course này thì không cho đăng ký
-        if ($course->instructor_id == $user->instructor->id ?? null) {
+     if ($user->instructor && $course->instructor_id == $user->instructor->id) {
             return response()->json([
                 'message' => 'Instructors cannot enroll in their own courses.'
             ], 403);
@@ -571,7 +571,7 @@ class EnrollmentController extends Controller
         }
 
         // Kiểm tra nếu user là instructor của course này thì không cho đăng ký
-        if ($course->instructor_id == $user->instructor->id ?? null) {
+       if ($user->instructor && $course->instructor_id == $user->instructor->id) {
             return response()->json([
                 'message' => 'Instructors cannot enroll in their own courses.'
             ], 403);
@@ -584,7 +584,6 @@ class EnrollmentController extends Controller
         // Check if already enrolled
         $existingEnrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course_id)
-            ->where('status', 'active')
             ->first();
 
         if ($existingEnrollment) {

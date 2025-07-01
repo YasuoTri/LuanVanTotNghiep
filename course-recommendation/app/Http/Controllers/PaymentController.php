@@ -165,11 +165,6 @@ class PaymentController extends Controller
   public function store(array $paymentData, int $userId, int $courseId): JsonResponse
 {
     $user = Auth::user();
-
-    if ($user->role !== 'student' || $user->id !== $userId) {
-        return response()->json(['message' => 'Unauthorized: Only students can make payments'], 403);
-    }
-
     // Validate payment data
     $requiredFields = ['amount', 'method'];
     foreach ($requiredFields as $field) {
@@ -181,7 +176,18 @@ class PaymentController extends Controller
     // Apply coupon if provided
     $finalAmount = $paymentData['amount'];
     $coupon = null;
-    if (!empty($paymentData['coupon_id'])) {
+    if (!empty($paymentData['code'])) {
+    $coupon = Coupon::where('code', $paymentData['code'])
+        ->where('is_active', true)
+        ->where('start_date', '<=', now())
+        ->where('end_date', '>=', now())
+        ->whereColumn('used_count', '<', 'usage_limit')
+        ->first();
+
+    if (!$coupon) {
+        return response()->json(['message' => 'Invalid or expired coupon'], 400);
+    }
+    $paymentData['coupon_id'] = $coupon->id;
         $coupon = Coupon::where('id', $paymentData['coupon_id'])
             ->where('is_active', true)
             ->where('start_date', '<=', now())

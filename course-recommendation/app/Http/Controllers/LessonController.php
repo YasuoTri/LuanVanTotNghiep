@@ -649,13 +649,13 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
     {
         try {
             $user = Auth::user();
-          $course = Course::where('id', $course_id)
-    ->where('instructor_id', $user->instructor->id) // hoặc 'instructor_id' nếu tên cột khác
-    ->first();
+            $course = Course::where('id', $course_id)
+            ->where('instructor_id', $user->instructor->id) // hoặc 'instructor_id' nếu tên cột khác
+            ->first();
 
-if (!$course) {
-    return response()->json(['message' => 'You are not an instructor for this course'], 403);
-}
+            if (!$course) {
+                return response()->json(['message' => 'You are not an instructor for this course'], 403);
+            }
 
             $lesson = Lesson::where('id', $lesson_id)
                 ->where('course_id', $course_id)
@@ -663,6 +663,11 @@ if (!$course) {
 
             if (!$lesson) {
                 return response()->json(['message' => 'Lesson not found'], 404);
+            }
+            // Kiểm tra có học viên nào đã enroll chưa
+            $hasEnrollment = Enrollment::where('course_id', $course_id)->exists();
+            if ($hasEnrollment) {
+                return response()->json(['message' => 'Cannot delete lesson. There are students enrolled in this course.'], 403);
             }
 
             // Xóa video trên Cloudinary nếu có

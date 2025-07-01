@@ -95,51 +95,45 @@ class RevenueDistributePaypal extends Controller
                     Log::warning("⚠️ Course not found: {$revenue->course_id}");
                     continue;
                 }
-
-                $instructors = $course->instructors;
+                 Log::warning("⚠️ course: {$course}");
+                $instructor = $course->instructors;
                 
-                if ($instructors) {
+                if (!$instructor) {
                     Log::warning("⚠️ No instructors found for course: {$course->title}");
                     continue;
                 }
 
-                Log::info("👨‍🏫 Processing course '{$course->title}' with " . $instructors->count() . " instructors");
+                // Tính tiền cho instructor
+                $instructorAmount = ($revenue->total_amount * 0.7); // Chỉ có 1 instructor
 
-                foreach ($instructors as $instructor) {
-                    // Chia đều cho các instructor của khóa học
-                    $instructorAmount = ($revenue->total_amount * 0.7) / $instructors->count();
+                $revenueDistribution = RevenueDistribution::create([
+                    'revenue_session_id' => $session->id,
+                    'instructor_id' => $instructor->id,
+                    'course_id' => $revenue->course_id,
+                    'revenue_amount' => $revenue->total_amount,
+                    'instructor_share' => $instructorAmount,
+                    'status' => 'pending',
+                    'distributed_at' => now(),
+                ]);
 
-                    // Tạo bản ghi phân chia
-                    $revenueDistribution = RevenueDistribution::create([
-                        'revenue_session_id' => $session->id,
-                        'instructor_id' => $instructor->id,
-                        'course_id' => $revenue->course_id,
-                        'revenue_amount' => $revenue->total_amount,
-                        'instructor_share' => $instructorAmount,
-                        'status' => 'pending',
-                        'distributed_at' => now(),
-                    ]);
+                $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $instructorAmount, $revenueDistribution);
 
-                    // Gửi tiền qua PayPal
-                    $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $instructorAmount, $revenueDistribution);
-                    
-                    $distributionResults[] = [
-                        'instructor_id' => $instructor->id,
-                        'instructor_name' => $instructor->name,
-                        'course_title' => $course->title,
-                        'amount_vnd' => $instructorAmount,
-                        'amount_usd' => round($instructorAmount / 24000, 2),
-                        'paypal_email' => "sb-iqclf44276453@personal.example.com",
-                        'success' => $payoutResult['success'],
-                        'message' => $payoutResult['message'],
-                        'batch_id' => $payoutResult['batch_id'] ?? null
-                    ];
+                $distributionResults[] = [
+                    'instructor_id' => $instructor->id,
+                    'instructor_name' => $instructor->name,
+                    'course_title' => $course->title,
+                    'amount_vnd' => $instructorAmount,
+                    'amount_usd' => $instructorAmount ,
+                    'paypal_email' => $instructor->user->email ?? null,
+                    'success' => $payoutResult['success'],
+                    'message' => $payoutResult['message'],
+                    'batch_id' => $payoutResult['batch_id'] ?? null
+                ];
 
-                    if ($payoutResult['success']) {
-                        $successCount++;
-                    } else {
-                        $failCount++;
-                    }
+                if ($payoutResult['success']) {
+                    $successCount++;
+                } else {
+                    $failCount++;
                 }
             }
 
@@ -171,8 +165,7 @@ class RevenueDistributePaypal extends Controller
                     ],
                     'distribution_details' => $distributionResults,
                     'admin_payout' => [
-                        'amount_vnd' => $adminShare,
-                        'amount_usd' => round($adminShare / 24000, 2),
+                        'amount_usd' =>$adminShare +'USD',
                         'success' => $adminPayoutResult['success'],
                         'message' => $adminPayoutResult['message']
                     ]
@@ -221,7 +214,7 @@ class RevenueDistributePaypal extends Controller
 
             // Chuyển đổi VND sang USD
             $exchangeRate = 24000; // 1 USD = 24,000 VND
-            $amountUSD = round($amount / $exchangeRate, 2);
+            $amountUSD = $amount;
             
             // Kiểm tra số tiền tối thiểu PayPal
             if ($amountUSD < 1.00) {
@@ -297,7 +290,7 @@ class RevenueDistributePaypal extends Controller
             }
 
             $exchangeRate = 24000;
-            $amountUSD = round($adminShare / $exchangeRate, 2);
+            $amountUSD =$adminShare;
             
             if ($amountUSD < 1.00) {
                 Log::warning("⚠️ Admin amount too small: \${$amountUSD}");
@@ -306,8 +299,6 @@ class RevenueDistributePaypal extends Controller
                     'message' => "Admin amount too small: \${$amountUSD}"
                 ];
             }
-
-            Log::info("💸 Sending admin PayPal payout: {$adminShare} VND = \${$amountUSD} USD");
             
             $response = $this->paypalService->sendPayout(
                 $adminEmail,

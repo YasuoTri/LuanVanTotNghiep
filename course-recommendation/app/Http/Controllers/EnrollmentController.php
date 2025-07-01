@@ -328,10 +328,6 @@ class EnrollmentController extends Controller
 {
     $user = Auth::user();
 
-    if ($user->role !== 'student') {
-        return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-    }
-
     $enrollments = Enrollment::where('user_id', $user->id)
         ->whereHas('course', function ($query) {
             $query->whereIn('status', ['approved', 'available', 'unavailable']);

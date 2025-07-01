@@ -21,5 +21,6 @@ class Instructors extends Model
    public function courses(){
     return $this->hasMany(Course::class, 'instructor_id');
    }
+   
 
 }

@@ -939,46 +939,43 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     /**
      * Lấy câu hỏi cho sinh viên, hỗ trợ random và giới hạn số lượng.
      */
-    public function getQuestionsForStudent($quiz_id): JsonResponse
-    {
-        $user = Auth::user();
-        $randomize = request()->query('randomize', false);
-        $limit = request()->query('limit', null);
-        $page = request()->query('page', 1);
+  public function getQuestionsForStudent($quiz_id): JsonResponse
+{
+    $user = Auth::user();
+    $limit = request()->query('limit', null);
+    $page = request()->query('page', 1);
 
-        $quiz = Quiz::with(['questions' => function ($query) use ($randomize, $limit, $page) {
-            if ($randomize) {
-                $query->inRandomOrder();
-            } 
-            if ($limit) {
-                $query->forPage($page, $limit);
-            }
-            $query->with('choices');
-        }])->find($quiz_id);
-
-        if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+    $quiz = Quiz::with(['questions' => function ($query) use ($limit, $page) {
+        if ($limit) {
+            $query->forPage($page, $limit);
         }
+        $query->with('choices');
+    }])->find($quiz_id);
 
-        // Kiểm tra đăng ký khóa học
-        $enrollment = Enrollment::where('user_id', $user->id)
-            ->where('course_id', $quiz->lesson->course_id)
-            ->first();
-
-        if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
-        }
-        $totalQuestions = $quiz->questions()->count();
-
-        return response()->json([
-            'data' => $quiz->questions,
-            'pagination' => $limit ? [
-                'page' => (int)$page,
-                'per_page' => (int)$limit,
-                'total' => $totalQuestions,
-            ] : null
-        ], 200);
+    if (!$quiz) {
+        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
     }
+
+    // Kiểm tra đăng ký khóa học
+    $enrollment = Enrollment::where('user_id', $user->id)
+        ->where('course_id', $quiz->lesson->course_id)
+        ->first();
+
+    if (!$enrollment) {
+        return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+    }
+
+    $totalQuestions = $quiz->questions()->count();
+
+    return response()->json([
+        'data' => $quiz->questions,
+        'pagination' => $limit ? [
+            'page' => (int)$page,
+            'per_page' => (int)$limit,
+            'total' => $totalQuestions,
+        ] : null
+    ], 200);
+}
 
     /**
      * Hiển thị chi tiết quiz cho sinh viên, bao gồm phản hồi.
@@ -1219,71 +1216,70 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
 //         ]
 //     ], 201);
 // }
+public function submitQuiz(Request $request, int $quizId): JsonResponse
+{
+    try {
+        $user = Auth::user();
+        $quiz = Quiz::with(['lesson', 'questions.choices'])->findOrFail($quizId);
 
- public function submitQuiz(Request $request, int $quizId): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $quiz = Quiz::with(['lesson', 'questions.choices'])->findOrFail($quizId);
-            $rawAnswers = $request->input('answers');
-            $answers = [];
-            if (is_array($rawAnswers)) {
-                foreach ($rawAnswers as $answer) {
-                    if (isset($answer['question_id'], $answer['choice_ids']) && is_array($answer['choice_ids'])) {
-                        $answers[$answer['question_id']] = $answer['choice_ids'];
-                    }
+        // Kiểm tra quyền truy cập quiz
+        $accessCheck = $this->validateQuizAccess($user, $quiz);
+        if ($accessCheck !== true) {
+            return $accessCheck;
+        }
+
+        // Tìm QuizResult chưa hoàn thành
+        $quizResult = QuizResult::where('user_id', $user->id)
+            ->where('quiz_id', $quizId)
+            ->whereNull('completed_at')
+            ->first();
+
+        if (!$quizResult) {
+            return response()->json([
+                'message' => 'Không tìm thấy phiên làm bài đang hoạt động. Vui lòng bắt đầu quiz trước.'
+            ], 400);
+        }
+
+        $questions = Question::where('quiz_id', $quiz->id)
+            ->with('choices')
+            ->get();
+
+        // Chuyển đổi dữ liệu answers
+        $rawAnswers = $request->input('answers');
+        $answers = [];
+        if (is_array($rawAnswers)) {
+            foreach ($rawAnswers as $answer) {
+                if (isset($answer['question_id'], $answer['choice_ids']) && is_array($answer['choice_ids'])) {
+                    $answers[$answer['question_id']] = $answer['choice_ids'];
                 }
             }
-            // Kiểm tra quyền truy cập quiz
-            $accessCheck = $this->validateQuizAccess($user, $quiz);
-            if ($accessCheck !== true) {
-                return $accessCheck;
-            }
-
-            // Tìm QuizResult chưa hoàn thành
-            $quizResult = QuizResult::where('user_id', $user->id)
-                ->where('quiz_id', $quizId)
-                ->whereNull('completed_at')
-                ->first();
-
-            if (!$quizResult) {
-                return response()->json([
-                    'message' => 'Không tìm thấy phiên làm bài đang hoạt động. Vui lòng bắt đầu quiz trước.'
-                ], 400);
-            }
-
-            $questions = Question::where('quiz_id', $quiz->id)
-                ->with('choices')
-                ->get();
-
-            $answers = $request->input('answers'); // dạng [question_id => [choice_id1, choice_id2]]
-
-            // Kiểm tra dữ liệu đầu vào answers
-            $answersValidation = $this->validateQuizAnswers($answers, $questions);
-            if ($answersValidation !== true) {
-                return $answersValidation;
-            }
-
-            // Xử lý nộp bài
-            return $this->processQuizSubmission($user, $quiz, $quizResult, $questions, $answers);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'message' => 'Quiz không tìm thấy'
-            ], 404);
-        } catch (\Exception $e) {
-            Log::error('Submit quiz error:', [
-                'quiz_id' => $quizId,
-                'user_id' => $user->id,
-                'message' => $e->getMessage()
-            ]);
-            return response()->json([
-                'message' => 'Lỗi khi nộp bài quiz',
-                'error' => $e->getMessage()
-            ], 500);
         }
-    }
 
+        // Kiểm tra dữ liệu đầu vào answers
+        $answersValidation = $this->validateQuizAnswers($answers, $questions);
+        if ($answersValidation !== true) {
+            return $answersValidation;
+        }
+
+        // Xử lý nộp bài
+        return $this->processQuizSubmission($user, $quiz, $quizResult, $questions, $answers);
+
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json([
+            'message' => 'Quiz không tìm thấy'
+        ], 404);
+    } catch (\Exception $e) {
+        Log::error('Submit quiz error:', [
+            'quiz_id' => $quizId,
+            'user_id' => $user->id,
+            'message' => $e->getMessage()
+        ]);
+        return response()->json([
+            'message' => 'Lỗi khi nộp bài quiz',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Validate quiz access (visibility and enrollment)
      *

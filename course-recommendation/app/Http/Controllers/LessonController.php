@@ -929,10 +929,11 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
         }
 
         // Lấy danh sách bài học và nhóm theo origin_id để sắp xếp
-        $lessons = $query->get()->sortBy([
-            ['sort_order', 'asc'], // Sắp xếp theo sort_order tăng dần
-            ['version', 'desc']    // Trong cùng sort_order, sắp xếp theo version giảm dần
-        ])->values();
+      $query->orderBy('sort_order', 'asc')
+              ->orderBy('version', 'desc');
+
+        // Áp dụng phân trang
+        $lessons = $query->paginate(10);
 
         return response()->json($lessons);
     } catch (\Exception $e) {

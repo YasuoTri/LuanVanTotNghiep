@@ -209,10 +209,46 @@ class PayPalService
         }
     }
 
- /**
-     * Tạo PayPal payment để nhận tiền vào business account
-     */
-    public function createPayment(array $data)
+    /**
+ * Execute payment sau khi user approve - CÁCH 2
+ */
+public function executePayment($orderId, $payerId = null)
+{
+    try {
+        $accessToken = $this->getAccessToken();
+        
+        Log::info('💰 Executing PayPal Payment', ['order_id' => $orderId]);
+
+        // Thử không gửi body gì cả
+        $response = Http::withToken($accessToken)
+            ->withHeaders(['Content-Type' => 'application/json', 'PayPal-Request-Id' => $orderId])
+            ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture');
+
+        if ($response->successful()) {
+            $result = $response->json();
+            
+            Log::info('✅ PayPal Payment Executed Successfully', [
+                'order_id' => $orderId,
+                'status' => $result['status']
+            ]);
+
+            return $result;
+        } else {
+            $errorBody = $response->body();
+            Log::error('❌ PayPal Execute API Error', [
+                'status' => $response->status(),
+                'body' => $errorBody,
+                'order_id' => $orderId
+            ]);
+            throw new \Exception('PayPal Execute Error: ' . $errorBody);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('❌ PayPal Execute Payment Error: ' . $e->getMessage());
+        throw $e;
+    }
+}
+  public function createPayment(array $data)
     {
         try {
             $accessToken = $this->getAccessToken();
@@ -275,39 +311,6 @@ class PayPalService
 
         } catch (\Exception $e) {
             Log::error('❌ PayPal Create Payment Error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Execute payment sau khi user approve
-     */
-    public function executePayment($orderId, $payerId = null)
-    {
-        try {
-            $accessToken = $this->getAccessToken();
-            
-            Log::info('💰 Executing PayPal Payment', ['order_id' => $orderId]);
-
-            $response = Http::withToken($accessToken)
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture');
-
-            if ($response->successful()) {
-                $result = $response->json();
-                
-                Log::info('✅ PayPal Payment Executed Successfully', [
-                    'order_id' => $orderId,
-                    'status' => $result['status']
-                ]);
-
-                return $result;
-            } else {
-                throw new \Exception('PayPal Execute Error: ' . $response->body());
-            }
-
-        } catch (\Exception $e) {
-            Log::error('❌ PayPal Execute Payment Error: ' . $e->getMessage());
             throw $e;
         }
     }

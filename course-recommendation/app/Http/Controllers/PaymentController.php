@@ -657,19 +657,21 @@ public function handlePayPalSuccess(Request $request)
     try {
         $token = $request->get('token'); // PayPal order ID
         $payerId = $request->get('PayerID');
-
+        Log::info('PayPal Success Callback', [
+            'token' => $token,
+            'payerId' => $payerId,
+            'all_params' => $request->all()
+        ]);
         if (!$token || !$payerId) {
             Log::error('PayPal Success: Missing parameters', $request->all());
             return redirect()->away('http://localhost:4200/payment/failed');
         }
 
         // Tìm payment record
-        $payment = Payment::where('transaction_code', 'like', '%' . $token . '%')
-            ->orWhere('transaction_code', $token)
-            ->first();
+        $payment = Payment::where('transaction_code', $token)->first();
 
         if (!$payment) {
-            Log::error('PayPal Success: Payment not found', ['token' => $token]);
+            Log::error('PayPal Success: Payment not found', ['token' => $token, 'searching_for' => $token]);
             return redirect()->away('http://localhost:4200/payment/failed');
         }
 
@@ -725,7 +727,8 @@ public function handlePayPalSuccess(Request $request)
                 'payment_id' => $payment->id,
                 'user_id' => $payment->user_id,
                 'course_id' => $payment->course_id,
-                'amount' => $payment->amount
+                'amount' => $payment->amount,
+                'transaction_code' => $payment->transaction_code
             ]);
 
             return redirect()->away('http://localhost:4200/payment/success?payment_id=' . $payment->id);

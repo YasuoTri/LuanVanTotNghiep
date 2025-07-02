@@ -16,13 +16,10 @@ class PayPalGateway implements PaymentGateway
     public function createOrder(array $data): array
     {
         try {
-            // Tạo unique transaction code
             $transactionCode = 'PAYPAL_' . uniqid() . '_' . time();
             
-            // Convert VND to USD (giả sử tỷ giá 1 USD = 24000 VND)
             $amountUSD = number_format($data['final_amount'] / 24000, 2, '.', '');
             
-            // Sử dụng PayPalService để tạo order
             $result = $this->paypalService->createPayment([
                 'amount' => $amountUSD,
                 'currency' => 'USD',
@@ -33,11 +30,11 @@ class PayPalGateway implements PaymentGateway
                     'user_id' => $data['user_id'],
                     'course_id' => $data['course_id'],
                     'coupon_id' => $data['coupon_id'] ?? null,
-                    'transaction_code' => $transactionCode
                 ])
             ]);
 
             if ($result && isset($result['approval_url'])) {
+                $transactionCode = $result['payment_id'];
                 Log::info('✅ PayPal Order Created Successfully', [
                     'transaction_code' => $transactionCode,
                     'amount_usd' => $amountUSD,
@@ -48,7 +45,7 @@ class PayPalGateway implements PaymentGateway
                     'success' => true,
                     'transaction_code' => $transactionCode,
                     'data' => [
-                        'order_id' => $result['payment_id'] ?? $transactionCode,
+                        'order_id' => $result['payment_id'],
                         'approval_url' => $result['approval_url'],
                         'amount_usd' => $amountUSD
                     ],
@@ -74,28 +71,44 @@ class PayPalGateway implements PaymentGateway
         }
     }
 
-    /**
-     * Execute PayPal payment sau khi user approve
-     */
     public function executePayment($paymentId, $payerId): array
     {
         try {
             $result = $this->paypalService->executePayment($paymentId, $payerId);
             
-            if ($result) {
+            if ($result['status'] === 'COMPLETED') {
+                Log::info('✅ PayPal Payment Execution Successful', [
+                    'order_id' => $paymentId,
+                    'capture_id' => $result['capture_id'],
+                    'amount' => $result['amount'],
+                    'currency' => $result['currency']
+                ]);
+
                 return [
                     'success' => true,
-                    'data' => $result,
+                    'data' => [
+                        'order_id' => $paymentId,
+                        'capture_id' => $result['capture_id'],
+                        'amount' => $result['amount'],
+                        'currency' => $result['currency']
+                    ],
                     'message' => 'Payment executed successfully'
                 ];
             } else {
+                Log::error('❌ PayPal Payment Execution Failed', [
+                    'order_id' => $paymentId,
+                    'status' => $result['status']
+                ]);
                 return [
                     'success' => false,
-                    'message' => 'Payment execution failed'
+                    'message' => 'Payment execution failed: ' . ($result['status'] ?? 'Unknown status')
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('❌ PayPal Execute Error', ['error' => $e->getMessage()]);
+            Log::error('❌ PayPal Execute Error', [
+                'error' => $e->getMessage(),
+                'order_id' => $paymentId
+            ]);
             return [
                 'success' => false,
                 'message' => 'Payment execution error: ' . $e->getMessage()

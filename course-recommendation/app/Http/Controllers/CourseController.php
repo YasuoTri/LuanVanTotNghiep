@@ -556,7 +556,10 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             if ($course->instructor_id !== $instructor->id) {
                 return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
             }
-
+            $hasEnrollment = Enrollment::where('course_id', $id)->exists();
+            if ($hasEnrollment) {
+                return response()->json(['message' => 'Cannot update lesson. There are students enrolled in this course.'], 403);
+            }
             $validated = $request->validated();
             if(isset($validated['course_name'])){
                 $validated['course_url'] = Str::slug($validated['course_name']);

@@ -512,15 +512,6 @@ class LessonController extends Controller
 
             // Kiểm tra phiên bản bài học
             $originId = $lesson->origin_id ?? $lesson->id;
-            $hasPending = Lesson::where('origin_id', $originId)
-                ->where('is_visible', false)
-                ->exists();
-
-            if ($hasPending) {
-                return response()->json([
-                    'message' => 'This lesson has already been edited and is pending approval.'
-                ], 409);
-            }
 
             $latestLesson = Lesson::where('origin_id', $originId)
                 ->orWhere('id', $originId)
@@ -661,9 +652,9 @@ class LessonController extends Controller
             }
 
             // Kiểm tra có học viên nào đã enroll chưa
-            $hasEnrollment = Enrollment::where('course_id', $course_id)->exists();
+            $hasEnrollment = LessonProgress::where('lesson_id', $lesson_id)->exists();
             if ($hasEnrollment) {
-                return response()->json(['message' => 'Cannot delete lesson. There are students enrolled in this course.'], 403);
+                return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
             }
 
             // Xóa video trên Cloudinary nếu có
@@ -986,7 +977,6 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
         }
 
         $lessons = Lesson::where('course_id', $courseId)
-            ->where('is_visible', false)
             ->orderBy('created_at', 'desc')
             ->get();
 

@@ -200,6 +200,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/reports/{report}/confirm-fix', [ReportController::class, 'confirmFix']);
     Route::put('/instructor/courses/{course_id}/status/pending', [CourseController::class, 'InstructorUpdateStatusToPending']);
     Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
+    Route::get('/instructor/courses/{courseId}/progress', [CertificateController::class, 'getCourseProgress']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {

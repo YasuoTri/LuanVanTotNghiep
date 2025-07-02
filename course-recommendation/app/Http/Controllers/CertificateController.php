@@ -21,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use App\Services\CloudinaryService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CertificateController extends Controller
 {
@@ -455,5 +456,116 @@ public function instructorIssue(Request $request)
     return $this->issueCertificate($courseId, $userId);
 }
 
+ public function getCourseProgress(Request $request, int $courseId): JsonResponse
+    {
+        try {
+            // Kiểm tra xem khóa học có tồn tại không
+            $course = Course::findOrFail($courseId);
 
+            // Lấy danh sách các user đã đăng ký khóa học
+            $enrollments = Enrollment::where('course_id', $courseId)
+                ->with(['user'])
+                ->get();
+
+            if ($enrollments->isEmpty()) {
+                return response()->json([
+                    'message' => 'Không có người dùng nào đăng ký khóa học này',
+                    'data' => []
+                ], 200);
+            }
+
+            // Lấy danh sách lesson của khóa học
+            $totalLessons = Lesson::where('course_id', $courseId)->count();
+
+            // Lấy danh sách quiz của khóa học
+            $quizzes = Quiz::whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
+                ->get()
+                ->keyBy('id');
+
+            // Lấy quy tắc cấp chứng chỉ
+            $certificateRule = CertificateRule::where('course_id', $courseId)->first();
+
+            $results = [];
+            foreach ($enrollments as $enrollment) {
+                $user = $enrollment->user;
+
+                // Tính phần trăm hoàn thành lesson
+                $completedLessons = LessonProgress::where('user_id', $user->id)
+                    ->whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
+                    ->where('status', 'completed')
+                    ->count();
+
+                $lessonCompletionPercent = $totalLessons > 0
+                    ? round(($completedLessons / $totalLessons) * 100, 2)
+                    : 0;
+
+                // Lấy kết quả quiz
+                $quizResults = QuizResult::where('user_id', $user->id)
+                    ->whereIn('quiz_id', $quizzes->pluck('id'))
+                    ->get()
+                    ->map(function ($quizResult) use ($quizzes, $certificateRule) {
+                        $quiz = $quizzes[$quizResult->quiz_id];
+                        $isPassed = $certificateRule
+                            ? $quizResult->score >= $certificateRule->quiz_min_score
+                            : false;
+
+                        return [
+                            'quiz_id' => $quizResult->quiz_id,
+                            'quiz_title' => $quiz->title,
+                            'score' => $quizResult->score,
+                            'is_passed' => $isPassed,
+                            'completed_at' => $quizResult->completed_at
+                                ? $quizResult->completed_at->toISOString()
+                                : null,
+                        ];
+                    });
+
+                // Kiểm tra điều kiện cấp chứng chỉ
+                $isEligibleForCertificate = false;
+                if ($certificateRule) {
+                    $allQuizzesPassed = $quizzes->isEmpty() || $quizResults->every(function ($result) {
+                        return $result['is_passed'];
+                    });
+
+                    $meetsLessonRequirement = $lessonCompletionPercent >= $certificateRule->lesson_completion_percent;
+
+                    $isEligibleForCertificate = $meetsLessonRequirement && $allQuizzesPassed;
+                }
+
+                $results[] = [
+                    'user_id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'lesson_completion_percent' => $lessonCompletionPercent,
+                    'total_lessons' => $totalLessons,
+                    'completed_lessons' => $completedLessons,
+                    'quizzes' => $quizResults->toArray(),
+                    'is_eligible_for_certificate' => $isEligibleForCertificate,
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Lấy thông tin tiến độ khóa học thành công',
+                'data' => [
+                    'course_id' => $course->id,
+                    'course_name' => $course->course_name,
+                    'users' => $results,
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Khóa học không tìm thấy'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Get course progress error:', [
+                'course_id' => $courseId,
+                'message' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'Lỗi khi lấy thông tin tiến độ khóa học',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

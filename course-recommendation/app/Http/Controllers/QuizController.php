@@ -1387,18 +1387,13 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
             // Tính điểm
             $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
             $isPassed = $score >= $passThreshold;
-
-            // Tính thời gian làm bài (phút)
-            $timeTaken = $quizResult->started_at
-                ? round(now()->diffInSeconds($quizResult->started_at) / 60, 2)
-                : 0;
-
             // Cập nhật QuizResult
             $quizResult->update([
                 'score' => $score,
                 'completed_at' => now(),
             ]);
-
+            // Tính thời gian làm bài (phút)
+            $timeTaken =round(($quizResult->started_at - $quizResult->completed_at) / 60);
             DB::commit();
 
             return response()->json([

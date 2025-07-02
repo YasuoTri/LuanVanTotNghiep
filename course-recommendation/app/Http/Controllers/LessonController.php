@@ -512,7 +512,6 @@ class LessonController extends Controller
 
             // Kiểm tra phiên bản bài học
             $originId = $lesson->origin_id ?? $lesson->id;
-
             $latestLesson = Lesson::where('origin_id', $originId)
                 ->orWhere('id', $originId)
                 ->orderByDesc('version')
@@ -524,10 +523,11 @@ class LessonController extends Controller
                 ], 400);
             }
 
+            // Kiểm tra xem có learner nào đã học lesson này chưa
+            $hasProgress = LessonProgress::where('lesson_id', $lesson_id)->exists();
+
             $data = $request->validated();
             $data['course_id'] = $course_id;
-            $data['version'] = $lesson->version + 1;
-            $data['origin_id'] = $lesson->origin_id ?? $lesson->id;
 
             // Xử lý chunked upload nếu có video mới
             if ($request->hasFile('video')) {
@@ -579,7 +579,7 @@ class LessonController extends Controller
                     $disk->delete($path);
 
                     // Đặt is_visible = false khi có video mới
-                    $data['is_visible'] = false;
+                    // $data['is_visible'] = false;
                 } else {
                     // Trả về tiến trình upload chunk
                     $handler = $save->handler();
@@ -591,38 +591,59 @@ class LessonController extends Controller
             }
 
             // Đặt is_visible = false nếu có thay đổi metadata quan trọng
-            if (isset($data['title']) || isset($data['duration']) || isset($data['is_preview']) || isset($data['sort_order'])) {
-                $data['is_visible'] = false;
+            // if (isset($data['title']) || isset($data['duration']) || isset($data['is_preview']) || isset($data['sort_order'])) {
+            //     $data['is_visible'] = false;
+            // }
+
+            if ($hasProgress) {
+                // Nếu đã có learner học, tạo lesson mới với version mới
+                $data['version'] = $lesson->version + 1;
+                $data['origin_id'] = $lesson->origin_id ?? $lesson->id;
+
+                $newLesson = Lesson::create($data);
+
+                // Thêm lesson_progress not_started cho tất cả user đã enroll
+                $enrolledUsers = Enrollment::where('course_id', $course_id)
+                    ->pluck('user_id');
+                
+                $newLesson->is_visible=true;
+                $lesson->is_visible=false;
+                foreach ($enrolledUsers as $userId) {
+                    LessonProgress::firstOrCreate(
+                        [
+                            'user_id' => $userId,
+                            'lesson_id' => $newLesson->id,
+                        ],
+                        [
+                            'status' => 'not_started'
+                        ]
+                    );
+                }
+
+                return response()->json([
+                    'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
+                    'data' => $newLesson
+                ]);
+            } else {
+                // Nếu chưa có learner học, cập nhật trực tiếp lesson hiện tại
+                $lesson->update($data);
+
+                return response()->json([
+                    'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
+                    'data' => $lesson
+                ]);
             }
-
-            $newLesson = Lesson::create($data); // Tạo bản ghi mới thay vì cập nhật
-            // Thêm lesson_progress not_started cho tất cả user đã enroll
-            $enrolledUsers = Enrollment::where('course_id', $course_id)
-                ->pluck('user_id');
-
-            foreach ($enrolledUsers as $userId) {
-                LessonProgress::firstOrCreate(
-                    [
-                        'user_id' => $userId,
-                        'lesson_id' => $newLesson->id,
-                    ],
-                    [
-                        'status' => 'not_started'
-                    ]
-                );
-            }
-
-            return response()->json([
-                'message' => 'Lesson updated successfully' . (isset($data['is_visible']) ? ', awaiting approval' : ''),
-                'data' => $newLesson
-            ]);
         } catch (UploadMissingFileException $e) {
             return response()->json([
                 'status' => 400,
                 'error' => 'No file uploaded.'
             ], 400);
-        } catch (Exception $e) {
-            Log::error('Lesson update for instructor error:', ['message' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            Log::error('Lesson update for instructor error:', [
+                'course_id' => $course_id,
+                'lesson_id' => $lesson_id,
+                'message' => $e->getMessage()
+            ]);
             return response()->json([
                 'status' => 500,
                 'error' => 'An error occurred while updating the lesson.',

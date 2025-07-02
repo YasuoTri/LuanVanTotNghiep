@@ -199,6 +199,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/instructor/course/{course}/clone', [CourseController::class, 'CourseClone']);
     Route::post('/reports/{report}/confirm-fix', [ReportController::class, 'confirmFix']);
     Route::put('/instructor/courses/{course_id}/status/pending', [CourseController::class, 'InstructorUpdateStatusToPending']);
+    Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {
@@ -377,7 +378,6 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::delete('/admin/audit-logs/force-delete-all', [AuditLogController::class, 'forceDeleteAll']);
 
     Route::get('/admin/allinstructors/summary', [AdminInstructorController::class, 'getSummary']);
-    Route::get('/admin/eachinstructors/{id}/details', [AdminInstructorController::class, 'getInstructorDetail']);
     Route::get('/admin/courses/search', [CourseController::class, 'searchCourseAdmin']);
     Route::get('/admin/courses/{course}/report-summary', [ReportController::class, 'searchCourseWithReportSummary']);
 

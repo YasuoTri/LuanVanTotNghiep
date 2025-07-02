@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class AdminInstructorController extends Controller
@@ -42,8 +43,9 @@ class AdminInstructorController extends Controller
 
     return response()->json($instructors);
 }
-public function getInstructorDetail(Request $request, $id)
+public function getInstructorDetail(Request $request)
 {
+    $id=Auth::user()->instructor->id;
     $month = $request->query('month');
     $year = $request->query('year');
 

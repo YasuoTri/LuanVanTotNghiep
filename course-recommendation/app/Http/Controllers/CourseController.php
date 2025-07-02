@@ -1294,15 +1294,17 @@ public function searchCourseAdmin(Request $request)
     return response()->json($query);
 }
 
-public function CourseClone($courseId)
-{   $user = Auth::user();
+ public function courseClone(int $courseId): JsonResponse
+    {
+        $user = Auth::user();
 
-    $originalCourse = Course::findOrFail($courseId);
+        // Kiểm tra quyền của instructor
+        $originalCourse = Course::findOrFail($courseId);
+        if ($originalCourse->instructor_id !== $user->instructor->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-    if ($originalCourse->instructor_id !== $user->instructor->id) {
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
-      // Kiểm tra số lượng khóa học draft của instructor
+        // Kiểm tra số lượng khóa học draft của instructor
         $draftCount = Course::where('instructor_id', $user->instructor->id)
             ->where('status', 'draft')
             ->count();
@@ -1312,65 +1314,89 @@ public function CourseClone($courseId)
                 'message' => 'Cannot clone course. You have reached the limit of 100 draft courses.'
             ], 403);
         }
-        
-    DB::beginTransaction();
 
-    try {
-        // clone course
-        $clonedCourse = $originalCourse->replicate();
-        $clonedCourse->status = 'draft';
-        $clonedCourse->course_name = $originalCourse->course_name . ' (Clone)';
-        $clonedCourse->course_rating=0;
-        $clonedCourse->save();
+        DB::beginTransaction();
 
-        // clone lessons
-        $originalLessons = Lesson::where('course_id', $originalCourse->id)->get();
+        try {
+            // Tạo tên khóa học mới và đảm bảo tính duy nhất
+            $baseName = $originalCourse->course_name . ' (Clone)';
+            $newCourseName = $baseName;
+            $counter = 1;
 
-        foreach ($originalLessons as $originalLesson) {
-            $clonedLesson = $originalLesson->replicate();
-            $clonedLesson->course_id = $clonedCourse->id;
-            $clonedLesson->save();
+            // Kiểm tra xem tên khóa học đã tồn tại chưa
+            while (Course::where('course_name', $newCourseName)->exists()) {
+                $newCourseName = $baseName . ' ' . $counter;
+                $counter++;
+            }
 
-            // clone quizzes in this lesson
-            $originalQuizzes = Quiz::where('lesson_id', $originalLesson->id)->get();
-            foreach ($originalQuizzes as $originalQuiz) {
-                $clonedQuiz = $originalQuiz->replicate();
-                $clonedQuiz->lesson_id = $clonedLesson->id;
-                $clonedQuiz->save();
+            // Clone course
+            $clonedCourse = $originalCourse->replicate();
+            $clonedCourse->status = 'draft';
+            $clonedCourse->course_name = $newCourseName;
+            $clonedCourse->course_rating = 0;
+            $clonedCourse->save();
 
-                // clone questions
-                $originalQuestions = Question::where('quiz_id', $originalQuiz->id)->get();
-                foreach ($originalQuestions as $originalQuestion) {
-                    $clonedQuestion = $originalQuestion->replicate();
-                    $clonedQuestion->quiz_id = $clonedQuiz->id;
-                    $clonedQuestion->save();
+            // Clone lessons
+            $originalLessons = Lesson::where('course_id', $originalCourse->id)->get();
+            foreach ($originalLessons as $originalLesson) {
+                $clonedLesson = $originalLesson->replicate();
+                $clonedLesson->course_id = $clonedCourse->id;
+                $clonedLesson->save();
 
-                    // clone choices
-                    $originalChoices = QuestionChoice::where('question_id', $originalQuestion->id)->get();
-                    foreach ($originalChoices as $originalChoice) {
-                        $clonedChoice = $originalChoice->replicate();
-                        $clonedChoice->question_id = $clonedQuestion->id;
-                        $clonedChoice->save();
+                // Clone quizzes
+                $originalQuizzes = Quiz::where('lesson_id', $originalLesson->id)->get();
+                foreach ($originalQuizzes as $originalQuiz) {
+                    $clonedQuiz = $originalQuiz->replicate();
+                    $clonedQuiz->lesson_id = $clonedLesson->id;
+                    $clonedQuiz->save();
+
+                    // Clone questions
+                    $originalQuestions = Question::where('quiz_id', $originalQuiz->id)->get();
+                    foreach ($originalQuestions as $originalQuestion) {
+                        $clonedQuestion = $originalQuestion->replicate();
+                        $clonedQuestion->quiz_id = $clonedQuiz->id;
+                        $clonedQuestion->save();
+
+                        // Clone question choices
+                        $originalChoices = QuestionChoice::where('question_id', $originalQuestion->id)->get();
+                        foreach ($originalChoices as $originalChoice) {
+                            $clonedChoice = $originalChoice->replicate();
+                            $clonedChoice->question_id = $clonedQuestion->id;
+                            $clonedChoice->save();
+                        }
                     }
                 }
             }
+
+            DB::commit();
+
+            // Load lại khóa học đã clone để trả về dữ liệu đầy đủ
+            $clonedCourse = Course::findOrFail($clonedCourse->id);
+
+            return response()->json([
+                'message' => 'Course cloned successfully',
+                'data' => $clonedCourse
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Course not found',
+                'error' => $e->getMessage()
+            ], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Course clone error:', [
+                'course_id' => $courseId,
+                'user_id' => Auth::id(),
+                'message' => $e->getMessage()
+            ]);
+            return response()->json([
+                'message' => 'Clone failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-
-        return response()->json([
-            'message' => 'Course cloned successfully',
-            'new_course_id' => $clonedCourse->id
-        ]);
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'message' => 'Clone failed',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
 public function InstructorUpdateStatusToPending($course_id): JsonResponse
     {
         try {

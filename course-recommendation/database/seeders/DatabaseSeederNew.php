@@ -514,7 +514,11 @@ class DatabaseSeederNew extends Seeder
                 $content = $question->question_type === 'true_false' 
                     ? ($i === 1 ? 'True' : 'False') 
                     : "Choice $i for Question {$question->id}";
-
+                if($isCorrect){
+                    $content .= ' (Correct)';
+                } else {
+                    $content .= ' (Incorrect)';
+                }
                 QuestionChoice::create([
                     'question_id' => $question->id,
                     'content' => $content,

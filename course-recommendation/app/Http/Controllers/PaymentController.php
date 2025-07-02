@@ -219,7 +219,7 @@ class PaymentController extends Controller
     );
 
     // Select payment gateway
-    $gatewayClass = $this->gateways[$paymentData['method']] ?? ZaloPayGateway::class;
+    $gatewayClass = $this->gateways[$paymentData['method']] ?? PayPalGateway::class;
     $gateway = new $gatewayClass();
 
     // Create order
@@ -229,6 +229,8 @@ class PaymentController extends Controller
         'amount' => $paymentData['amount'],
         'final_amount' => $finalAmount,
         'coupon_id' => $paymentData['coupon_id'] ?? null,
+        'currency' => 'USD', // PayPal thường dùng USD
+        'description' => 'Course Payment - Course ID: ' . $courseId,
     ];
 
     $result = $gateway->createOrder($orderData);
@@ -279,11 +281,19 @@ class PaymentController extends Controller
 
         DB::commit();
 
-        return response()->json([
+        $responseData =[
             'message' => 'Payment initiated successfully',
             'data' => $payment,
-            'order' => $result['data']
-        ], 201);
+            'order' => $result['data'],
+            'payment_method' => $paymentData['method']
+        ];
+        if ($paymentData['method'] === 'paypal' && isset($result['data']['approval_url'])) {
+            $responseData['approval_url'] = $result['data']['approval_url'];
+            $responseData['redirect_required'] = true;
+        } else {
+            $responseData['order'] = $result['data'];
+        }
+        return response()->json($responseData, 201);
     } catch (\Exception $e) {
         DB::rollBack();
         Log::error('Payment creation failed', ['error' => $e->getMessage()]);
@@ -637,6 +647,270 @@ public function handleVNPayIPN(Request $request): JsonResponse
     }
 
     return response()->json($query->paginate(10));
+}
+
+/**
+ * Handle PayPal payment success callback
+ */
+public function handlePayPalSuccess(Request $request)
+{
+    try {
+        $token = $request->get('token'); // PayPal order ID
+        $payerId = $request->get('PayerID');
+
+        if (!$token || !$payerId) {
+            Log::error('PayPal Success: Missing parameters', $request->all());
+            return redirect()->away('http://localhost:4200/payment/failed');
+        }
+
+        // Tìm payment record
+        $payment = Payment::where('transaction_code', 'like', '%' . $token . '%')
+            ->orWhere('transaction_code', $token)
+            ->first();
+
+        if (!$payment) {
+            Log::error('PayPal Success: Payment not found', ['token' => $token]);
+            return redirect()->away('http://localhost:4200/payment/failed');
+        }
+
+        // Execute PayPal payment - tiền sẽ vào business account PayPal
+        $gateway = new PayPalGateway();
+        $result = $gateway->executePayment($token, $payerId);
+
+        if (!$result['success']) {
+            $payment->update(['status' => 'failed']);
+            Log::error('PayPal Execute Failed', $result);
+            return redirect()->away('http://localhost:4200/payment/failed');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Chỉ update payment status - KHÔNG lưu tiền vào database
+            $payment->update([
+                'status' => 'completed',
+                'payment_date' => now(),
+            ]);
+
+            // Create enrollment cho learner
+            Enrollment::firstOrCreate(
+                [
+                    'user_id' => $payment->user_id,
+                    'course_id' => $payment->course_id,
+                ],
+                [
+                    'enrolled_at' => now(),
+                    'status' => 'active',
+                ]
+            );
+
+            // Chỉ tracking revenue - KHÔNG chuyển tiền thật
+            $revenueSession = RevenueSession::find($payment->revenue_session_id);
+            if ($revenueSession) {
+                $revenueSession->increment('total_revenue', $payment->amount);
+                $revenueSession->increment('admin_share', $payment->amount * 0.3);
+                $revenueSession->increment('instructor_share', $payment->amount * 0.7);
+            }
+
+            // Log audit
+            AuditLog::create([
+                'payment_id' => $payment->id,
+                'action' => 'payment_completed',
+                'details' => 'PayPal payment completed - Money received in PayPal business account',
+                'user_id' => $payment->user_id,
+            ]);
+
+            DB::commit();
+
+            Log::info('✅ PayPal payment completed - Money in business account', [
+                'payment_id' => $payment->id,
+                'user_id' => $payment->user_id,
+                'course_id' => $payment->course_id,
+                'amount' => $payment->amount
+            ]);
+
+            return redirect()->away('http://localhost:4200/payment/success?payment_id=' . $payment->id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('PayPal payment completion failed', [
+                'error' => $e->getMessage(),
+                'payment_id' => $payment->id
+            ]);
+            return redirect()->away('http://localhost:4200/payment/failed');
+        }
+
+    } catch (\Exception $e) {
+        Log::error('PayPal success handler error', [
+            'error' => $e->getMessage(),
+            'request' => $request->all()
+        ]);
+        return redirect()->away('http://localhost:4200/payment/failed');
+    }
+}
+
+
+/**
+ * Handle PayPal payment cancellation
+ */
+public function handlePayPalCancel(Request $request)
+{
+    try {
+        $token = $request->get('token');
+        
+        Log::info('PayPal payment cancelled', ['token' => $token]);
+        
+        if ($token) {
+            $payment = Payment::where('transaction_code', 'like', '%' . $token . '%')
+                ->orWhere('transaction_code', $token)
+                ->first();
+                
+            if ($payment) {
+                $payment->update(['status' => 'failed']);
+                
+                AuditLog::create([
+                    'payment_id' => $payment->id,
+                    'action' => 'payment_cancelled',
+                    'details' => 'PayPal payment cancelled by user',
+                    'user_id' => $payment->user_id,
+                ]);
+            }
+        }
+
+        return redirect()->away('http://localhost:4200/payment/cancelled');
+
+    } catch (\Exception $e) {
+        Log::error('PayPal cancel handler error', [
+            'error' => $e->getMessage(),
+            'request' => $request->all()
+        ]);
+        return redirect()->away('http://localhost:4200/payment/failed');
+    }
+}
+
+/**
+ * Handle PayPal webhook notifications
+ */
+public function handlePayPalWebhook(Request $request): JsonResponse
+{
+    try {
+        $payload = $request->getContent();
+        $headers = $request->headers->all();
+        
+        Log::info('PayPal Webhook received', [
+            'headers' => $headers,
+            'payload' => $payload
+        ]);
+
+        $data = json_decode($payload, true);
+        
+        if (!$data || !isset($data['event_type'])) {
+            return response()->json(['status' => 'error'], 400);
+        }
+
+        // Xử lý các event types khác nhau
+        switch ($data['event_type']) {
+            case 'CHECKOUT.ORDER.APPROVED':
+                Log::info('PayPal Order Approved', $data);
+                break;
+                
+            case 'PAYMENT.CAPTURE.COMPLETED':
+                $this->handlePaymentCaptureCompleted($data);
+                break;
+                
+            case 'PAYMENT.CAPTURE.DENIED':
+                $this->handlePaymentCaptureDenied($data);
+                break;
+                
+            default:
+                Log::info('Unhandled PayPal webhook event', ['event_type' => $data['event_type']]);
+        }
+
+        return response()->json(['status' => 'success'], 200);
+
+    } catch (\Exception $e) {
+        Log::error('PayPal webhook error', [
+            'error' => $e->getMessage(),
+            'payload' => $request->getContent()
+        ]);
+        return response()->json(['status' => 'error'], 500);
+    }
+}
+
+/**
+ * Handle payment capture completed webhook
+ */
+private function handlePaymentCaptureCompleted(array $data)
+{
+    try {
+        $orderId = $data['resource']['supplementary_data']['related_ids']['order_id'] ?? null;
+        
+        if (!$orderId) {
+            Log::error('PayPal webhook: No order ID found', $data);
+            return;
+        }
+
+        $payment = Payment::where('transaction_code', 'like', '%' . $orderId . '%')->first();
+        
+        if (!$payment) {
+            Log::error('PayPal webhook: Payment not found', ['order_id' => $orderId]);
+            return;
+        }
+
+        if ($payment->status === 'completed') {
+            Log::info('PayPal webhook: Payment already completed', ['payment_id' => $payment->id]);
+            return;
+        }
+
+        // Update payment status via webhook
+        $payment->update([
+            'status' => 'completed',
+            'payment_date' => now(),
+        ]);
+
+        Log::info('PayPal webhook: Payment updated to completed', [
+            'payment_id' => $payment->id,
+            'order_id' => $orderId
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('PayPal webhook capture completed error', [
+            'error' => $e->getMessage(),
+            'data' => $data
+        ]);
+    }
+}
+
+/**
+ * Handle payment capture denied webhook
+ */
+private function handlePaymentCaptureDenied(array $data)
+{
+    try {
+        $orderId = $data['resource']['supplementary_data']['related_ids']['order_id'] ?? null;
+        
+        if (!$orderId) {
+            return;
+        }
+
+        $payment = Payment::where('transaction_code', 'like', '%' . $orderId . '%')->first();
+        
+        if ($payment) {
+            $payment->update(['status' => 'failed']);
+            
+            AuditLog::create([
+                'payment_id' => $payment->id,
+                'action' => 'payment_denied',
+                'details' => 'PayPal payment capture denied',
+                'user_id' => $payment->user_id,
+            ]);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('PayPal webhook capture denied error', [
+            'error' => $e->getMessage(),
+            'data' => $data
+        ]);
+    }
 }
 
 }

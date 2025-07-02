@@ -209,6 +209,109 @@ class PayPalService
         }
     }
 
+ /**
+     * Tạo PayPal payment để nhận tiền vào business account
+     */
+    public function createPayment(array $data)
+    {
+        try {
+            $accessToken = $this->getAccessToken();
+            
+            $payload = [
+                "intent" => "CAPTURE",
+                "purchase_units" => [
+                    [
+                        "amount" => [
+                            "currency_code" => $data['currency'] ?? 'USD',
+                            "value" => $data['amount']
+                        ],
+                        "description" => $data['description'] ?? 'Course Payment',
+                        "custom_id" => $data['custom_data'] ?? null
+                    ]
+                ],
+                "application_context" => [
+                    "return_url" => $data['return_url'],
+                    "cancel_url" => $data['cancel_url'],
+                    "brand_name" => "Course Platform",
+                    "landing_page" => "BILLING",
+                    "user_action" => "PAY_NOW"
+                ]
+            ];
+
+            Log::info('🚀 Creating PayPal Payment', [
+                'amount' => $data['amount'],
+                'currency' => $data['currency'] ?? 'USD'
+            ]);
+
+            $response = Http::withToken($accessToken)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($this->baseUrl . '/v2/checkout/orders', $payload);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                
+                // Tìm approval URL
+                $approvalUrl = null;
+                foreach ($result['links'] as $link) {
+                    if ($link['rel'] === 'approve') {
+                        $approvalUrl = $link['href'];
+                        break;
+                    }
+                }
+
+                Log::info('✅ PayPal Payment Created', [
+                    'order_id' => $result['id'],
+                    'approval_url' => $approvalUrl
+                ]);
+
+                return [
+                    'payment_id' => $result['id'],
+                    'approval_url' => $approvalUrl,
+                    'status' => $result['status']
+                ];
+            } else {
+                throw new \Exception('PayPal API Error: ' . $response->body());
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ PayPal Create Payment Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Execute payment sau khi user approve
+     */
+    public function executePayment($orderId, $payerId = null)
+    {
+        try {
+            $accessToken = $this->getAccessToken();
+            
+            Log::info('💰 Executing PayPal Payment', ['order_id' => $orderId]);
+
+            $response = Http::withToken($accessToken)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture');
+
+            if ($response->successful()) {
+                $result = $response->json();
+                
+                Log::info('✅ PayPal Payment Executed Successfully', [
+                    'order_id' => $orderId,
+                    'status' => $result['status']
+                ]);
+
+                return $result;
+            } else {
+                throw new \Exception('PayPal Execute Error: ' . $response->body());
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ PayPal Execute Payment Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
     /**
      * Test connection với PayPal
      */

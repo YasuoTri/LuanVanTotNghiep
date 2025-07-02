@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1:8200
--- Thời gian đã tạo: Th6 24, 2025 lúc 03:42 AM
+-- Thời gian đã tạo: Th7 01, 2025 lúc 11:45 AM
 -- Phiên bản máy phục vụ: 10.4.27-MariaDB
 -- Phiên bản PHP: 8.2.0
 
@@ -127,6 +127,24 @@ CREATE TABLE `certificates` (
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `certificate_rules`
+--
+
+CREATE TABLE `certificate_rules` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `course_id` bigint(20) UNSIGNED NOT NULL,
+  `instructor_id` bigint(20) UNSIGNED NOT NULL,
+  `lesson_completion_percent` tinyint(3) UNSIGNED NOT NULL DEFAULT 100,
+  `lesson_version_rule` enum('latest','any') NOT NULL DEFAULT 'latest',
+  `quiz_min_score` tinyint(3) UNSIGNED NOT NULL DEFAULT 60,
+  `quiz_version_rule` enum('latest','any') NOT NULL DEFAULT 'latest',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `coupons`
 --
 
@@ -161,12 +179,32 @@ CREATE TABLE `courses` (
   `course_description` text DEFAULT NULL,
   `price` int(11) NOT NULL DEFAULT 0,
   `skills` text DEFAULT NULL,
-  `status` enum('pending','approved','rejected','unavailable','banned') NOT NULL DEFAULT 'pending',
+  `status` enum('pending','approved','rejected','unavailable','draft') NOT NULL DEFAULT 'draft',
+  `is_certificate_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `instructor_id` bigint(20) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Bẫy `courses`
+--
+DELIMITER $$
+CREATE TRIGGER `check_certificates_before_disable` BEFORE UPDATE ON `courses` FOR EACH ROW BEGIN
+            IF NEW.is_certificate_enabled = 0 THEN
+                IF (
+                    (SELECT COUNT(*) FROM certificate_rules WHERE course_id = NEW.id) > 0
+                    OR
+                    (SELECT COUNT(*) FROM certificates WHERE course_id = NEW.id) > 0
+                ) THEN
+                    SIGNAL SQLSTATE '45000'
+                    SET MESSAGE_TEXT = 'Cannot disable certificate because certificate rules or issued certificates still exist for this course.';
+                END IF;
+            END IF;
+        END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -337,8 +375,8 @@ CREATE TABLE `lessons` (
   `sort_order` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `status` varchar(255) NOT NULL DEFAULT 'pending',
-  `deleted_at` timestamp NULL DEFAULT NULL
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `is_visible` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -433,6 +471,30 @@ CREATE TABLE `question_choices` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Bẫy `question_choices`
+--
+DELIMITER $$
+CREATE TRIGGER `check_true_false_correct_answer` BEFORE INSERT ON `question_choices` FOR EACH ROW BEGIN
+                DECLARE q_type VARCHAR(50);
+
+                SELECT question_type INTO q_type
+                FROM questions
+                WHERE id = NEW.question_id;
+
+                IF q_type = 'true_false' AND NEW.is_correct = 1 THEN
+                    IF (
+                        SELECT COUNT(*) FROM question_choices
+                        WHERE question_id = NEW.question_id AND is_correct = 1
+                    ) >= 1 THEN
+                        SIGNAL SQLSTATE '45000'
+                        SET MESSAGE_TEXT = 'True/False questions can only have one correct answer';
+                    END IF;
+                END IF;
+            END
+$$
+DELIMITER ;
+
 -- --------------------------------------------------------
 
 --
@@ -441,13 +503,16 @@ CREATE TABLE `question_choices` (
 
 CREATE TABLE `quizzes` (
   `id` bigint(20) UNSIGNED NOT NULL,
+  `origin_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `version` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `lesson_id` bigint(20) UNSIGNED NOT NULL,
   `title` varchar(255) NOT NULL,
   `max_attempts` int(11) DEFAULT 3,
   `time_limit` int(11) DEFAULT NULL,
   `is_visible` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -463,7 +528,6 @@ CREATE TABLE `quiz_results` (
   `attempt_number` int(11) NOT NULL DEFAULT 1 COMMENT 'Số lần thử bài kiểm tra',
   `started_at` timestamp NULL DEFAULT NULL COMMENT 'Thời gian bắt đầu làm bài',
   `score` decimal(5,2) NOT NULL,
-  `snapshot_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Lưu cấu trúc quiz tại thời điểm học viên làm bài' CHECK (json_valid(`snapshot_json`)),
   `completed_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -489,26 +553,6 @@ CREATE TABLE `reports` (
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Bẫy `reports`
---
-DELIMITER $$
-CREATE TRIGGER `flag_content_on_report` AFTER INSERT ON `reports` FOR EACH ROW BEGIN
-                IF NEW.reportable_type = 'App\Models\Course' THEN
-                    UPDATE courses SET flagged = 1 WHERE id = NEW.reportable_id;
-                ELSEIF NEW.reportable_type = 'App\Models\Lesson' THEN
-                    UPDATE lessons SET flagged = 1 WHERE id = NEW.reportable_id;
-                ELSEIF NEW.reportable_type = 'App\Models\Quiz' THEN
-                    UPDATE quizzes SET flagged = 1 WHERE id = NEW.reportable_id;
-                ELSEIF NEW.reportable_type = 'App\Models\ForumPost' THEN
-                    UPDATE forum_posts SET flagged = 1 WHERE id = NEW.reportable_id;
-                ELSEIF NEW.reportable_type = 'App\Models\Question' THEN
-                    UPDATE questions SET flagged = 1 WHERE id = NEW.reportable_id;
-                END IF;
-            END
-$$
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -750,6 +794,14 @@ ALTER TABLE `certificates`
   ADD KEY `certificates_instructor_id_foreign` (`instructor_id`);
 
 --
+-- Chỉ mục cho bảng `certificate_rules`
+--
+ALTER TABLE `certificate_rules`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `certificate_rules_course_id_unique` (`course_id`),
+  ADD KEY `certificate_rules_instructor_id_foreign` (`instructor_id`);
+
+--
 -- Chỉ mục cho bảng `coupons`
 --
 ALTER TABLE `coupons`
@@ -880,7 +932,8 @@ ALTER TABLE `question_choices`
 --
 ALTER TABLE `quizzes`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `quizzes_lesson_id_foreign` (`lesson_id`);
+  ADD KEY `quizzes_lesson_id_foreign` (`lesson_id`),
+  ADD KEY `quizzes_origin_id_foreign` (`origin_id`);
 
 --
 -- Chỉ mục cho bảng `quiz_results`
@@ -959,9 +1012,9 @@ ALTER TABLE `users`
 ALTER TABLE `user_answers`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_answers_quiz_result_id_foreign` (`quiz_result_id`),
+  ADD KEY `idx_user_quiz_question` (`user_id`,`quiz_result_id`),
   ADD KEY `user_answers_question_id_foreign` (`question_id`),
-  ADD KEY `user_answers_choice_id_foreign` (`choice_id`),
-  ADD KEY `idx_user_quiz_question` (`user_id`,`quiz_result_id`,`question_id`);
+  ADD KEY `user_answers_choice_id_foreign` (`choice_id`);
 
 --
 -- Chỉ mục cho bảng `violations`
@@ -997,6 +1050,12 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT cho bảng `certificates`
 --
 ALTER TABLE `certificates`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `certificate_rules`
+--
+ALTER TABLE `certificate_rules`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -1188,6 +1247,13 @@ ALTER TABLE `certificates`
   ADD CONSTRAINT `certificates_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+-- Các ràng buộc cho bảng `certificate_rules`
+--
+ALTER TABLE `certificate_rules`
+  ADD CONSTRAINT `certificate_rules_course_id_foreign` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `certificate_rules_instructor_id_foreign` FOREIGN KEY (`instructor_id`) REFERENCES `instructors` (`id`) ON DELETE CASCADE;
+
+--
 -- Các ràng buộc cho bảng `courses`
 --
 ALTER TABLE `courses`
@@ -1266,7 +1332,8 @@ ALTER TABLE `question_choices`
 -- Các ràng buộc cho bảng `quizzes`
 --
 ALTER TABLE `quizzes`
-  ADD CONSTRAINT `quizzes_lesson_id_foreign` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `quizzes_lesson_id_foreign` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `quizzes_origin_id_foreign` FOREIGN KEY (`origin_id`) REFERENCES `quizzes` (`id`) ON DELETE SET NULL;
 
 --
 -- Các ràng buộc cho bảng `quiz_results`
@@ -1315,7 +1382,7 @@ ALTER TABLE `student_category`
 -- Các ràng buộc cho bảng `user_answers`
 --
 ALTER TABLE `user_answers`
-  ADD CONSTRAINT `user_answers_choice_id_foreign` FOREIGN KEY (`choice_id`) REFERENCES `question_choices` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `user_answers_choice_id_foreign` FOREIGN KEY (`choice_id`) REFERENCES `question_choices` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `user_answers_question_id_foreign` FOREIGN KEY (`question_id`) REFERENCES `questions` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `user_answers_quiz_result_id_foreign` FOREIGN KEY (`quiz_result_id`) REFERENCES `quiz_results` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `user_answers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;

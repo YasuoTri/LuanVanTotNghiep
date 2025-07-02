@@ -396,6 +396,10 @@ Route::get('/search/payments', [PaymentController::class, 'search']);
 Route::get('/search/enrollments', [EnrollmentController::class, 'search']);
 Route::get('/search/forum-posts', [ForumPostController::class, 'search']);
 Route::get('/search/courses', [CourseController::class, 'SearchCourse']);
+// PayPal callback routes
+Route::get('/payment/paypal/success', [PaymentController::class, 'handlePayPalSuccess'])->name('paypal.success');
+Route::get('/payment/paypal/cancel', [PaymentController::class, 'handlePayPalCancel'])->name('paypal.cancel');
+Route::post('/payment/paypal/webhook', [PaymentController::class, 'handlePayPalWebhook'])->name('paypal.webhook');
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)

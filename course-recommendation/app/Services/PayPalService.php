@@ -241,14 +241,16 @@ public function executePayment($orderId, $payerId = null)
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
-                'PayPal-Request-Id' => $orderId,
-                'Prefer' => 'return=representation'
             ])
             ->withOptions([
                 'debug' => fopen('php://stderr', 'w') // Log raw request for debugging
             ])
             ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture', []);
-
+        Log::info('Order Details', [
+            'order_id' => $orderId,
+            'status' => $response->status(),
+            'body' => $response->body()
+        ]);        
         if ($response->successful()) {
             $result = $response->json();
             
@@ -308,10 +310,8 @@ public function executePayment($orderId, $payerId = null)
                 "application_context" => [
                     "return_url" => $data['return_url'],
                     "cancel_url" => $data['cancel_url'],
-                    "brand_name" => "Course Platform",
-                    "landing_page" => "BILLING",
                     "user_action" => "PAY_NOW"
-                ]
+                ],
             ];
 
             Log::info('🚀 Creating PayPal Payment', [

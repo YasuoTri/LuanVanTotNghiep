@@ -987,7 +987,7 @@ if ($course->instructor_id !== $instructor->id) {
                 ->whereHas('instructors', function ($query) use ($instructor) {
                     $query->where('instructor_id', $instructor->id);
                 })
-                ->paginate(10);
+                ->get();
 
             return response()->json($courses, 200);
         } catch (\Exception $e) {

@@ -1293,6 +1293,7 @@ public function searchCourseAdmin(Request $request)
 
     return response()->json($query);
 }
+
 public function CourseClone($courseId)
 { $user = Auth::user();
 
@@ -1309,6 +1310,7 @@ public function CourseClone($courseId)
         $clonedCourse = $originalCourse->replicate();
         $clonedCourse->status = 'draft';
         $clonedCourse->course_name = $originalCourse->course_name . ' (Clone)';
+        $clonedCourse->course_rating=0;
         $clonedCourse->save();
 
         // clone lessons
@@ -1359,4 +1361,62 @@ public function CourseClone($courseId)
         ], 500);
     }
 }
+public function InstructorUpdateStatusToPending($course_id): JsonResponse
+    {
+        try {
+            // Lấy user đang đăng nhập
+            $user = Auth::user();
+
+            // Kiểm tra xem user có tồn tại và có vai trò phù hợp không
+            if (!$user || !in_array($user->role, ['instructor', 'admin'])) {
+                return response()->json([
+                    'message' => 'Unauthorized. Only instructors or admins can update course status.'
+                ], 403);
+            }
+
+            // Tìm khóa học
+            $course = Course::findOrFail($course_id);
+
+            // Nếu user là instructor, kiểm tra quyền sở hữu khóa học
+            if ($user->role === 'instructor') {
+                $instructor = Instructors::where('user_id', $user->id)->first();
+                if (!$instructor || $course->instructor_id !== $instructor->id) {
+                    return response()->json([
+                        'message' => 'You are not the instructor for this course.'
+                    ], 403);
+                }
+            }
+            if ($course->status !== 'draft') {
+                return response()->json([
+                    'message' => 'Status is invalid,only draft can be updated to pending.'
+                ], 422);
+            }
+            // Cập nhật status thành pending
+            $course->update(['status' => 'pending']);
+
+            // Tải lại khóa học để lấy dữ liệu mới nhất
+            $updatedCourse = Course::findOrFail($course_id);
+
+            return response()->json([
+                'message' => 'Course status updated to pending successfully.',
+                'data' => $updatedCourse
+            ], 200);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Course not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Course status update error:', [
+                'course_id' => $course_id,
+                'user_id' => Auth::id(),
+                'message' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'An error occurred while updating the course status.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

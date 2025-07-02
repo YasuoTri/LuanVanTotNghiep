@@ -208,31 +208,68 @@ class PayPalService
             throw $e;
         }
     }
-
-    /**
- * Execute payment sau khi user approve - CÁCH 2
- */
 public function executePayment($orderId, $payerId = null)
 {
     try {
         $accessToken = $this->getAccessToken();
         
-        Log::info('💰 Executing PayPal Payment', ['order_id' => $orderId]);
+        Log::info('💰 Executing PayPal Payment', [
+            'order_id' => $orderId,
+            'payer_id' => $payerId,
+            'base_url' => $this->baseUrl
+        ]);
 
-        // Thử không gửi body gì cả
+        // Verify order state before capturing
+        $orderResponse = Http::withToken($accessToken)
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->get($this->baseUrl . '/v2/checkout/orders/' . $orderId);
+
+        if ($orderResponse->successful()) {
+            $orderDetails = $orderResponse->json();
+            Log::info('Order Details', [
+                'order_id' => $orderId,
+                'status' => $orderDetails['status']
+            ]);
+            if ($orderDetails['status'] !== 'APPROVED') {
+                throw new \Exception('Order is not in APPROVED state: ' . $orderDetails['status']);
+            }
+        } else {
+            throw new \Exception('Failed to retrieve order details: ' . $orderResponse->body());
+        }
+
+        // Capture the payment with an empty JSON body
         $response = Http::withToken($accessToken)
-            ->withHeaders(['Content-Type' => 'application/json', 'PayPal-Request-Id' => $orderId])
-            ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture');
+            ->withHeaders([
+                'Content-Type' => 'application/json',
+                'PayPal-Request-Id' => $orderId,
+                'Prefer' => 'return=representation'
+            ])
+            ->withOptions([
+                'debug' => fopen('php://stderr', 'w') // Log raw request for debugging
+            ])
+            ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture', []);
 
         if ($response->successful()) {
             $result = $response->json();
             
             Log::info('✅ PayPal Payment Executed Successfully', [
                 'order_id' => $orderId,
-                'status' => $result['status']
+                'status' => $result['status'],
+                'response' => $result
             ]);
 
-            return $result;
+            // Extract capture details
+            $capture = $result['purchase_units'][0]['payments']['captures'][0] ?? null;
+            if (!$capture) {
+                throw new \Exception('No capture details found in response');
+            }
+
+            return [
+                'status' => $result['status'],
+                'capture_id' => $capture['id'],
+                'amount' => $capture['amount']['value'],
+                'currency' => $capture['amount']['currency_code']
+            ];
         } else {
             $errorBody = $response->body();
             Log::error('❌ PayPal Execute API Error', [
@@ -244,7 +281,10 @@ public function executePayment($orderId, $payerId = null)
         }
 
     } catch (\Exception $e) {
-        Log::error('❌ PayPal Execute Payment Error: ' . $e->getMessage());
+        Log::error('❌ PayPal Execute Payment Error: ' . $e->getMessage(), [
+            'order_id' => $orderId,
+            'payer_id' => $payerId
+        ]);
         throw $e;
     }
 }

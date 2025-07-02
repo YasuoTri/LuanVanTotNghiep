@@ -101,7 +101,7 @@ public function categories()
     }
     public function getHasPendingReportAttribute()
 {
-    return $this->course->reports->firstWhere('status', 'pending') ? true : false;
+    return $this->reports->firstWhere('status', 'pending') ? true : false;
 }
 public function questions()
 {

@@ -135,7 +135,7 @@ public function show($id)
  public function showSlug($slug)
     {
         try {
-            $course = Course::with(['instructors', 'reviews', 'lessons', 'categories','enrollments', 'certificates', 'forumPosts'])
+            $course = Course::with(['instructors', 'reviews', 'reviews.user','lessons', 'categories','enrollments'])
                 ->where('status', 'approved')
                 ->where('course_url', $slug)
                 ->firstOrFail();
@@ -144,7 +144,7 @@ public function show($id)
                 return response()->json(['message' => 'Course not found'], 404);
             }
             // Trả về thông tin khóa học
-            $course->loadCount(['enrollments', 'certificates', 'forumPosts']);
+            $course->loadCount(['enrollments','reports']);
             return response()->json($course);
         } catch (\Exception $e) {
             Log::error("Failed to fetch course with slug {$slug}: {$e->getMessage()}");

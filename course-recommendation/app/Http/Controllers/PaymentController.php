@@ -662,6 +662,7 @@ public function handlePayPalSuccess(Request $request)
             'payerId' => $payerId,
             'all_params' => $request->all()
         ]);
+
         if (!$token || !$payerId) {
             Log::error('PayPal Success: Missing parameters', $request->all());
             return redirect()->away('http://localhost:4200/payment/failed');
@@ -671,29 +672,29 @@ public function handlePayPalSuccess(Request $request)
         $payment = Payment::where('transaction_code', $token)->first();
 
         if (!$payment) {
-            Log::error('PayPal Success: Payment not found', ['token' => $token, 'searching_for' => $token]);
+            Log::error('PayPal Success: Payment not found', ['token' => $token]);
             return redirect()->away('http://localhost:4200/payment/failed');
         }
 
-        // Execute PayPal payment - tiền sẽ vào business account PayPal
+        // Execute PayPal payment
         $gateway = new PayPalGateway();
         $result = $gateway->executePayment($token, $payerId);
 
         if (!$result['success']) {
             $payment->update(['status' => 'failed']);
-            Log::error('PayPal Execute Failed', $result);
+            Log::error('PayPal Execute Failed', ['result' => $result, 'payment_id' => $payment->id]);
             return redirect()->away('http://localhost:4200/payment/failed');
         }
 
         DB::beginTransaction();
         try {
-            // Chỉ update payment status - KHÔNG lưu tiền vào database
+            // Update payment status
             $payment->update([
                 'status' => 'completed',
                 'payment_date' => now(),
             ]);
 
-            // Create enrollment cho learner
+            // Create enrollment
             Enrollment::firstOrCreate(
                 [
                     'user_id' => $payment->user_id,
@@ -705,7 +706,7 @@ public function handlePayPalSuccess(Request $request)
                 ]
             );
 
-            // Chỉ tracking revenue - KHÔNG chuyển tiền thật
+            // Update revenue session
             $revenueSession = RevenueSession::find($payment->revenue_session_id);
             if ($revenueSession) {
                 $revenueSession->increment('total_revenue', $payment->amount);
@@ -750,8 +751,6 @@ public function handlePayPalSuccess(Request $request)
         return redirect()->away('http://localhost:4200/payment/failed');
     }
 }
-
-
 /**
  * Handle PayPal payment cancellation
  */

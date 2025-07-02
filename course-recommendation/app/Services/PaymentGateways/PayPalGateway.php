@@ -70,51 +70,50 @@ class PayPalGateway implements PaymentGateway
             ];
         }
     }
+public function executePayment($paymentId, $payerId): array
+{
+    try {
+        $result = $this->paypalService->executePayment($paymentId, $payerId);
+        
+        if ($result['status'] === 'COMPLETED') {
+            Log::info('✅ PayPal Payment Execution Successful', [
+                'order_id' => $paymentId,
+                'capture_id' => $result['capture_id'],
+                'amount' => $result['amount'],
+                'currency' => $result['currency']
+            ]);
 
-    public function executePayment($paymentId, $payerId): array
-    {
-        try {
-            $result = $this->paypalService->executePayment($paymentId, $payerId);
-            
-            if ($result['status'] === 'COMPLETED') {
-                Log::info('✅ PayPal Payment Execution Successful', [
+            return [
+                'success' => true,
+                'data' => [
                     'order_id' => $paymentId,
                     'capture_id' => $result['capture_id'],
                     'amount' => $result['amount'],
                     'currency' => $result['currency']
-                ]);
-
-                return [
-                    'success' => true,
-                    'data' => [
-                        'order_id' => $paymentId,
-                        'capture_id' => $result['capture_id'],
-                        'amount' => $result['amount'],
-                        'currency' => $result['currency']
-                    ],
-                    'message' => 'Payment executed successfully'
-                ];
-            } else {
-                Log::error('❌ PayPal Payment Execution Failed', [
-                    'order_id' => $paymentId,
-                    'status' => $result['status']
-                ]);
-                return [
-                    'success' => false,
-                    'message' => 'Payment execution failed: ' . ($result['status'] ?? 'Unknown status')
-                ];
-            }
-        } catch (\Exception $e) {
-            Log::error('❌ PayPal Execute Error', [
-                'error' => $e->getMessage(),
-                'order_id' => $paymentId
+                ],
+                'message' => 'Payment executed successfully'
+            ];
+        } else {
+            Log::error('❌ PayPal Payment Execution Failed', [
+                'order_id' => $paymentId,
+                'status' => $result['status']
             ]);
             return [
                 'success' => false,
-                'message' => 'Payment execution error: ' . $e->getMessage()
+                'message' => 'Payment execution failed: ' . ($result['status'] ?? 'Unknown status')
             ];
         }
+    } catch (\Exception $e) {
+        Log::error('❌ PayPal Execute Error', [
+            'error' => $e->getMessage(),
+            'order_id' => $paymentId
+        ]);
+        return [
+            'success' => false,
+            'message' => 'Payment execution error: ' . $e->getMessage()
+        ];
     }
+}
 
     public function verifyCallback(array $data): array
     {

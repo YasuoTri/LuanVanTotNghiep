@@ -1295,14 +1295,24 @@ public function searchCourseAdmin(Request $request)
 }
 
 public function CourseClone($courseId)
-{ $user = Auth::user();
+{   $user = Auth::user();
 
     $originalCourse = Course::findOrFail($courseId);
 
     if ($originalCourse->instructor_id !== $user->instructor->id) {
         return response()->json(['message' => 'Unauthorized'], 403);
     }
+      // Kiểm tra số lượng khóa học draft của instructor
+        $draftCount = Course::where('instructor_id', $user->instructor->id)
+            ->where('status', 'draft')
+            ->count();
 
+        if ($draftCount >= 100) {
+            return response()->json([
+                'message' => 'Cannot clone course. You have reached the limit of 100 draft courses.'
+            ], 403);
+        }
+        
     DB::beginTransaction();
 
     try {

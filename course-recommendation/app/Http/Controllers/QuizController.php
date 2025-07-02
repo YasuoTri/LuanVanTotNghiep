@@ -1220,137 +1220,204 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
 //     ], 201);
 // }
 
-//Không dùng snapshot
-public function submitQuiz(Request $request, $quizId)
-{
-    $user = Auth::user();
 
-    $quiz = Quiz::findOrFail($quizId);
+    /**
+     * Submit a quiz attempt
+     *
+     * @param Request $request
+     * @param int $quizId
+     * @return JsonResponse
+     */
+    public function submitQuiz(Request $request, int $quizId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $quiz = Quiz::with(['lesson', 'questions.choices'])->findOrFail($quizId);
 
-    $questions = Question::where('quiz_id', $quiz->id)
-        ->with('choices')
-        ->get();
+            // Kiểm tra quiz có hiển thị không
+            if (!$quiz->is_visible) {
+                return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+            }
 
-    $answers = $request->input('answers'); // dạng [question_id => [choice_id1, choice_id2]]
+            // Kiểm tra đăng ký khóa học
+            $enrollment = Enrollment::where('user_id', $user->id)
+                ->where('course_id', $quiz->lesson->course_id)
+                ->first();
 
-    $correctCount = 0;
-    $totalQuestions = $questions->count();
-    $passThreshold = 80; // giả định
-    $results = [];
+            if (!$enrollment) {
+                return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            }
 
-    foreach ($questions as $question) {
-        $correctChoices = $question->choices->where('is_correct', 1)->values();
-        $submittedChoiceIds = collect($answers[$question->id] ?? []);
+            // Tìm QuizResult chưa hoàn thành
+            $quizResult = QuizResult::where('user_id', $user->id)
+                ->where('quiz_id', $quizId)
+                ->whereNull('completed_at')
+                ->first();
 
-        // check đúng sai
-        $correctChoiceIds = $correctChoices->pluck('id')->sort()->values();
-        $submittedSorted = $submittedChoiceIds->sort()->values();
-        $isCorrect = $correctChoiceIds->toArray() === $submittedSorted->toArray();
+            if (!$quizResult) {
+                return response()->json(['message' => 'Không tìm thấy phiên làm bài đang hoạt động. Vui lòng bắt đầu quiz trước.'], 400);
+            }
 
-        if ($isCorrect) {
-            $correctCount++;
+            $questions = Question::where('quiz_id', $quiz->id)
+                ->with('choices')
+                ->get();
+
+            $answers = $request->input('answers'); // dạng [question_id => [choice_id1, choice_id2]]
+            if (!$answers || !is_array($answers)) {
+                return response()->json(['message' => 'Dữ liệu câu trả lời không hợp lệ'], 422);
+            }
+
+            $correctCount = 0;
+            $totalQuestions = $questions->count();
+            $passThreshold = 80; // Giả định
+            $results = [];
+
+            DB::beginTransaction();
+
+            try {
+                foreach ($questions as $question) {
+                    $correctChoices = $question->choices->where('is_correct', 1)->values();
+                    $submittedChoiceIds = collect($answers[$question->id] ?? []);
+
+                    // Kiểm tra đúng/sai
+                    $correctChoiceIds = $correctChoices->pluck('id')->sort()->values();
+                    $submittedSorted = $submittedChoiceIds->sort()->values();
+                    $isCorrect = $correctChoiceIds->toArray() === $submittedSorted->toArray();
+
+                    if ($isCorrect) {
+                        $correctCount++;
+                    }
+
+                    // Lưu câu trả lời của người dùng
+                    foreach ($submittedChoiceIds as $choiceId) {
+                        UserAnswer::create([
+                            'user_id' => $user->id,
+                            'quiz_result_id' => $quizResult->id,
+                            'question_id' => $question->id,
+                            'choice_id' => $choiceId,
+                            'is_correct' => $question->choices->where('id', $choiceId)->first()->is_correct ?? false,
+                        ]);
+                    }
+
+                    // Xây dựng dữ liệu lựa chọn đã chọn
+                    $selectedChoicesData = $question->choices
+                        ->whereIn('id', $submittedChoiceIds)
+                        ->map(function ($c) {
+                            return [
+                                'id' => $c->id,
+                                'content' => $c->content,
+                                'is_correct' => $c->is_correct
+                            ];
+                        })->values();
+
+                    $correctChoicesData = $correctChoices->map(function ($c) {
+                        return [
+                            'id' => $c->id,
+                            'content' => $c->content
+                        ];
+                    })->values();
+
+                    $allChoicesData = $question->choices->map(function ($c) {
+                        return [
+                            'id' => $c->id,
+                            'content' => $c->content,
+                            'is_correct' => $c->is_correct
+                        ];
+                    })->values();
+
+                    // Giải thích
+                    $explanation = $isCorrect
+                        ? "Chính xác!"
+                        : "Sai rồi. Đáp án đúng: " . $correctChoices->pluck('content')->implode(', ');
+
+                    $results[] = [
+                        'question_id' => $question->id,
+                        'question_title' => $question->title,
+                        'question_type' => $question->question_type,
+                        'selected_choices' => $selectedChoicesData,
+                        'correct_choices' => $correctChoicesData,
+                        'all_choices' => $allChoicesData,
+                        'is_correct' => $isCorrect,
+                        'explanation' => $explanation
+                    ];
+                }
+
+                // Tính điểm
+                $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
+                $isPassed = $score >= $passThreshold;
+
+                // Tính thời gian làm bài (phút)
+                $timeTaken = $quizResult->started_at
+                    ? round(now()->diffInSeconds($quizResult->started_at) / 60, 2)
+                    : 0;
+
+                // Cập nhật QuizResult
+                $quizResult->update([
+                    'score' => $score,
+                    'completed_at' => now(),
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'message' => 'Nộp bài quiz thành công',
+                    'data' => [
+                        'quiz_result_id' => $quizResult->id,
+                        'quiz_info' => [
+                            'id' => $quiz->id,
+                            'title' => $quiz->title,
+                            'total_questions' => $totalQuestions,
+                            'score' => $correctCount,
+                            'percentage' => $score,
+                            'is_passed' => $isPassed,
+                            'pass_threshold' => $passThreshold,
+                            'attempt_number' => $quizResult->attempt_number,
+                            'time_taken' => $timeTaken,
+                            'completed_at' => now()->toISOString(),
+                        ],
+                        'results' => $results,
+                        'summary' => [
+                            'total_questions' => $totalQuestions,
+                            'correct_answers' => $correctCount,
+                            'incorrect_answers' => $totalQuestions - $correctCount,
+                            'percentage' => $score,
+                            'status' => $isPassed ? 'PASSED' : 'FAILED',
+                            'message' => $isPassed
+                                ? "Bạn đã vượt qua bài kiểm tra."
+                                : "Bạn cần đạt ít nhất {$passThreshold}% để vượt qua bài kiểm tra."
+                        ]
+                    ]
+                ], 200);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Submit quiz error:', [
+                    'quiz_id' => $quizId,
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage()
+                ]);
+                return response()->json([
+                    'message' => 'Lỗi khi nộp bài quiz',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Quiz không tìm thấy'
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Submit quiz error:', [
+                'quiz_id' => $quizId,
+                'user_id' => $user->id,
+                'message' => $e->getMessage()
+            ]);
+            return response()->json([
+                'message' => 'Lỗi khi nộp bài quiz',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // build selected choice data
-        $selectedChoicesData = $question->choices
-            ->whereIn('id', $submittedChoiceIds)
-            ->map(function ($c) {
-                return [
-                    'id' => $c->id,
-                    'content' => $c->content,
-                    'is_correct' => $c->is_correct
-                ];
-            })->values();
-
-        $correctChoicesData = $correctChoices->map(function ($c) {
-            return [
-                'id' => $c->id,
-                'content' => $c->content
-            ];
-        })->values();
-
-        $allChoicesData = $question->choices->map(function ($c) {
-            return [
-                'id' => $c->id,
-                'content' => $c->content,
-                'is_correct' => $c->is_correct
-            ];
-        })->values();
-
-        // explanation text
-        $explanation = $isCorrect
-            ? "Chính xác!"
-            : "Sai rồi. Đáp án đúng: " . $correctChoices->pluck('content')->implode(', ');
-
-        $results[] = [
-            'question_id' => $question->id,
-            'question_title' => $question->title,
-            'question_type' => $question->question_type,
-            'selected_choices' => $selectedChoicesData,
-            'correct_choices' => $correctChoicesData,
-            'all_choices' => $allChoicesData,
-            'is_correct' => $isCorrect,
-            'explanation' => $explanation
-        ];
     }
-
-    $score = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100, 2) : 0;
-    $isPassed = $score >= $passThreshold;
-    // Đếm số lần đã làm quiz này của user
-    $previousAttempts = QuizResult::where('user_id', $user->id)
-        ->where('quiz_id', $quiz->id)
-        ->count();
-
-    $attemptNumber = $previousAttempts + 1;
-    
-    // (Optionally: kiểm tra vượt quá max_attempts)
-    if ($quiz->max_attempts && $attemptNumber > $quiz->max_attempts) {
-        return response()->json([
-            'message' => "Bạn đã vượt quá số lần làm lại cho phép ({$quiz->max_attempts})"
-        ], 400);
-    }
-    $quizResult = QuizResult::create([
-        'user_id' => $user->id,
-        'quiz_id' => $quiz->id,
-        'attempt_number' => $attemptNumber,
-        'score' => $score,
-        'started_at' => now(),
-        'completed_at' => now(),
-    ]);
-
-    $timeTaken = 0.1666; // nếu muốn thực đo thì bạn lưu start_time / end_time
-
-    return response()->json([
-        'message' => 'Nộp bài quiz thành công',
-        'data' => [
-            'quiz_result_id' => $quizResult->id,
-            'quiz_info' => [
-                'id' => $quiz->id,
-                'title' => $quiz->title,
-                'total_questions' => $totalQuestions,
-                'score' => $correctCount,
-                'percentage' => $score,
-                'is_passed' => $isPassed,
-                'pass_threshold' => $passThreshold,
-                'attempt_number' => $attemptNumber,
-                'time_taken' => $timeTaken,
-                'completed_at' => now()->toISOString(),
-            ],
-            'results' => $results,
-            'summary' => [
-                'total_questions' => $totalQuestions,
-                'correct_answers' => $correctCount,
-                'incorrect_answers' => $totalQuestions - $correctCount,
-                'percentage' => $score,
-                'status' => $isPassed ? 'PASSED' : 'FAILED',
-                'message' => $isPassed
-                    ? "Bạn đã vượt qua bài kiểm tra."
-                    : "Bạn cần đạt ít nhất {$passThreshold}% để vượt qua bài kiểm tra."
-            ]
-        ]
-    ]);
-}
-
 
 
 private function validateQuizSubmission(Request $request): array

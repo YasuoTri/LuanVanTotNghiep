@@ -18,7 +18,7 @@ class PayPalGateway implements PaymentGateway
         try {
             $transactionCode = 'PAYPAL_' . uniqid() . '_' . time();
             
-            $amountUSD = number_format($data['final_amount'] / 24000, 2, '.', '');
+            $amountUSD = $data['final_amount'];
             
             $result = $this->paypalService->createPayment([
                 'amount' => $amountUSD,

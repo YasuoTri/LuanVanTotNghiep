@@ -8,6 +8,7 @@ use App\Http\Controllers\CouponController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ExportRecommendController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PayPalOnboardingController;
 use App\Http\Controllers\RecommendationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
@@ -401,6 +402,12 @@ Route::get('/search/courses', [CourseController::class, 'SearchCourse']);
 Route::get('/payment/paypal/success', [PaymentController::class, 'handlePayPalSuccess'])->name('paypal.success');
 Route::get('/payment/paypal/cancel', [PaymentController::class, 'handlePayPalCancel'])->name('paypal.cancel');
 Route::post('/payment/paypal/webhook', [PaymentController::class, 'handlePayPalWebhook'])->name('paypal.webhook');
+
+//submerchant
+Route::get('/paypal/url-onboarding', [PayPalOnboardingController::class, 'generateUrlOnboardingLink']);
+Route::get('/paypal/return', [PayPalOnboardingController::class, 'handleReturn']);
+Route::get('/paypal/simulate-return', [PayPalOnboardingController::class, 'simulateReturn']);
+
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)

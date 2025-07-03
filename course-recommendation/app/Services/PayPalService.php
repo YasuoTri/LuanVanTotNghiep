@@ -242,7 +242,7 @@ class PayPalService
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
-              'PayPal-Request-Id' => Uuid::uuid4()->toString() // Use a unique UUID
+                'PayPal-Request-Id' => Uuid::uuid4()->toString() // Use a unique UUID
             ])
             ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture', (object)[]);
 
@@ -254,7 +254,20 @@ class PayPalService
 
         if ($response->successful()) {
             $result = $response->json();
-            
+            $capture = $result['purchase_units'][0]['payments']['captures'][0] ?? null;
+            if (!$capture) {
+                throw new \Exception('No capture details found in response');
+            }
+
+            $platformFee = $result['purchase_units'][0]['platform_fees'][0]['amount']['value'] ?? 0;
+            Log::info('✅ PayPal Payment Executed Successfully', [
+                'order_id' => $orderId,
+                'capture_id' => $capture['id'],
+                'amount' => $capture['amount']['value'],
+                'currency' => $capture['amount']['currency_code'],
+                'platform_fee' => $platformFee
+            ]);
+
             Log::info('✅ PayPal Payment Executed Successfully', [
                 'order_id' => $orderId,
                 'status' => $result['status'],
@@ -327,13 +340,16 @@ class PayPalService
         //             "description" => $data['description'] ?? 'Course Payment',
         //             "custom_id" => $data['custom_data'] ?? null,
         //             "payee" => [
-        //                 "email_address" => "sb-v4whv44224147@business.example.com" // Tài khoản Business phụ
+        //                 "email_address" => "sb-hwwip44224479@business.example.com" // Tài khoản Business phụ
         //             ],
         //             "platform_fees" => [
         //                 [
         //                     "amount" => [
         //                         "currency_code" => "USD",
         //                         "value" => "5.00" // Phí hoa hồng của nền tảng
+        //                     ],
+        //                     "payee" => [
+        //                         "merchant_id" => "FLMD9YM3H3J4U" // Merchant ID của platform
         //                     ]
         //                 ]
         //             ]

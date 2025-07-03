@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PayoutCompletedMail;
 use App\Models\RevenueSession;
 use App\Models\Payment;
 use App\Models\RevenueDistribution;
@@ -12,6 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class RevenueDistributePaypal extends Controller
 {
@@ -251,6 +254,12 @@ class RevenueDistributePaypal extends Controller
 
             Log::info("✅ PayPal payout SUCCESS for instructor {$instructor->id}: \${$amountUSD} to {$paypalEmail}");
             
+            try {
+                Mail::to($instructor->email)->send(new PayoutCompletedMail($instructor, $amountUSD, $revenueDistribution));
+                Log::info("📧 Sent payout notification email to instructor {$instructor->id}");
+            } catch (\Exception $mailEx) {
+                Log::warning("⚠️ Failed to send payout email to instructor {$instructor->id}: " . $mailEx->getMessage());
+            }
             return [
                 'success' => true,
                 'message' => "Payout sent successfully: \${$amountUSD}",
@@ -309,12 +318,19 @@ class RevenueDistributePaypal extends Controller
 
             Log::info("✅ Admin PayPal payout SUCCESS: \${$amountUSD} to {$adminEmail}");
             
+
+            $admin=Auth::user();
+            try {
+                Mail::to($adminEmail)->send(new PayoutCompletedMail($admin, $amountUSD, $amountUSD));
+                Log::info("📧 Sent payout notification email to instructor {$admin->id}");
+            } catch (\Exception $mailEx) {
+                Log::warning("⚠️ Failed to send payout email to instructor {$admin->id}: " . $mailEx->getMessage());
+            }
             return [
                 'success' => true,
                 'message' => "Admin payout sent: \${$amountUSD}",
                 'batch_id' => $response->result->batch_header->payout_batch_id ?? null
             ];
-
         } catch (\Exception $e) {
             Log::error("❌ Admin PayPal payout FAILED: " . $e->getMessage());
             

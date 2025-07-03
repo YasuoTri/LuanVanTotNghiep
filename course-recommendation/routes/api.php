@@ -409,6 +409,12 @@ Route::get('/paypal/return', [PayPalOnboardingController::class, 'handleReturn']
 Route::get('/paypal/simulate-return', [PayPalOnboardingController::class, 'simulateReturn']);
 
 
+Route::get('/title_latest/courses', [CourseController::class, 'getCoursesByCriteria']);
+Route::get('/title_popular/courses/popular', [CourseController::class, 'getPopularCourses']);
+Route::get('/title_high_rated/courses/high-rated', [CourseController::class, 'getHighRatedCourses']);
+Route::get('/title_active_course/courses/active', [CourseController::class, 'getActiveCourses']);
+Route::get('/title_random_category/courses/popular-random-category', [CourseController::class, 'getPopularCoursesInRandomCategory']);
+
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)
 // Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);

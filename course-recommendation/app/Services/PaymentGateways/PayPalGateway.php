@@ -32,10 +32,12 @@ class PayPalGateway implements PaymentGateway
                     'coupon_id' => $data['coupon_id'] ?? null,
                 ])
             ]);
-
+            Log::info('🚀 Creating PayPal Order', [
+                '$result fromt create Order' => $result,
+            ]);
             if ($result && isset($result['approval_url'])) {
                 $transactionCode = $result['payment_id'];
-                Log::info('✅ PayPal Order Created Successfully', [
+                Log::info('✅ PayPal Order Created Successfully from create Order', [
                     'transaction_code' => $transactionCode,
                     'amount_usd' => $amountUSD,
                     'approval_url' => $result['approval_url']
@@ -70,11 +72,15 @@ class PayPalGateway implements PaymentGateway
             ];
         }
     }
+    
 public function executePayment($paymentId, $payerId): array
 {
     try {
         $result = $this->paypalService->executePayment($paymentId, $payerId);
-        
+        Log::info('Executing PayPal Payment', [
+            'payment_id' => $paymentId,
+            'payer_id' => $payerId
+        ]);
         if ($result['status'] === 'COMPLETED') {
             Log::info('✅ PayPal Payment Execution Successful', [
                 'order_id' => $paymentId,

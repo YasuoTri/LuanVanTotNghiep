@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Ramsey\Uuid\Uuid;
 
 class PayPalService
 {
@@ -208,7 +209,7 @@ class PayPalService
             throw $e;
         }
     }
-public function executePayment($orderId, $payerId = null)
+    public function executePayment($orderId, $payerId = null)
 {
     try {
         $accessToken = $this->getAccessToken();
@@ -221,7 +222,7 @@ public function executePayment($orderId, $payerId = null)
 
         // Verify order state before capturing
         $orderResponse = Http::withToken($accessToken)
-            ->withHeaders(['Content-Type' => 'application/json'])
+            ->withHeaders(['Content-Type' => 'application/json']) // Unique request ID to avoid duplication
             ->get($this->baseUrl . '/v2/checkout/orders/' . $orderId);
 
         if ($orderResponse->successful()) {
@@ -236,21 +237,21 @@ public function executePayment($orderId, $payerId = null)
         } else {
             throw new \Exception('Failed to retrieve order details: ' . $orderResponse->body());
         }
-
-        // Capture the payment with an empty JSON body
+         $accessToken = $this->getAccessToken();
+        // Capture the payment with an empty JSON object
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
+              'PayPal-Request-Id' => Uuid::uuid4()->toString() // Use a unique UUID
             ])
-            ->withOptions([
-                'debug' => fopen('php://stderr', 'w') // Log raw request for debugging
-            ])
-            ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture', []);
-        Log::info('Order Details', [
+            ->post($this->baseUrl . '/v2/checkout/orders/' . $orderId . '/capture', (object)[]);
+
+        Log::info('Capture Request Details', [
             'order_id' => $orderId,
             'status' => $response->status(),
             'body' => $response->body()
-        ]);        
+        ]);
+
         if ($response->successful()) {
             $result = $response->json();
             
@@ -299,6 +300,7 @@ public function executePayment($orderId, $payerId = null)
                 "intent" => "CAPTURE",
                 "purchase_units" => [
                     [
+                        "invoice_id" => 'INV-' . uniqid(),
                         "amount" => [
                             "currency_code" => $data['currency'] ?? 'USD',
                             "value" => $data['amount']
@@ -313,6 +315,36 @@ public function executePayment($orderId, $payerId = null)
                     "user_action" => "PAY_NOW"
                 ],
             ];
+        //     $payload = [
+        //     "intent" => "CAPTURE",
+        //     "purchase_units" => [
+        //         [
+        //             "invoice_id" => 'INV-' . uniqid(),
+        //             "amount" => [
+        //                 "currency_code" => $data['currency'] ?? 'USD',
+        //                 "value" => $data['amount']
+        //             ],
+        //             "description" => $data['description'] ?? 'Course Payment',
+        //             "custom_id" => $data['custom_data'] ?? null,
+        //             "payee" => [
+        //                 "email_address" => "sb-v4whv44224147@business.example.com" // Tài khoản Business phụ
+        //             ],
+        //             "platform_fees" => [
+        //                 [
+        //                     "amount" => [
+        //                         "currency_code" => "USD",
+        //                         "value" => "5.00" // Phí hoa hồng của nền tảng
+        //                     ]
+        //                 ]
+        //             ]
+        //         ]
+        //     ],
+        //     "application_context" => [
+        //         "return_url" => $data['return_url'],
+        //         "cancel_url" => $data['cancel_url'],
+        //         "user_action" => "PAY_NOW"
+        //     ],
+        // ];
 
             Log::info('🚀 Creating PayPal Payment', [
                 'amount' => $data['amount'],
@@ -322,7 +354,9 @@ public function executePayment($orderId, $payerId = null)
             $response = Http::withToken($accessToken)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post($this->baseUrl . '/v2/checkout/orders', $payload);
-
+            Log::info('🚀 Creating PayPal Payment from create Payment', [
+                '$request:' =>$response->body(),
+            ]);
             if ($response->successful()) {
                 $result = $response->json();
                 

@@ -26,9 +26,9 @@ class UpdateInstructorRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where('role', 'instructor'),
             ],
-            'name' => ['sometimes', 'string', 'max:100'],
             'bio' => ['nullable', 'string'],
             'organization' => ['nullable', 'string', 'max:100'],
+            'email_paypal' => ['nullable', 'string', 'email', 'max:255'],
         ];
     }
 
@@ -41,6 +41,7 @@ class UpdateInstructorRequest extends FormRequest
             'user_id.exists' => 'The selected user must exist and have the role "instructor".',
             'name.max' => 'The instructor name cannot exceed 100 characters.',
             'organization.max' => 'The organization name cannot exceed 100 characters.',
+            'email_paypal.email' => 'The email PayPal must be a valid email address.',
         ];
     }
 }

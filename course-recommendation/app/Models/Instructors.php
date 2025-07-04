@@ -11,7 +11,7 @@ class Instructors extends Model
     use HasFactory, SoftDeletes;
     protected $table = 'instructors';
     protected $primaryKey = 'id';
-    protected $fillable = ['user_id', 'name', 'bio', 'organization','bank_account', 'bank_name'];
+    protected $fillable = ['user_id', 'bio', 'organization','email_paypal'];
     protected $dates = ['deleted_at'];
     public function user()
     {
@@ -21,6 +21,5 @@ class Instructors extends Model
    public function courses(){
     return $this->hasMany(Course::class, 'instructor_id');
    }
-   
 
 }

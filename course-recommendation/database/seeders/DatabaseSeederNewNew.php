@@ -1,5 +1,4 @@
 <?php
-
 namespace Database\Seeders;
 
 use App\Models\StudentCategory;
@@ -30,8 +29,9 @@ use App\Models\Student;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\File;
 
-class DatabaseSeederNew extends Seeder
+class DatabaseSeederNewNew extends Seeder
 {
     public function run(): void
     {
@@ -41,7 +41,6 @@ class DatabaseSeederNew extends Seeder
         $this->seedStudents();
         $this->seedCategories();
         $this->seedCourses();
-        $this->seedCourseCategories();
         $this->seedStudentCategories();
         $this->seedEnrollments();
         $this->seedCertificates();
@@ -91,7 +90,7 @@ class DatabaseSeederNew extends Seeder
             'updated_at' => now(),
         ]);
 
-        // Create 1 instructor
+        // Create 2 instructors
         User::create([
             'username' => 'instructor1',
             'email' => 'instructor1@example.com',
@@ -99,7 +98,17 @@ class DatabaseSeederNew extends Seeder
             'birthdate' => '1985-01-01',
             'gender' => 'Female',
             'role' => 'instructor',
-            'email_paypal' => 'sb-iqclf44276453@personal.example.com',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        User::create([
+            'username' => 'instructor2',
+            'email' => 'instructor2@example.com',
+            'password' => Hash::make('password'),
+            'birthdate' => '1990-01-01',
+            'gender' => 'Male',
+            'role' => 'instructor',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -127,16 +136,31 @@ class DatabaseSeederNew extends Seeder
     {
         $this->command->info('Seeding instructors...');
 
-        $instructorUser = User::where('role', 'instructor')->first();
-        Instructors::create([
-            'user_id' => $instructorUser->id,
-            'bio' => 'Expert in programming and data science.',
-            'organization' => 'Learning Platform',
-            'bank_account' => 'ACC1234567',
-            'bank_name' => 'Vietcombank',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $instructorUsers = User::where('role', 'instructor')->get();
+        $instructorData = [
+            [
+                'user_id' => $instructorUsers[0]->id,
+                'name' => 'Instructor One',
+                'bio' => 'Expert in programming and data science.',
+                'organization' => 'Learning Platform',
+                'email_paypal' => 'sb-iqclf44276453@personal.example.com',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'user_id' => $instructorUsers[1]->id,
+                'name' => 'Instructor Two',
+                'bio' => 'Specialist in web development and AI.',
+                'organization' => 'Tech Academy',
+                'email_paypal' => 'sb-iqclf44276454@personal.example.com',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ];
+
+        foreach ($instructorData as $data) {
+            Instructors::create($data);
+        }
 
         $this->command->info('Instructors seeded successfully!');
     }
@@ -158,64 +182,111 @@ class DatabaseSeederNew extends Seeder
         $this->command->info('Students seeded successfully!');
     }
 
-    private function seedCategories()
-    {
-        $this->command->info('Seeding categories...');
+  private function seedCategories()
+{
+    $this->command->info('Seeding categories...');
 
-        // Create 1 parent category and 1 subcategory
-        $parent = Category::create([
-            'name' => 'Programming',
-            'parent_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+    // Đường dẫn đến file CSV
+    $csvFile = public_path('udemy_coursesReal.csv');
+    if (!File::exists($csvFile)) {
+        $this->command->error('CSV file not found for categories seeding!');
+        return;
+    }
 
+    // Đọc file CSV để lấy danh sách subject duy nhất
+    $file = fopen($csvFile, 'r');
+    $header = fgetcsv($file); // Bỏ qua dòng tiêu đề
+    $subjects = [];
+
+    while (($row = fgetcsv($file)) !== false) {
+        $data = array_combine($header, $row);
+        $subject = trim($data['subject']);
+        if (!empty($subject) && !in_array($subject, $subjects)) {
+            $subjects[] = $subject;
+        }
+    }
+    fclose($file);
+
+    // Tạo danh mục cha
+    $parent = Category::create([
+        'name' => 'Programming',
+        'parent_id' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Tạo các danh mục con từ subjects
+    foreach ($subjects as $subject) {
         Category::create([
-            'name' => 'Web Development',
+            'name' => $subject,
             'parent_id' => $parent->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
-        $this->command->info('Categories seeded successfully!');
     }
 
-    private function seedCourses()
-    {
-        $this->command->info('Seeding 3 courses...');
+    $this->command->info('Categories seeded successfully!');
+}
+private function seedCourses()
+{
+    $this->command->info('Seeding courses from CSV...');
 
-        $instructor = Instructors::first();
-        $difficulties = ['Beginner', 'Intermediate', 'Advanced'];
+    $instructors = Instructors::all()->pluck('id')->toArray();
+    $csvFile = public_path('udemy_coursesReal.csv'); // Đường dẫn đến file CSV
+    if (!File::exists($csvFile)) {
+        $this->command->error('CSV file not found!');
+        return;
+    }
 
-        for ($i = 1; $i <= 3; $i++) {
-            Course::create([
-                'instructor_id' => $instructor->id,
-                'course_name' => "Course $i",
-                'difficulty_level' => $difficulties[$i - 1],
-                'course_rating' => 0,
-                'course_url' => "course-$i",
-                'image' => "images/course_$i.jpg",
-                'course_description' => "Description for Course $i",
-                'price' => 29.99,
-                'skills' => "Skill $i",
-                'status' => 'approved',
-                'is_certificate_enabled' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+    $file = fopen($csvFile, 'r');
+    $header = fgetcsv($file); // Bỏ qua dòng tiêu đề
+
+    $skippedCourses = 0; // Đếm số khóa học bị bỏ qua do trùng tên
+
+    while (($row = fgetcsv($file)) !== false) {
+        $data = array_combine($header, $row);
+
+        // Kiểm tra xem course_name đã tồn tại chưa
+        if (Course::where('course_name', $data['course_title'])->exists()) {
+            $this->command->warn("Skipping course '{$data['course_title']}' due to duplicate course_name.");
+            $skippedCourses++;
+            continue; // Bỏ qua dòng này và chuyển sang dòng tiếp theo
         }
 
-        $this->command->info('Courses seeded successfully!');
-    }
+        // Ánh xạ level
+        $level = match ($data['level']) {
+            'All Levels', 'Beginner Level' => 'Beginner',
+            'Intermediate Level' => 'Intermediate',
+            'Expert Level', 'Advanced Level' => 'Advanced',
+            default => null,
+        };
 
-    private function seedCourseCategories()
-    {
-        $this->command->info('Seeding course categories...');
+        // Xử lý price
+        $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) : 0;
 
-        $courses = Course::all();
-        $category = Category::where('name', 'Web Development')->first();
+        // Chọn ngẫu nhiên instructor
+        $instructorId = $instructors[array_rand($instructors)];
 
-        foreach ($courses as $course) {
+        // Tạo khóa học
+        $course = Course::create([
+            'instructor_id' => $instructorId,
+            'course_name' => $data['course_title'],
+            'difficulty_level' => $level,
+            'course_rating' => 0, // Sẽ được cập nhật sau khi có review
+            'course_url' => $data['url'],
+            'image' => null, // Có thể thêm logic để xử lý hình ảnh
+            'course_description' => null, // CSV không có mô tả
+            'price' => $price,
+            'skills' => $data['subject'], // Sử dụng subject làm skills
+            'status' => 'approved',
+            'is_certificate_enabled' => 1,
+            'created_at' => $data['published_timestamp'],
+            'updated_at' => $data['published_timestamp'],
+        ]);
+
+        // Gán khóa học vào danh mục tương ứng
+        $category = Category::where('name', $data['subject'])->first();
+        if ($category) {
             CourseCategory::create([
                 'course_id' => $course->id,
                 'category_id' => $category->id,
@@ -223,9 +294,31 @@ class DatabaseSeederNew extends Seeder
                 'updated_at' => now(),
             ]);
         }
-
-        $this->command->info('Course categories seeded successfully!');
     }
+
+    fclose($file);
+    $this->command->info("Courses seeded successfully from CSV! Skipped $skippedCourses duplicate courses.");
+}
+
+    // private function seedCourseCategories()
+    // {
+    //     $this->command->info('Seeding course categories...');
+
+    //     $courses = Course::all();
+    //     foreach ($courses as $course) {
+    //         $category = Category::where('name', $course->skills)->first();
+    //         if ($category) {
+    //             CourseCategory::create([
+    //                 'course_id' => $course->id,
+    //                 'category_id' => $category->id,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ]);
+    //         }
+    //     }
+
+    //     $this->command->info('Course categories seeded successfully!');
+    // }
 
     private function seedStudentCategories()
     {
@@ -287,22 +380,24 @@ class DatabaseSeederNew extends Seeder
 
     private function seedCertificateRules()
     {
-        $this->command->info('Seeding 1 certificate rule...');
+        $this->command->info('Seeding certificate rules...');
 
-        $course = Course::first();
+        $courses = Course::all();
 
-        CertificateRule::create([
-            'course_id' => $course->id,
-            'instructor_id' => $course->instructor_id,
-            'lesson_completion_percent' => 80,
-            'lesson_version_rule' => 'latest',
-            'quiz_min_score' => 70,
-            'quiz_version_rule' => 'latest',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        foreach ($courses as $course) {
+            CertificateRule::create([
+                'course_id' => $course->id,
+                'instructor_id' => $course->instructor_id,
+                'lesson_completion_percent' => 80,
+                'lesson_version_rule' => 'latest',
+                'quiz_min_score' => 70,
+                'quiz_version_rule' => 'latest',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
-        $this->command->info('Certificate rule seeded successfully!');
+        $this->command->info('Certificate rules seeded successfully!');
     }
 
     private function seedCoupons()

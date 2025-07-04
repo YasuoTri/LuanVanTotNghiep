@@ -198,7 +198,7 @@ class RevenueDistributePaypal extends Controller
     {
         try {
             // Lấy PayPal email
-            $paypalEmail ="sb-iqclf44276453@personal.example.com";
+            $paypalEmail = $instructor->email_paypal ?? null;
             
             if (!$paypalEmail) {
                 $error = "No PayPal email found for instructor {$instructor->id}";

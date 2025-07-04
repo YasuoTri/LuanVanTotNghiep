@@ -27,9 +27,9 @@ class StoreInstructorRequest extends FormRequest
                 Rule::exists('users', 'id')->where('role', 'instructor'),
                 Rule::unique('instructors', 'user_id'),
             ],
-            'name' => ['required', 'string', 'max:100'],
             'bio' => ['nullable', 'string'],
             'organization' => ['nullable', 'string', 'max:100'],
+            'email_paypal' => ['nullable', 'email'],
         ];
     }
 

@@ -49,9 +49,8 @@ class AuthController extends Controller
             'category_ids.*' => 'exists:categories,id',
             'bio' => 'nullable|string|max:1000',
             'organization' => 'nullable|string|max:100',
-            'name' => 'nullable|string|max:100',
-            'bank_account' => 'nullable|string|max:50',
-            'bank_name' => 'nullable|string|max:100',
+            'fullname' => 'nullable|string|max:100', // Updated from name to full_name
+            'email_paypal' => 'nullable|email', // PayPal email for instructors
         ]);
 
         // Create a unique userid_DI
@@ -71,6 +70,7 @@ class AuthController extends Controller
         // Create user with default role as student
         $user = User::create([
             'username' => $validatedData['username'],
+            'fullname' => $validatedData['fullname'] ?? null, // Updated from name to full_name
             'email' => $validatedData['email'],
             'password' => $validatedData['password'],
             'birthdate' => $validatedData['birthdate'] ?? null, // Updated from YoB to birthdate
@@ -82,17 +82,15 @@ class AuthController extends Controller
             // Create instructor record if role is instructor
             Instructors::create([
                 'user_id' => $user->id,
-                'name' => $validatedData['name'],
                 'bio' =>  $validatedData['bio'] ?? 'No bio provided',
                 'organization' =>  $validatedData['organization'] ?? 'No organization provided',
-                'bank_account' => $validatedData['bank_account'] ?? null,
-                'bank_name' => $validatedData['bank_name'] ?? null,
+                'email_paypal' => $validatedData['email_paypal'],
             ]);
         }else if ($user->role === 'admin') {
             // Create admin record if role is admin
             Admins::create([
                 'user_id' => $user->id,
-                'name' => $validatedData['name'] ?? 'Admin',
+                'admin_level' => $validatedData['admin_level'] ?? 'organization', // Default admin level is organization
             ]);
         }else if ($user->role === 'student') {
             // Create student record if role is student
@@ -381,6 +379,7 @@ class AuthController extends Controller
 
             $user = User::create([
                 'username' => $username,
+                'fullname' => $socialUser->getName() ?? 'User ' . Str::random(5), // Updated from name to full_name
                 'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.com',
                 'password' => Hash::make('password'), // Placeholder password
                 'avatar' => $avatarUrl,
@@ -774,6 +773,7 @@ class AuthController extends Controller
             // Validate input
             $validatedData = $request->validate([
                 'username' =>'required|string|max:50',
+                'fullname' => 'nullable|string|max:100', // Updated from name to full_name
                 'LoE_DI' => 'nullable|string|max:50',
                 'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
                 'gender' => 'nullable|string|in:Male,Female,other',
@@ -783,9 +783,7 @@ class AuthController extends Controller
                 'category_ids.*' => 'nullable|exists:categories,id',
                 'bio' => 'nullable|string|max:1000',
                 'organization' => 'nullable|string|max:100',
-                'name' => 'nullable|string|max:100',
-                'bank_account'=>'nullable|string|max:50',
-                'bank_name'=>'nullable|string|max:50',
+                'email_paypal' => 'nullable|email', // PayPal email for instructors
             ]);
 
             // Handle avatar upload
@@ -813,7 +811,7 @@ class AuthController extends Controller
 
             // Update user data
             $userDataToUpdate = array_intersect_key($validatedData, array_flip([
-                'username', 'birthdate', 'gender', 'avatar'
+                'username','fullname', 'birthdate', 'gender', 'avatar'
             ]));
             $user->fill($userDataToUpdate);
             $userIsDirty = $user->isDirty();
@@ -843,7 +841,7 @@ class AuthController extends Controller
                 $instructor = $user->instructor;
                 if ($instructor) {
                     $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([
-                        'bio', 'organization', 'name','bank_account','bank_name'
+                        'bio', 'organization','email_paypal'
                     ]));
                     $instructor->fill($instructorDataToUpdate);
                     $instructorIsDirty = $instructor->isDirty();

@@ -29,12 +29,6 @@ class UpdateUserRequest extends FormRequest
         $userId = $this->route('id') ?? $this->input('id');
 
         return [
-            'userid_DI' => [
-                'sometimes',
-                'string',
-                'max:255',
-                Rule::unique('users', 'userid_DI')->ignore($userId)
-            ],
             'email' => [
                 'sometimes',
                 'nullable',
@@ -42,6 +36,8 @@ class UpdateUserRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId)
             ],
+            'username' => 'sometimes|string|max:50',
+            'fullname' => 'sometimes|string|max:100',
             'password' => 'sometimes|string|min:8|max:255',
             'avatar' => ['nullable', 'string', 'max:255'],
             'final_cc_cname_DI' => 'sometimes|string|max:100',

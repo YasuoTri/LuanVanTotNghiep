@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Certificate\StoreCertificateRequest;
 use App\Http\Requests\Certificate\UpdateCertificateRequest;
+use App\Mail\CertificateIssuedMail;
 use App\Models\Certificate;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 use App\Models\CertificateRule;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -13,13 +16,16 @@ use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Quiz;
 use App\Models\QuizResult;
+use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use App\Services\CloudinaryService;
+use Cloudinary\Cloudinary as CloudinaryCloudinary;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -420,6 +426,35 @@ public function destroy($id): JsonResponse
             'certificate_url' => $existingCertificate->download_url
         ]);
     }
+    $course = Course::findOrFail($courseId);
+    $user = User::findOrFail($userId);
+    $instructor = $course->instructor;
+    $instructor_fullname=User::findOrFail($course->instructor->user_id);
+    $pdf = Pdf::loadView('certificate', [
+    'student_name' => $user->fullname,
+    'course_name' => $course->course_name,
+    'instructor_name' => $instructor_fullname ?? 'N/A',
+    'instructor' => $instructor ?? 'N/A',
+    'issued_at' => now()->format('d/m/Y'),
+    'signature_url' => $instructor->signature_url ?? public_path('signatures/default.png')
+]);
+
+    // 2. Lưu file tạm
+     $pdfPath = storage_path("app/certificates/certificate_{$userId}_{$courseId}.pdf");
+
+    $uploadedFile = new UploadedFile(
+        $pdfPath,
+        basename($pdfPath),
+        'application/pdf',
+        null,
+        true
+    );
+
+    $pdf->save($pdfPath);
+    $cloudinaryService=new CloudinaryCloudinary();
+    // 3. Upload lên Cloudinary
+    $cloudinaryService = new CloudinaryService($cloudinaryService);
+    $uploadResult = $cloudinaryService->upload($uploadedFile, 'certificates');
 
     // 5. Tạo chứng chỉ nếu chưa có
     $certificate = Certificate::firstOrCreate(
@@ -431,11 +466,15 @@ public function destroy($id): JsonResponse
             'enrollment_id' => $enrollment->id,
             'instructor_id' => Course::find($courseId)->instructor_id,
             'certificate_code' => strtoupper(Str::random(12)),
-            'download_url' => url("/certificates/{$userId}/{$courseId}/download")
+            'download_url' => $uploadResult['secure_url'] ?? null,
         ]
     );
     Mail::to($certificate->user->email)
-     ->send(new \App\Mail\CertificateIssuedMail($certificate));
+     ->send(new CertificateIssuedMail($certificate));
+     // 6. Xoá file tạm
+    if (file_exists($pdfPath)) {
+        unlink($pdfPath);
+    }
     return response()->json([
         'eligible' => true,
         'message' => 'Đã cấp chứng chỉ thành công.',

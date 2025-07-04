@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <h2>🎉 Xin chúc mừng {{ $user->name }}!</h2>
+    <h2>🎉 Xin chúc mừng {{ $user->fullname }}!</h2>
 
     <p>Bạn đã được cấp chứng chỉ cho khóa học <strong>{{ $course->title }}</strong>.</p>
 

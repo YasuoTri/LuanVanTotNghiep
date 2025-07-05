@@ -14,9 +14,9 @@ class User extends Authenticatable implements JWTSubject
     use HasApiTokens,HasFactory, Notifiable, SoftDeletes;
 
     protected $fillable = [
+        'id',
         'username',
         'fullname', // Updated from name to fullname
-        'userid_DI',
         'email',
         'password',
         'avatar',
@@ -112,12 +112,10 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [
+            'id' => $this->id,
             'role' => $this->role,
             'email' => $this->email,
-            'userid_DI' => $this->userid_DI,
-            'final_cc_cname_DI' => $this->final_cc_cname_DI,
-            'LoE_DI' => $this->LoE_DI,
-            'YoB' => $this->YoB,
+
         ];
     }
     public function violations()

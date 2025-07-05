@@ -45,7 +45,9 @@ class AuthController extends Controller
             'gender' => 'nullable|string|in:Male,Female,other',
             'role' => 'in:student,instructor,admin', // Default role is student
             'learning_goals' => 'nullable|string',
-            'category_ids' => 'nullable|array',
+            // 'category_ids' => 'nullable|array',
+            // 'category_ids.*' => 'exists:categories,id',
+            'category_ids' => 'required|array|min:1', // bắt buộc phải có ít nhất 1 category
             'category_ids.*' => 'exists:categories,id',
             'bio' => 'nullable|string|max:1000',
             'organization' => 'nullable|string|max:100',
@@ -110,8 +112,11 @@ class AuthController extends Controller
        
 
      
-        // Generate JWT token
-        $token = JWTAuth::fromUser($user);
+        try {
+            $token = JWTAuth::fromUser($user);
+        } catch (\Exception $e) {
+            dd('JWT ERROR', $e->getMessage(), $user);
+        }
 
         // Set cookie
         $cookie = cookie(
@@ -228,7 +233,12 @@ class AuthController extends Controller
             }
 
             // Generate JWT token
+        try {
             $token = JWTAuth::fromUser($user);
+        } catch (\Exception $e) {
+            dd('JWT ERROR', $e->getMessage(), $user);
+        }
+        $token = JWTAuth::fromUser($user); 
 
             // Create JWT cookie
             $cookie = cookie(
@@ -300,34 +310,55 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
-    public function redirectToGoogle()
-    {
-        return Socialite::driver('google')->redirect();
+public function redirectToGoogle()
+{
+    try {
+        /** @var \Laravel\Socialite\Two\GoogleProvider  */
+        $driver = Socialite::driver('google');
+        $url= $driver->stateless()->redirect()->getTargetUrl();
+        return response()->json([
+            'url' => $url,
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Google redirect error: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Failed to redirect to Google: ' . $e->getMessage(),
+        ], 500);
     }
-
-    public function handleGoogleCallback()
-    {
-        try {
-            $socialUser = Socialite::driver('google')->user();
-            return $this->handleSocialLogin($socialUser, 'google');
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Google login failed: ' . $e->getMessage(),
-            ], 500);
-        }
+}
+public function handleGoogleCallback()
+{
+    try {
+            /** @var \Laravel\Socialite\Two\GoogleProvider $provider */
+        $provider = Socialite::driver('google');
+        $user = $provider->stateless()->user();
+        return $this->handleSocialLogin($user, 'google');
+    } catch (\Exception $e) {
+        Log::error('Google callback error: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Failed to authenticate with Google: ' . $e->getMessage(),
+        ], 500);
     }
+}
+
 
     public function redirectToFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+            /** @var \Laravel\Socialite\Two\GoogleProvider  */
+        $driver = Socialite::driver('facebook');
+        $url= $driver->stateless()->redirect()->getTargetUrl();
+        return response()->json([
+            'url' => $url,
+        ]);
     }
 
     public function handleFacebookCallback()
     {
         try {
-            $socialUser = Socialite::driver('facebook')->user();
-            return $this->handleSocialLogin($socialUser, 'facebook');
+             /** @var \Laravel\Socialite\Two\FacebookProvider $provider */
+            $provider = Socialite::driver('facebook');
+            $user = $provider->stateless()->user();
+            return $this->handleSocialLogin($user, 'facebook');
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Facebook login failed: ' . $e->getMessage(),
@@ -335,8 +366,11 @@ class AuthController extends Controller
         }
     }
 
-    protected function handleSocialLogin($socialUser, $provider)
-    {
+   protected function handleSocialLogin($socialUser, $provider)
+{
+    try {
+        Log::info("Handling social login for provider: {$provider}");
+        
         $user = User::where('provider_id', $socialUser->getId())
             ->where('provider', $provider)
             ->first();
@@ -373,30 +407,45 @@ class AuthController extends Controller
                     $avatarUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'user_avatars');
                     @unlink($tempImage);
                 } catch (\Exception $e) {
+                    Log::error('Avatar upload error: ' . $e->getMessage());
                     $avatarUrl = $socialUser->getAvatar();
                 }
             }
 
             $user = User::create([
                 'username' => $username,
-                'fullname' => $socialUser->getName() ?? 'User ' . Str::random(5), // Updated from name to full_name
+                'fullname' => $socialUser->getName() ?? 'User ' . Str::random(5),
                 'email' => $socialUser->getEmail() ?? $socialUser->getId() . '@' . $provider . '.com',
-                'password' => Hash::make('password'), // Placeholder password
+                'password' => Hash::make(Str::random(16)), // Random password
                 'avatar' => $avatarUrl,
-                'role' => null,
+                'role' => 'student', // Will be set later
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
+                'status' => 'active',
             ]);
 
-            // $student = Student::create([
-            //     'user_id' => $user->id,
-            //     'learning_goals' => null,
-            //     'LoE_DI' => null,
-            //     'total_courses_completed' => 0,
-            // ]);
+            Log::info("Created new user via {$provider}: " . $user->id);
         }
 
-        $token = JWTAuth::fromUser($user);
+        // Check user status
+        if ($user->status === 'banned') {
+            return response()->json([
+                'error' => 'Your account has been permanently banned.',
+            ], 403);
+        }
+
+        if ($user->status === 'suspended' && $user->suspended_until && now()->lt($user->suspended_until)) {
+            return response()->json([
+                'error' => 'Your account is suspended until ' . $user->suspended_until->toFormattedDateString(),
+            ], 403);
+        }
+
+        try {
+            $token = JWTAuth::fromUser($user);
+        } catch (\Exception $e) {
+            dd('JWT ERROR', $e->getMessage(), $user);
+        }
+
         $cookie = cookie(
             'jwt_token',
             $token,
@@ -408,18 +457,6 @@ class AuthController extends Controller
             false,
             'Strict'
         );
-
-        try {
-            // $response = Http::withHeaders([
-            //     'Authorization' => 'Bearer ' . $token,
-            // ])->post('http://localhost:8100/recommend-laravel', [
-            //     'user_id' => $user->id,
-            //     'course_name' => null,
-            // ]);
-
-            // $recommendedCourses = $response->successful()
-            //     ? $response->json()['courses']
-            //     : null;
 
         if ($user->role === null) {
             return response()->json([
@@ -436,15 +473,13 @@ class AuthController extends Controller
             'token' => $token,
         ])->withCookie($cookie);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Social login successful',
-                'user' => $user,
-                'token' => $token,
-                'recommendation_error' => 'Recommendation service unavailable: ' . $e->getMessage(),
-            ])->withCookie($cookie);
-        }
+    } catch (\Exception $e) {
+        Log::error("Social login error for {$provider}: " . $e->getMessage());
+        return response()->json([
+            'error' => 'Social login failed: ' . $e->getMessage(),
+        ], 500);
     }
+}
 
     public function sendResetLinkEmail(Request $request)
     {

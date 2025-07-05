@@ -378,8 +378,11 @@ public function indexAvailableCourseInstructor()
 public function storeCourseInstructor(CreateCourseRequest $request)
     {
         try {
+            if(Auth::user()->role === 'student') {
+                
+            }
             $validated = $request->validated();
-
+            
             // Kiểm tra từ khóa cấm
             $bannedWords = ['inappropriate', 'offensive'];
             if (isset($validated['course_description']) &&

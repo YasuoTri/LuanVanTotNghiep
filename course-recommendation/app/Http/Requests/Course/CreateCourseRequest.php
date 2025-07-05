@@ -21,7 +21,6 @@ class CreateCourseRequest extends FormRequest
             'course_rating' => 'nullable|numeric|min:0|max:5',
             'price' => 'required|integer|min:0',
             'skills' => 'required|string',
-            'tag' => 'nullable|string|max:100',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_ids' => 'required|array|exists:categories,id',
             'instructor_id' => 'nullable|exists:instructors,id',

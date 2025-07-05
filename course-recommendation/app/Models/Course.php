@@ -13,7 +13,7 @@ class Course extends Model
     protected $primaryKey = 'id';
     protected $fillable = ['id','instructor_id',
         'course_name', 'difficulty_level', 'course_rating',
-        'course_url','image', 'price','skills','tag','status','is_certificate_enabled'
+        'course_url','image', 'price','skills','course_description','status','is_certificate_enabled'
     ];
     protected $casts = [
         'course_rating' => 'float',

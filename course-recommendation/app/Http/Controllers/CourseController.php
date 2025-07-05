@@ -389,13 +389,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
             $validated = $request->validated();
             
-            // Kiểm tra từ khóa cấm
-            $bannedWords = ['inappropriate', 'offensive'];
-            if (isset($validated['course_description']) &&
-                preg_match('/\b(' . implode('|', $bannedWords) . ')\b/i', $validated['course_description'])) {
-                return response()->json(['message' => 'Course description contains banned words'], 422);
-            }
-
             // Kiểm tra category_ids
             if (!isset($validated['category_ids']) || empty($validated['category_ids'])) {
                 return response()->json(['message' => 'At least one category must be selected'], 422);

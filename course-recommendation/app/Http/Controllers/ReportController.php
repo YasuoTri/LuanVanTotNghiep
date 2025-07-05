@@ -62,17 +62,15 @@ class ReportController extends Controller
     }
 
     // Admin xem danh sách báo cáo
-    public function index(Request $request)
-    {
-        $reports = Report::with(['user', 'course', 'user.student', 'user.instructor'])
-            ->when($request->status, function ($query, $status) {
-                return $query->where('status', $status);
-            })
-            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-        return response()->json($reports);
-    }
+public function index(Request $request)
+{
+    $reports = Report::with(['user', 'course', 'user.student', 'user.instructor'])
+        ->orderBy('created_at', 'desc')
+        ->paginate(10);
+
+    return response()->json($reports);
+}
+
 public function searchCourseWithReportSummary($courseId)
 {
     $course = Course::with('instructors.user')->findOrFail($courseId);
@@ -88,36 +86,15 @@ public function searchCourseWithReportSummary($courseId)
         'report_summary' => $reportSummary,
     ]);
 }
-public function FindviewReports(Request $request)
-    {
-        // Validate input
-        $request->validate([
-            'status' => 'nullable|in:pending,reviewed,resolved',
-            'report_type' => 'nullable|in:inappropriate_content,technical_issue,copyright_violation,spam,other',
-        ]);
+public function viewReports(Request $request)
+{
+    $reports = Report::with(['user.student', 'user.instructor', 'course'])
+                     ->orderBy('created_at', 'desc')
+                     ->paginate(10);
 
-        try {
-            $query = Report::with(['user.student', 'user.instructor','course']);
+    return response()->json($reports);
+}
 
-            // Filter by status
-            if ($request->status) {
-                $query->where('status', $request->status);
-            }
-
-            // Sort and paginate
-            $reports = $query->orderBy('status', 'asc')
-                             ->orderBy('created_at', 'desc')
-                             ->paginate(10);
-
-            return response()->json($reports);
-        } catch (\Exception $e) {
-            Log::error('Error in FindviewReports: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error: ' . $e->getMessage(),
-                'data' => [],
-            ], 500);
-        }
-    }
     // Admin xử lý báo cáo
     // public function handleReport(Request $request, Report $report)
     // {
@@ -205,14 +182,9 @@ public function FindviewReports(Request $request)
 //         ], 500);
 //     }
 // }
+
 public function handleReport(Request $request, Report $report)
 {
-    $request->validate([
-        'status' => 'required|in:reviewed,resolved',
-        'admin_notes' => 'nullable|string|max:1000',
-        'action' => 'nullable|in:ban,delete,ignore',
-    ]);
-
     try {
         // Cập nhật trạng thái report
         // $report->update([
@@ -230,7 +202,6 @@ public function handleReport(Request $request, Report $report)
             'admin_id' => Auth::user()->id,
             'reviewed_at' => now(),
         ]);
-
 
         $course = $report->course;
 
@@ -486,7 +457,6 @@ public function instructorViewReports($courseId)
         return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    // kiểm tra instructor có đúng là chủ course này không
     $course = Course::where('id', $courseId)
         ->where('instructor_id', $user->instructor->id)
         ->first();
@@ -495,9 +465,8 @@ public function instructorViewReports($courseId)
         return response()->json(['message' => 'You do not own this course'], 403);
     }
 
-    // instructor chỉ xem, không sửa
     $reports = Report::where('course_id', $courseId)
-        ->select('id', 'user_id', 'reason', 'report_type', 'status', 'created_at')
+        ->select('id', 'user_id', 'reason', 'report_type', 'created_at')
         ->orderBy('created_at', 'desc')
         ->get();
 

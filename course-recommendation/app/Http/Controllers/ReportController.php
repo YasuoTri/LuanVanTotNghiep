@@ -438,4 +438,73 @@ public function reportSummary($courseId)
     ]);
 }
 
+public function resolveAllReports($courseId)
+{
+    $reports = Report::where('course_id', $courseId)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'resolved',
+                    'admin_id' => Auth::id(),
+                    'admin_notes' => 'Batch auto-resolved due to course suspended',
+                    'reviewed_at' => now()
+                ]);
+
+    return response()->json([
+        'message' => 'All reports resolved',
+        'count' => $reports
+    ]);
+}
+public function checkThreshold($courseId)
+{
+    $pendingCount = Report::where('course_id', $courseId)
+                    ->where('status', 'pending')
+                    ->count();
+
+    if ($pendingCount >= 10) {
+        Course::where('id', $courseId)
+            ->update(['status' => 'unavailable']);
+
+        // có thể auto resolve toàn bộ luôn
+        $this->resolveAllReports($courseId);
+
+        return response()->json([
+            'message' => 'Course auto-suspended due to high number of reports',
+            'pending_reports' => $pendingCount
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Threshold not reached',
+        'pending_reports' => $pendingCount
+    ]);
+}
+public function instructorViewReports($courseId)
+{
+    $user = Auth::user();
+
+    if (!$user || $user->role !== 'instructor') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // kiểm tra instructor có đúng là chủ course này không
+    $course = Course::where('id', $courseId)
+        ->where('instructor_id', $user->instructor->id)
+        ->first();
+
+    if (!$course) {
+        return response()->json(['message' => 'You do not own this course'], 403);
+    }
+
+    // instructor chỉ xem, không sửa
+    $reports = Report::where('course_id', $courseId)
+        ->select('id', 'user_id', 'reason', 'report_type', 'status', 'created_at')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'message' => 'Reports retrieved',
+        'reports' => $reports
+    ]);
+}
+
 }

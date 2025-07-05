@@ -81,15 +81,26 @@ class RevenueDistributePaypal extends Controller
             // ]);
 
             // Phân chia doanh thu cho từng instructor
+            // $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
+            //     ->where('status', 'completed')
+            //     ->groupBy('course_id')
+            //     ->selectRaw('course_id, SUM(amount) as total_amount')
+            //     ->get();
             $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
-                ->where('status', 'completed')
-                ->groupBy('course_id')
-                ->selectRaw('course_id, SUM(amount) as total_amount')
-                ->get();
+            ->whereIn('status', ['completed', 'refunded']) // tính luôn refund
+            ->groupBy('course_id')
+            ->selectRaw('course_id, SUM(
+                CASE
+                    WHEN status = "completed" THEN amount
+                    WHEN status = "refunded" THEN -amount
+                    ELSE 0
+                END
+            ) as total_amount')
+            ->get();
 
-                $distributionResults = [];
-                $successCount = 0;
-                $failCount = 0;
+            $distributionResults = [];
+            $successCount = 0;
+            $failCount = 0;
 
             foreach ($instructorsRevenue as $revenue) {
                 $course = Course::with('instructors.user')->find($revenue->course_id);

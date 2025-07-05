@@ -67,6 +67,7 @@ class DatabaseSeederNewNew extends Seeder
         // Create 1 student
         User::create([
             'username' => 'student1',
+            'fullname' => 'Student One',
             'email' => 'student1@example.com',
             'password' => Hash::make('password'),
             'birthdate' => '2000-01-01',
@@ -80,6 +81,7 @@ class DatabaseSeederNewNew extends Seeder
         // Create 1 admin
         User::create([
             'username' => 'admin1',
+            'fullname' => 'Admin One',
             'email' => 'admin1@example.com',
             'password' => Hash::make('password'),
             'birthdate' => '1980-01-01',
@@ -93,6 +95,7 @@ class DatabaseSeederNewNew extends Seeder
         // Create 2 instructors
         User::create([
             'username' => 'instructor1',
+            'fullname' => 'Instructor One',
             'email' => 'instructor1@example.com',
             'password' => Hash::make('password'),
             'birthdate' => '1985-01-01',
@@ -104,6 +107,7 @@ class DatabaseSeederNewNew extends Seeder
 
         User::create([
             'username' => 'instructor2',
+            'fullname'=> 'Instructor Two',
             'email' => 'instructor2@example.com',
             'password' => Hash::make('password'),
             'birthdate' => '1990-01-01',
@@ -140,7 +144,6 @@ class DatabaseSeederNewNew extends Seeder
         $instructorData = [
             [
                 'user_id' => $instructorUsers[0]->id,
-                'name' => 'Instructor One',
                 'bio' => 'Expert in programming and data science.',
                 'organization' => 'Learning Platform',
                 'email_paypal' => 'sb-iqclf44276453@personal.example.com',
@@ -149,7 +152,6 @@ class DatabaseSeederNewNew extends Seeder
             ],
             [
                 'user_id' => $instructorUsers[1]->id,
-                'name' => 'Instructor Two',
                 'bio' => 'Specialist in web development and AI.',
                 'organization' => 'Tech Academy',
                 'email_paypal' => 'sb-iqclf44276454@personal.example.com',

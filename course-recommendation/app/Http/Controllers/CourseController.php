@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Course\CreateCourseRequest;
 use App\Http\Requests\Course\UpdateCourseRequest;
+use App\Mail\CourseApprovedMail;
+use App\Mail\CourseRejectedMail;
+use App\Models\AuditLog;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseCategory;
@@ -12,10 +15,12 @@ use App\Models\Category;
 use App\Models\Enrollment;
 use App\Models\Instructors;
 use App\Models\Lesson;
+use App\Models\Payment;
 use App\Models\Question;
 use App\Models\QuestionChoice;
 use App\Models\Quiz;
 use App\Models\Student;
+use App\Services\PayPalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Services\CloudinaryService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class CourseController extends Controller
 {
@@ -1015,7 +1021,12 @@ public function approveCourse(Request $request, $id)
         'admin_id' => Auth::user()->admin->id, // Giả sử admin_id là ID của người dùng đang đăng nhập
         'notes' => $request->input('notes'),
     ]);
-
+     // Gửi mail instructor
+    $instructor = $course->instructor;
+    if ($instructor && $instructor->user) {
+        Mail::to($instructor->user->email)
+            ->send(new CourseApprovedMail($course));
+    }
     return response()->json(['message' => 'Course approved successfully']);
 }
 // public function approveCourse(Request $request, $id)
@@ -1072,7 +1083,13 @@ public function rejectCourse(Request $request, $id)
         'status' => 'rejected',
         'notes' => $request->notes,
     ]);
-
+      // Gửi mail instructor
+    $course->load('instructor.user');
+    $instructor = $course->instructor;
+    if ($instructor && $instructor->user) {
+        Mail::to($instructor->user->email)
+            ->send(new CourseRejectedMail($course, $request->notes));
+    }
     return response()->json(['message' => 'Course rejected', 'notes' => $request->notes]);
 }
 
@@ -1585,6 +1602,152 @@ public function getPopularCourses(Request $request)
         ],
         'message' => 'Danh sách khóa học phổ biến trong danh mục ' . $category->name
     ], 200);
+}
+
+public function banAndRefundCourse($id)
+{
+    $admin = Auth::user();
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    // Tìm course
+    $course =Course::findOrFail($id);
+    $course->status = 'unavailable';
+    $course->save();
+
+    // Tìm các enrollments
+    $enrollments = Enrollment::where('course_id', $id)->get();
+    $refunds = [];
+
+    foreach ($enrollments as $enroll) {
+        $payment = Payment::where('user_id', $enroll->user_id)
+                        ->where('course_id', operator: $id)
+                        ->where('status', 'completed')
+                        ->first();
+
+        if ($payment) {
+            try {
+                // Refund qua PayPalService
+            $paypal = new PayPalService();
+            $result=$paypal->refundTransaction($payment->transaction_code, $payment->amount);
+
+                // Cập nhật payment
+                $payment->status = 'refunded';
+                $payment->save();
+
+                // Ghi log
+                AuditLog::create([
+                    'payment_id' => $payment->id,
+                    'action' => 'refunded',
+                    'details' => json_encode($result),
+                    'user_id' => $admin->id,
+                ]);
+
+                $refunds[] = [
+                    'user_id' => $enroll->user_id,
+                    'amount' => $payment->amount,
+                    'status' => 'success'
+                ];
+
+            } catch (\Exception $e) {
+                $refunds[] = [
+                    'user_id' => $enroll->user_id,
+                    'amount' => $payment->amount,
+                    'status' => 'failed',
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+    }
+
+    return response()->json([
+        'message' => 'Course banned and refund attempted',
+        'refunds' => $refunds,
+    ]);
+}
+public function banCourse($id)
+{
+    $admin = Auth::user();
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $course = Course::findOrFail($id);
+    $course->status = 'unavailable';
+    $course->save();
+
+    return response()->json([
+        'message' => 'Course banned successfully',
+        'course_id' => $id
+    ]);
+}
+public function refundCourse(Request $request, $id)
+{
+    $admin = Auth::user();
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $request->validate([
+        'refund_amounts' => 'required|array', // ví dụ: [{"enrollment_id":123,"amount":100000}]
+    ]);
+
+    $refunds = [];
+    foreach ($request->refund_amounts as $refund) {
+        $enrollId = $refund['enrollment_id'];
+        $amount = $refund['amount'];
+
+        $enrollment = Enrollment::find($enrollId);
+        if (!$enrollment || $enrollment->course_id != $id) {
+            $refunds[] = [
+                'enrollment_id' => $enrollId,
+                'status' => 'failed',
+                'error' => 'Enrollment not found or not part of this course'
+            ];
+            continue;
+        }
+
+        $payment = Payment::where('user_id', $enrollment->user_id)
+                        ->where('course_id', $id)
+                        ->where('status', 'completed')
+                        ->first();
+
+        if ($payment) {
+            try {
+                $paypal = new PayPalService();
+                $result = $paypal->refundTransaction($payment->transaction_code, $amount);
+
+                $payment->status = 'refunded';
+                $payment->save();
+
+                AuditLog::create([
+                    'payment_id' => $payment->id,
+                    'action' => 'refunded',
+                    'details' => json_encode($result),
+                    'user_id' => $admin->id,
+                ]);
+
+                $refunds[] = [
+                    'enrollment_id' => $enrollId,
+                    'amount' => $amount,
+                    'status' => 'success'
+                ];
+            } catch (\Exception $e) {
+                $refunds[] = [
+                    'enrollment_id' => $enrollId,
+                    'amount' => $amount,
+                    'status' => 'failed',
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+    }
+
+    return response()->json([
+        'message' => 'Refunds processed',
+        'results' => $refunds
+    ]);
 }
 
 }

@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\Payment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use PayPalCheckoutSdk\Core\PayPalHttpClient;
+use PayPalCheckoutSdk\Core\SandboxEnvironment;
+use PayPalCheckoutSdk\Payments\CapturesRefundRequest;
 use Ramsey\Uuid\Uuid;
 
 class PayPalService
@@ -12,7 +16,7 @@ class PayPalService
     private $clientSecret;
     private $baseUrl;
     private $accessToken;
-
+    protected $client;
     public function __construct()
     {
         $this->clientId = config('paypal.client_id');
@@ -25,6 +29,8 @@ class PayPalService
         $this->baseUrl = config('paypal.mode') === 'sandbox' 
             ? 'https://api-m.sandbox.paypal.com'
             : 'https://api-m.paypal.com';
+        $env = new SandboxEnvironment($this->clientId, $this->clientSecret);
+        $this->client = new PayPalHttpClient($env);
     }
 
     /**
@@ -267,7 +273,11 @@ class PayPalService
                 'currency' => $capture['amount']['currency_code'],
                 'platform_fee' => $platformFee
             ]);
-
+            $payment = Payment::where('order_id', $orderId)->first();
+            if ($payment) {
+                $payment->transaction_code = $capture['id'];  // Lưu capture id
+                $payment->save();
+            }
             Log::info('✅ PayPal Payment Executed Successfully', [
                 'order_id' => $orderId,
                 'status' => $result['status'],
@@ -415,6 +425,27 @@ class PayPalService
             return true;
         } catch (\Exception $e) {
             return false;
+        }
+    }
+      public function refundTransaction($captureId, $amount)
+    {
+        $request = new CapturesRefundRequest($captureId);
+        $request->body = [
+            'amount' => [
+                'value' => $amount,
+                'currency_code' => 'USD'
+            ]
+        ];
+
+        try {
+            $response = $this->client->execute($request);
+            if ($response->statusCode === 201) {
+                return $response->result;
+            } else {
+                throw new \Exception('Refund failed');
+            }
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
         }
     }
 }

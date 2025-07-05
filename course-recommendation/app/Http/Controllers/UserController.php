@@ -199,8 +199,10 @@ public function show($id): JsonResponse
             $query->select('categories.id', 'categories.name');
         },
         'instructor.courses' => function ($query) {
-            $query->select('courses.id', 'course_name', 'course_rating');
+            $query->where('courses.status', 'approved')
+                ->withCount('enrollments');
         }
+
     ])->select([
         'id',
         'username',
@@ -211,7 +213,8 @@ public function show($id): JsonResponse
         'role',
         'created_at',
         'updated_at'
-    ])->find($id);
+    ])
+    ->find($id);
 
     if (!$user) {
         return response()->json([

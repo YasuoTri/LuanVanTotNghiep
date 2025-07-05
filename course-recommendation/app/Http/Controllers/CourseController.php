@@ -560,7 +560,10 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             }
             $hasEnrollment = Enrollment::where('course_id', $id)->exists();
             if ($hasEnrollment) {
-                return response()->json(['message' => 'Cannot update lesson. There are students enrolled in this course.'], 403);
+                return response()->json(['message' => 'Cannot update course. There are students enrolled in this course.'], 403);
+            }
+            if ($course->status === 'pending' || $course->status === 'draft') {
+                return response()->json(['message' => 'Cannot update course,its status must be draft or pending is ok'], 403);
             }
             $validated = $request->validated();
             if(isset($validated['course_name'])){
@@ -606,7 +609,8 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             if((!$course->isDirty()) && $courseCategoryCurrent === $courseCategory&&!$flag) {          
                 return response()->json(['message' => 'No changes detected'], 200);
             }
-            $validated['status'] = 'pending'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
+
+            $validated['status'] = 'draft'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
             $course->update($validated);
             return response()->json([
                 'success' => true,

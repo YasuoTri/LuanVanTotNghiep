@@ -1,119 +1,112 @@
-# from fastapi import FastAPI, Query, HTTPException
-# from typing import Optional
-# import pickle
-# from CourseRecommendationSystem import recommend, update_model
-
-# # Load pre-trained models at startup
-# try:
-#     courses_list = pickle.load(open('models/courses.pkl', 'rb'))
-#     similarity = pickle.load(open('models/similarity.pkl', 'rb'))
-#     svd = pickle.load(open('models/svd.pkl', 'rb'))
-#     user_interactions = pickle.load(open('models/user_interactions.pkl', 'rb'))
-#     user_competency = pickle.load(open('models/user_competency.pkl', 'rb'))
-#     user_features = pickle.load(open('models/user_features.pkl', 'rb'))
-# except FileNotFoundError as e:
-#     raise HTTPException(status_code=500, detail=f"Model file missing: {e}")
-
-# app = FastAPI()
-
-# @app.get("/recommend")
-# def get_recommendation(
-#     user_id: Optional[int] = Query(default=None, description="User ID for personalized recommendations"),
-#     course_name: Optional[str] = Query(default=None, description="Course name for content-based recommendations"),
-#     alpha: float = Query(default=0.5, ge=0, le=1, description="Weight for hybrid filtering (0 = collaborative, 1 = content-based)")
-# ):
-#     """
-#     Get course recommendations based on user_id, course_name, or both.
-#     Returns a list of courses with details: course_id, course_name, difficulty_level, university, skills, description, price, rating, course_url, status, categories.
-#     """
-#     result = recommend(
-#         user_id=user_id,
-#         course_name=course_name,
-#         alpha=alpha,
-#         courses_list=courses_list,
-#         similarity=similarity,
-#         svd=svd,
-#         user_interactions=user_interactions,
-#         user_competency=user_competency,
-#         user_features=user_features
-#     )
-#     return {"recommendations": result}
-
-# @app.post("/update-model")
-# def trigger_model_update():
-#     """
-#     Trigger model retraining and update saved models.
-#     """
-#     try:
-#         update_model()
-#         # Reload models after update
-#         global courses_list, similarity, svd, user_interactions, user_competency, user_features
-#         courses_list = pickle.load(open('models/courses.pkl', 'rb'))
-#         similarity = pickle.load(open('models/similarity.pkl', 'rb'))
-#         svd = pickle.load(open('models/svd.pkl', 'rb'))
-#         user_interactions = pickle.load(open('models/user_interactions.pkl', 'rb'))
-#         user_competency = pickle.load(open('models/user_competency.pkl', 'rb'))
-#         user_features = pickle.load(open('models/user_features.pkl', 'rb'))
-#         return {"status": "Model updated successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Model update failed: {str(e)}")
-
-
 from fastapi import FastAPI, Query, HTTPException
 from typing import Optional
 import pickle
-from CourseRecommendationSystem import recommend, update_model,recommend_similar_courses
+from CourseRecommendationSystem import recommend_similar_courses, update_model, get_popular_courses, recommend_collaborative,recommend_user_user_cf
+import pandas as pd
+import logging
+from fastapi import UploadFile, File
+import shutil
+import os
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load pre-trained models at startup
 try:
     courses_list = pickle.load(open('models/courses.pkl', 'rb'))
-    similarity = pickle.load(open('models/similarity.pkl', 'rb'))
-    svd = pickle.load(open('models/svd.pkl', 'rb'))
-    user_interactions = pickle.load(open('models/user_interactions.pkl', 'rb'))
-    user_competency = pickle.load(open('models/user_competency.pkl', 'rb'))
-    user_features = pickle.load(open('models/user_features.pkl', 'rb'))
-    svd_predictions = pickle.load(open('models/svd_predictions.pkl', 'rb'))
-    pathways = pickle.load(open('models/pathways.pkl', 'rb'))
-    student_categories = pickle.load(open('models/student_categories.pkl', 'rb'))
-    reviews = pickle.load(open('models/reviews.pkl', 'rb'))
+    tfidf_vectorizer = pickle.load(open('models/tfidf_vectorizer.pkl', 'rb'))
+    tfidf_matrix = pickle.load(open('models/tfidf_matrix.pkl', 'rb'))
+    svd_model = pickle.load(open('models/svd_model.pkl', 'rb'))
+    user_item_matrix = pickle.load(open('models/user_item_matrix.pkl', 'rb'))
 except FileNotFoundError as e:
     raise HTTPException(status_code=500, detail=f"Model file missing: {e}")
 
 app = FastAPI()
 
-@app.get("/recommend")
-def get_recommendation(
-    user_id: Optional[int] = Query(default=None, description="User ID for personalized recommendations"),
-    course_name: Optional[str] = Query(default=None, description="Course name for content-based recommendations"),
-    alpha: float = Query(default=0.7, ge=0, le=1, description="Weight for hybrid filtering (0 = collaborative, 1 = content-based)")
+@app.get("/recommend-similar")
+def get_similar_courses(
+    course_title: str = Query(..., description="Course title for content-based recommendations"),
+    num_recommendations: int = Query(default=20, ge=1, le=30, description="Number of recommendations to return")
 ):
     """
-    Get course recommendations based on user_id, course_name, or both.
-    Returns a list of courses with details: course_id, course_name, difficulty_level, university, skills, description, price, rating, course_url, status, categories.
+    Get recommendations for courses similar to the input course title.
+    Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
+    num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
     """
-    result = recommend(
-        user_id=user_id,
-        course_name=course_name,
-        alpha=alpha,
-        courses_list=courses_list,
-        similarity=similarity,
-        svd=svd,
-        user_interactions=user_interactions,
-        user_competency=user_competency,
-        user_features=user_features,
-        svd_predictions=svd_predictions,
-        pathways=pathways,
-        student_categories=student_categories,
-        reviews=reviews
-    )
-    return {"recommendations": result}
-
-@app.get("/recommend-similar")
-def get_similar_courses(course_name: str = Query(...)):
-    recommendations = recommend_similar_courses(course_name)
+    recommendations = recommend_similar_courses(course_title, num_recommendations=num_recommendations)
     return {"recommendations": recommendations}
+
+@app.get("/popular-courses")
+def get_popular_courses_endpoint(
+    num_recommendations: int = Query(default=5, ge=1, le=30, description="Number of popular courses to return")
+):
+    """
+    Get the most popular courses based on number of reviews and subscribers.
+    Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
+    num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
+    """
+    recommendations = get_popular_courses(courses_list, num_recommendations=num_recommendations)
+    return {"recommendations": recommendations}
+
+@app.get("/recommend-usercf")
+def get_user_user_cf_recommendations(
+    user_id: int = Query(..., description="User ID for User-User CF"),
+    num_recommendations: int = Query(default=10, ge=1, le=30, description="Number of recommendations to return")
+):
+    """
+    Get course recommendations for a user using User-User Collaborative Filtering.
+    """
+    recommendations = recommend_user_user_cf(user_id=user_id, num_recommendations=num_recommendations)
+    return {"recommendations": recommendations}
+
+
+@app.get("/recommend-collaborative")
+def get_collaborative_recommendations(
+    user_id: int = Query(..., description="User ID for collaborative filtering recommendations"),
+    num_recommendations: int = Query(default=20, ge=1, le=30, description="Number of recommendations to return")
+):
+    """
+    Get course recommendations for a user based on collaborative filtering.
+    Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
+    num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
+    """
+    recommendations = recommend_collaborative(user_id, num_recommendations=num_recommendations)
+    return {"recommendations": recommendations}
+
+
+
+@app.post("/recommend/update-model")
+async def receive_csv_files(
+    courses_file: UploadFile = File(...),
+    enrollments_file: UploadFile = File(...)
+):
+    """
+    Nhận 2 file CSV từ Laravel và lưu vào thư mục Data/
+    Sau đó gọi update_model() để cập nhật hệ thống gợi ý.
+    """
+    try:
+        # Tạo thư mục nếu chưa có
+        os.makedirs('Data', exist_ok=True)
+
+        # Lưu file courses.csv
+        with open('Data/udemy_courses.csv', 'wb') as f:
+            shutil.copyfileobj(courses_file.file, f)
+
+        # Lưu file ratings.csv
+        with open('Data/ratings.csv', 'wb') as f:
+            shutil.copyfileobj(enrollments_file.file, f)
+
+        # Gọi cập nhật model
+        from CourseRecommendationSystem import update_model
+        update_model()  # sẽ đọc lại Data/udemy_courses.csv và ratings.csv
+
+        return {"message": "✔️ Model updated from CSV files successfully!"}
     
-@app.post("/update-model")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi cập nhật mô hình: {str(e)}")
+
+@app.post("/recommend/update-model-directly")
 def trigger_model_update():
     """
     Trigger model retraining and update saved models.
@@ -121,15 +114,12 @@ def trigger_model_update():
     try:
         update_model()
         # Reload models after update
-        global courses_list, similarity, svd, user_interactions, user_competency, user_features, svd_predictions, pathways
+        global courses_list, tfidf_vectorizer, tfidf_matrix, svd_model, user_item_matrix
         courses_list = pickle.load(open('models/courses.pkl', 'rb'))
-        similarity = pickle.load(open('models/similarity.pkl', 'rb'))
-        svd = pickle.load(open('models/svd.pkl', 'rb'))
-        user_interactions = pickle.load(open('models/user_interactions.pkl', 'rb'))
-        user_competency = pickle.load(open('models/user_competency.pkl', 'rb'))
-        user_features = pickle.load(open('models/user_features.pkl', 'rb'))
-        svd_predictions = pickle.load(open('models/svd_predictions.pkl', 'rb'))
-        pathways = pickle.load(open('models/pathways.pkl', 'rb'))
+        tfidf_vectorizer = pickle.load(open('models/tfidf_vectorizer.pkl', 'rb'))
+        tfidf_matrix = pickle.load(open('models/tfidf_matrix.pkl', 'rb'))
+        svd_model = pickle.load(open('models/svd_model.pkl', 'rb'))
+        user_item_matrix = pickle.load(open('models/user_item_matrix.pkl', 'rb'))
         return {"status": "Model updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Model update failed: {str(e)}")

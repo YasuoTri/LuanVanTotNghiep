@@ -273,7 +273,7 @@ class PayPalService
                 'currency' => $capture['amount']['currency_code'],
                 'platform_fee' => $platformFee
             ]);
-            $payment = Payment::where('order_id', $orderId)->first();
+            $payment = Payment::where('transaction_code', $orderId)->first();
             if ($payment) {
                 $payment->transaction_code = $capture['id'];  // Lưu capture id
                 $payment->save();

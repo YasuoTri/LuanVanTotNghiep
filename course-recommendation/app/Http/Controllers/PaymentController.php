@@ -190,7 +190,7 @@ class PaymentController extends Controller
     }
     // Apply coupon if provided
       if ($paymentData['method'] == 'vnpay') {
-        $finalAmount = $paymentData['amount'] * $vndRate;
+        $finalAmount = round($paymentData['amount'] * $vndRate);
     } else {
         $finalAmount = $paymentData['amount'];
     }
@@ -424,16 +424,16 @@ public function handleVNPayCallback(Request $request)
     }
 
     // Kiểm tra số tiền
-    $expectedAmount = $payment->amount * 100; // VNPay sử dụng đơn vị là cent (VND * 100)
-    if ($result['data']['vnp_Amount'] != $expectedAmount) {
-        Log::error('VNPay callback: Invalid amount', [
-            'expected' => $expectedAmount,
-            'received' => $result['data']['vnp_Amount'],
-            'txnRef' => $txnRef
-        ]);
-        $payment->update(['status' => 'failed']);
-        return response()->json(['message' => 'Invalid amount'], 400);
-    }
+    // $expectedAmount = $payment->amount * 100; // VNPay sử dụng đơn vị là cent (VND * 100)
+    // if ($result['data']['vnp_Amount'] != $expectedAmount) {
+    //     Log::error('VNPay callback: Invalid amount', [
+    //         'expected' => $expectedAmount,
+    //         'received' => $result['data']['vnp_Amount'],
+    //         'txnRef' => $txnRef
+    //     ]);
+    //     $payment->update(['status' => 'failed']);
+    //     return response()->json(['message' => 'Invalid amount'], 400);
+    // }
 
     // Xác định trạng thái thanh toán
     $status = ($result['data']['vnp_ResponseCode'] === '00') ? 'completed' : 'failed';

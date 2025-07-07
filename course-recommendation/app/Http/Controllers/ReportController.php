@@ -449,6 +449,26 @@ public function checkThreshold($courseId)
         'pending_reports' => $pendingCount
     ]);
 }
+
+
+public function instructorViewReportsAll()
+{
+    $user = Auth::user();
+
+    if (!$user || $user->role !== 'instructor') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $reports = Report::with(['user','user.instructor','user.student','course'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'message' => 'Reports retrieved',
+        'reports' => $reports
+    ]);
+}
+
 public function instructorViewReports($courseId)
 {
     $user = Auth::user();
@@ -466,7 +486,16 @@ public function instructorViewReports($courseId)
     }
 
     $reports = Report::where('course_id', $courseId)
-        ->select('id', 'user_id', 'reason', 'report_type', 'created_at')
+    ->with(['user','user.instructor','user.student','course'])
+        // ->where('report_type', ['spam','technical_issue']) // nếu cần lọc theo loại báo cáo
+        // ->select('id', 'user_id', 'reason', 'report_type', 'created_at') // nếu cần chọn trường cụ thể
+        // ->orderBy('created_at', 'desc')
+        // ->paginate(10);
+        // ->get();
+        // Nếu không cần phân trang thì bỏ paginate đi
+        // ->paginate(10) hoặc ->get() tùy nhu cầu
+    // ->where('report_type', ['spam','technical_issue'])
+        // ->select('id', 'user_id', 'reason', 'report_type', 'created_at')
         ->orderBy('created_at', 'desc')
         ->get();
 

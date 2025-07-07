@@ -26,6 +26,7 @@ use App\Models\PaymentMethod;
 use App\Models\PaymentStatus;
 use App\Models\Admins;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -172,9 +173,27 @@ class PaymentController extends Controller
             return response()->json(['message' => "Missing required field: {$field}"], 400);
         }
     }
+     $apiUrl = "https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD";
 
+    $response = Http::get($apiUrl);
+     if ($response->failed()) {
+        return response()->json([
+            'error' => 'Không gọi được tỷ giá từ ExchangeRate API'
+        ], 500);
+    }
+    $rateData = $response->json();
+    $vndRate = $rateData['conversion_rates']['VND'] ?? null;
+    if (!$vndRate) {
+        return response()->json([
+            'error' => 'Không tìm thấy tỷ giá VND trong kết quả trả về'
+        ], 500);
+    }
     // Apply coupon if provided
-    $finalAmount = $paymentData['amount'];
+      if ($paymentData['method'] == 'vnpay') {
+        $finalAmount = $paymentData['amount'] * $vndRate;
+    } else {
+        $finalAmount = $paymentData['amount'];
+    }
     $coupon = null;
     if (!empty($paymentData['code'])) {
     $coupon = Coupon::where('code', $paymentData['code'])

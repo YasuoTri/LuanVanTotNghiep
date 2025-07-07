@@ -63,8 +63,8 @@ class RevenueDistributePaypal extends Controller
             }
 
             // Tính phần chia
-            $adminShare = $totalRevenue * 0.3; // 30% cho admin
-            $instructorShare = $totalRevenue * 0.7; // 70% cho instructor
+            $adminShare = $totalRevenue * 0.1; // 30% cho admin
+            $instructorShare = $totalRevenue * 0.9; // 70% cho instructor
 
             Log::info("💰 Starting revenue distribution for session {$sessionId}", [
                 'total_revenue' => number_format($totalRevenue, 2) . ' VND',

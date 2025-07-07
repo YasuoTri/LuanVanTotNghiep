@@ -24,17 +24,37 @@ except FileNotFoundError as e:
 
 app = FastAPI()
 
+# @app.get("/recommend-similar")
+# def get_similar_courses(
+#     course_title: str = Query(..., description="Course title for content-based recommendations"),
+#     num_recommendations: int = Query(default=20, ge=1, le=30, description="Number of recommendations to return")
+# ):
+#     """
+#     Get recommendations for courses similar to the input course title.
+#     Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
+#     num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
+#     """
+#     recommendations = recommend_similar_courses(course_title, num_recommendations=num_recommendations)
+#     return {"recommendations": recommendations}
+
 @app.get("/recommend-similar")
 def get_similar_courses(
     course_title: str = Query(..., description="Course title for content-based recommendations"),
+    level: str = Query(None, description="Level of the course (e.g., 'beginner', 'intermediate', 'advanced')"),
+    subject: str = Query(None, description="Subject/category of the course (e.g., 'programming', 'data science')"),
     num_recommendations: int = Query(default=20, ge=1, le=30, description="Number of recommendations to return")
 ):
     """
-    Get recommendations for courses similar to the input course title.
+    Get recommendations for courses similar to the input course based on course_title, level, and subject.
     Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
     num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
     """
-    recommendations = recommend_similar_courses(course_title, num_recommendations=num_recommendations)
+    recommendations = recommend_similar_courses(
+        course_title=course_title,
+        level=level,
+        subject=subject,
+        num_recommendations=num_recommendations
+    )
     return {"recommendations": recommendations}
 
 @app.get("/popular-courses")

@@ -26,10 +26,10 @@ def normalize_difficulty(difficulty):
 
 # Define level hierarchy for comparison
 LEVEL_HIERARCHY = {
-    'beginner level': 1,
-    'intermediate level': 2,
-    'expert level': 3,
-    'all levels': 4,
+    'beginner level': 2,
+    'intermediate level': 3,
+    'expert level': 4,
+    'all levels': 1,
     'unknown': 0
 }
 
@@ -137,12 +137,14 @@ def get_level_value(level):
 #     except Exception as e:
 #         logger.error(f"Error in recommendation: {str(e)}")
 #         return [{"error": f"Error: {str(e)}"}]
-def recommend_similar_courses(course_title, data_file='Data/udemy_courses.csv', num_recommendations=20):
+def recommend_similar_courses(course_title, level=None, subject=None, data_file='Data/udemy_courses.csv', num_recommendations=20):
     """
-    Recommend courses similar to the input course based on course_title, level, and category.
+    Recommend courses similar to the input course based on course_title, level, and subject.
     
     Parameters:
     - course_title (str): Title of the input course.
+    - level (str, optional): Level of the input course (e.g., 'beginner', 'intermediate', 'advanced').
+    - subject (str, optional): Subject/category of the input course.
     - data_file (str): Path to the CSV file containing course data.
     - num_recommendations (int): Number of courses to recommend.
     
@@ -164,8 +166,13 @@ def recommend_similar_courses(course_title, data_file='Data/udemy_courses.csv', 
         df['level'] = df['level'].str.lower().fillna('unknown')
         df['subject'] = df['subject'].str.lower().fillna('unknown')
         
+        # Normalize input
+        course_title = course_title.lower()
+        level = level.lower() if level else None
+        subject = subject.lower() if subject else None
+        
         # Check if course_title exists in dataset
-        input_course = df[df['course_title'].str.lower() == course_title.lower()]
+        input_course = df[df['course_title'].str.lower() == course_title]
         
         if not input_course.empty:
             # Course found in dataset
@@ -176,15 +183,25 @@ def recommend_similar_courses(course_title, data_file='Data/udemy_courses.csv', 
                 input_course['level'].lower(),
                 input_course['subject'].lower()
             ])
+            logger.info(f"Course '{course_title}' found in dataset with level '{input_course['level']}' and subject '{input_course['subject']}'.")
         else:
-            # Course not found, use input title with default assumptions
-            logger.info(f"Course '{course_title}' not found in dataset. Using input title for vectorization.")
-            input_level_value = get_level_value('beginner')  # Default to beginner level
-            input_text = ' '.join([
-                course_title.lower(),
-                'beginner',  # Default level
-                'unknown'    # Default category
-            ])
+            # Course not found, use input values or defaults
+            if level and subject:
+                logger.info(f"Course '{course_title}' not found in dataset. Using provided level '{level}' and subject '{subject}'.")
+                input_level_value = get_level_value(level)
+                input_text = ' '.join([
+                    course_title,
+                    level,
+                    subject
+                ])
+            else:
+                logger.info(f"Course '{course_title}' not found in dataset. Using default level 'beginner' and subject 'unknown'.")
+                input_level_value = get_level_value('beginner')
+                input_text = ' '.join([
+                    course_title,
+                    'beginner',
+                    'unknown'
+                ])
         
         # Compute input vector and similarity
         input_vector = vectorizer.transform([input_text])
@@ -197,15 +214,18 @@ def recommend_similar_courses(course_title, data_file='Data/udemy_courses.csv', 
             'course_title': df['course_title'],
             'similarity': similarity_scores,
             'level': df['level'],
+            'subject': df['subject'],
             'num_reviews': df['num_reviews'],
             'num_subscribers': df['num_subscribers']
         })
         
-        # Filter candidates
+        # Filter candidates (exclude the input course if it exists in dataset)
         candidates = similarity_df[
-            (similarity_df['course_title'].str.lower() != course_title.lower()) &
-            (similarity_df['similarity'] > 0)
+            (similarity_df['course_title'].str.lower() != course_title) |
+            ((level is not None) & (similarity_df['level'].str.lower() != level)) |
+            ((subject is not None) & (similarity_df['subject'].str.lower() != subject))
         ]
+        candidates = candidates[similarity_df['similarity'] > 0]
         logger.info(f"Number of candidates after filtering: {len(candidates)}")
         
         if candidates.empty:
@@ -242,7 +262,7 @@ def recommend_similar_courses(course_title, data_file='Data/udemy_courses.csv', 
                 'level': str(course_row['level']),
                 'content_duration': float(course_row['content_duration']),
                 'published_timestamp': str(course_row['published_timestamp']),
-                'category': str(course_row['subject'])  # Changed from 'subject' to 'category'
+                'category': str(course_row['subject'])
             })
         
         return recommendations

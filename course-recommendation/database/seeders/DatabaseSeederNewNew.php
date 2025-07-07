@@ -276,7 +276,7 @@ private function seedCourses()
             'difficulty_level' => $level,
             'course_rating' => 0, // Sẽ được cập nhật sau khi có review
             'course_url' => $data['url'],
-            'image' => null, // Có thể thêm logic để xử lý hình ảnh
+            'image' => "https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg", // Có thể thêm logic để xử lý hình ảnh
             'course_description' =>'Course is about .....', // CSV không có mô tả
             'price' => $price,
             'skills' => $data['subject'], // Sử dụng subject làm skills
@@ -516,7 +516,7 @@ private function seedCourses()
                 Lesson::create([
                     'course_id' => $course->id,
                     'title' => "Lesson $i: Topic $i",
-                    'video_url' => "videos/lesson_$i.mp4",
+                    'video_url' => "https://res.cloudinary.com/dj11e209p/video/upload/v1751885690/lessons/course_2/vihnuuncpdmdoyicvkvk.mp4",
                     'duration' => 10,
                     'is_preview' => $i == 1,
                     'sort_order' => $i,

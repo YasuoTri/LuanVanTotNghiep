@@ -63,9 +63,10 @@ Route::get('/subcategories', [CategoryController::class, 'getSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 
+//instructor thêm profile student
+Route::post('/updateProfile/student/profile', [StudentController::class, 'createStudentProfile']);
 Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
 Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
-
 Route::get('/recommend/export-send', [ExportRecommendController::class, 'exportAndSend']);
 // Student Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {

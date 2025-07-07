@@ -384,8 +384,20 @@ public function indexAvailableCourseInstructor()
 public function storeCourseInstructor(CreateCourseRequest $request)
     {
         try {
-            if(Auth::user()->role === 'student') {
-                
+            $user=Auth::user();
+            if ($user->role === 'student' && !$user->instructor) {
+                return response()->json([
+                    'message' => 'Instructor profile not found. Please complete your instructor profile.',
+                    'redirect' => true,
+                    'url' =>'localhost:4200/instructor/profile/create' // Frontend URL for instructor profile creation
+                ], 200);
+            }
+
+            // Check if user is not an instructor
+            if ($user->role !== 'instructor') {
+                return response()->json([
+                    'message' => 'Only users with instructor role can create courses.'
+                ], 403);
             }
             $validated = $request->validated();
             

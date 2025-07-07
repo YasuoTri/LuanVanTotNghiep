@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateStudentRequest;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class StudentController extends Controller
 {
@@ -94,4 +95,28 @@ class StudentController extends Controller
     return response()->json($query->paginate(10));
 }
 
+public function createStudentProfile(Request $request): JsonResponse
+{
+    $user = Auth::user();
+
+    // Check if student profile already exists
+    if ($user->student) {
+        return response()->json([
+            'message' => 'Student profile already exists.'
+        ], 409);
+    }
+
+    // Create student profile
+    $student = Student::create([
+        'user_id' => $user->id,
+        'LoE_DI' => $request->input('LoE_DI', 'Unknown'),
+        'learning_goals' => $request->input('learning_goals'),
+        'total_courses_completed' => 0,
+    ]);
+
+    return response()->json([
+        'message' => 'Student profile created successfully',
+        'data' => $student
+    ], 201);
+}
 }

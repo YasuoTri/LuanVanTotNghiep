@@ -277,7 +277,7 @@ private function seedCourses()
             'course_rating' => 0, // Sẽ được cập nhật sau khi có review
             'course_url' => $data['url'],
             'image' => null, // Có thể thêm logic để xử lý hình ảnh
-            'course_description' => null, // CSV không có mô tả
+            'course_description' =>'Course is about .....', // CSV không có mô tả
             'price' => $price,
             'skills' => $data['subject'], // Sử dụng subject làm skills
             'status' => 'approved',

@@ -180,5 +180,30 @@ class InstructorController extends Controller
         ], 500);
     }
 }
+public function createInstructorProfile(Request $request): JsonResponse
+{
+    $user = Auth::user();
 
+    // Check if user already has an instructor profile
+    if ($user->instructor) {
+        return response()->json([
+            'message' => 'Instructor profile already exists.'
+        ], 409);
+    }
+    $user1=User::find($user->id);
+    $user1->role = 'instructor';
+    $user1->save();
+    // Create instructor profile
+    $instructor = Instructors::create([
+        'user_id' => $user->id,
+        'bio' => $request->input('bio'),
+        'organization' => $request->input('organization'),
+        'email_paypal' => $request->input('email_paypal'),
+    ]);
+
+    return response()->json([
+        'message' => 'Instructor profile created successfully',
+        'data' => $instructor
+    ], 201);
+}
 }

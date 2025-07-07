@@ -341,7 +341,7 @@ class EnrollmentController extends Controller
 
     // Thêm biến has_pending_report
     $enrollments->getCollection()->transform(function ($enrollment) use ($user) {
-        $pendingReport = $enrollment->course->reports->firstWhere('status', 'pending');
+        $pendingReport = $enrollment->course->reports->first();
         $enrollment->has_pending_report = $pendingReport ? true : false;
         $enrollment->pending_report_id = $pendingReport ? $pendingReport->id : null;
         return $enrollment;
@@ -505,9 +505,9 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        // if ($user->role !== 'student') {
-        //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        // }
+        if ($user->role == 'instructor') {
+
+        }
          // Tìm khóa học
         $course = Course::withCount('lessons')->find($course_id);
 
@@ -524,6 +524,14 @@ class EnrollmentController extends Controller
             return response()->json([
                 'message' => 'Instructors cannot enroll in their own courses.'
             ], 403);
+        }
+        // Check if user is a student but not yet registered in students table
+        if ($user->role == 'instructor' && !$user->student) {
+            return response()->json([
+                'message' => 'Student profile not found. Please complete your profile.',
+                'redirect' => true,
+                'url' => 'localhost:4200/student/profile/create' // Frontend URL for student profile creation
+            ], 200);
         }
         // Check if the course is free (price == 0)
         if ($course->price > 0) {
@@ -560,9 +568,6 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        // if ($user->role !== 'student') {
-        //     return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        // }
             
         // Check if course exists and is paid
         $course = Course::find($course_id);
@@ -576,7 +581,14 @@ class EnrollmentController extends Controller
                 'message' => 'Instructors cannot enroll in their own courses.'
             ], 403);
         }
-
+              // Check if user is a student but not yet registered in students table
+        if ($user->role == 'instructor' && !$user->student) {
+            return response()->json([
+                'message' => 'Student profile not found. Please complete your profile.',
+                'redirect' => true,
+                'url' => 'localhost:4200/student/profile/create' // Frontend URL for student profile creation
+            ], 200);
+        }
         if ($course->price <= 0) {
             return response()->json(['message' => 'This course is free. Use the free enrollment endpoint.'], 400);
         }

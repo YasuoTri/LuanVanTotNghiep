@@ -124,6 +124,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->
     Route::get('/instructor/Getreports/{courseId}', [ReportController::class, 'instructorViewReports']);
 
     // Route::get('/lessons/{lesson}/quizzes', [QuizController::class, 'getByLesson']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+
 
 });
 

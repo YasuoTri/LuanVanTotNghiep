@@ -949,6 +949,31 @@ public function handleGoogleCallback()
         $tamp->save();
         return redirect()->intended('/');
     }
+public function changePassword(Request $request)
+{
+    $request->validate([
+        'old_password' => 'required',
+        'new_password' => 'required|min:8',
+        'repeat_password' => 'required|same:new_password',
+    ]);
+
+    $usernow =Auth::user();
+    $user=User::find($usernow->id);
+    // kiểm tra mật khẩu cũ
+    if (!Hash::check($request->old_password, $user->password)) {
+        return response()->json([
+            'message' => 'Mật khẩu cũ không chính xác.'
+        ], 400);
+    }
+
+    // cập nhật mật khẩu mới
+    $user->password = Hash::make($request->new_password);
+    $user->save();
+
+    return response()->json([
+        'message' => 'Đổi mật khẩu thành công.'
+    ]);
+}
 
 }
 

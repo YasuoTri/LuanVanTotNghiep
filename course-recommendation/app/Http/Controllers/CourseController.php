@@ -293,7 +293,7 @@ public function show($id)
                 ->withCount('lessons')
                 ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
                 ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
-                ->paginate(10);
+                ->get();
             return response()->json($courses, 200);
         } catch (\Exception $e) {
             Log::error("Failed to fetch instructor courses: {$e->getMessage()}");

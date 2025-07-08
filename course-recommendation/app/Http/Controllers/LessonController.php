@@ -461,8 +461,27 @@ class LessonController extends Controller
                 $data['is_visible'] = false;
                 $lesson = Lesson::create($data);
 
+                // Create lesson progress for all enrolled users
+                $enrolledUsers = Enrollment::where('course_id', $course_id)
+                    ->where('status', 'active')
+                    ->pluck('user_id');
+
+                foreach ($enrolledUsers as $userId) {
+                    LessonProgress::firstOrCreate(
+                        [
+                            'user_id' => $userId,
+                            'lesson_id' => $lesson->id,
+                        ],
+                        [
+                            'status' => 'not_started',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]
+                    );
+                }
+
                 return response()->json([
-                    'message' => 'Lesson created successfully, awaiting approval',
+                    'message' => 'Lesson created successfully',
                     'data' => $lesson
                 ], 201);
             }

@@ -65,6 +65,7 @@ class DatabaseSeederNewNew extends Seeder
         $this->command->info('Seeding users...');
 
         // Create 1 student
+        for ($i = 1; $i <= 1; $i++) {
         User::create([
             'username' => 'student1',
             'fullname' => 'Student One',
@@ -77,7 +78,7 @@ class DatabaseSeederNewNew extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-
+    }
         // Create 1 admin
         User::create([
             'username' => 'admin1',
@@ -678,7 +679,6 @@ private function seedCourses()
             'user_id' => $enrollment->user_id,
             'course_id' => $enrollment->course_id,
             'reason' => 'Technical issue with video playback',
-            'report_type' => 'technical_issue',
             'status' => 'pending',
             'admin_id' => $admin->id,
             'created_at' => now(),

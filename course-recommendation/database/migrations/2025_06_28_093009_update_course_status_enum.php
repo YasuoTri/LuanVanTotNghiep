@@ -9,7 +9,7 @@ return new class extends Migration
 {
 public function up(): void
 {
-    DB::statement("ALTER TABLE courses MODIFY COLUMN status ENUM('pending','approved','rejected','unavailable','draft') NOT NULL DEFAULT 'pending'");
+    DB::statement("ALTER TABLE courses MODIFY COLUMN status ENUM('pending','approved','rejected','unavailable','banned','draft') NOT NULL DEFAULT 'pending'");
 }
 
 public function down(): void

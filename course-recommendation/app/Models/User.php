@@ -122,4 +122,9 @@ class User extends Authenticatable implements JWTSubject
 {
     return $this->hasMany(Violation::class);
 }
+    public function isSuspended()
+    {
+        return $this->suspended_until && $this->suspended_until->isFuture();
+    }
+
 }

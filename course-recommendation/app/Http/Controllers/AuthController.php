@@ -225,12 +225,20 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            if ($user->status === 'suspended' && $user->suspended_until && now()->lt($user->suspended_until)) {
+          if ($user->status === 'suspended') {
+            $latestViolation = $user->violations
+                ->where('action_taken', 'suspension')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($latestViolation && $latestViolation->suspended_until && now()->lt($latestViolation->suspended_until)) {
                 Auth::logout(); // Log out the user
                 return response()->json([
-                    'error' => 'Your account is suspended until ' . $user->suspended_until->toFormattedDateString() . '. Please try again later.',
+                    'error' => 'Your account is suspended until ' . \Carbon\Carbon::parse($latestViolation->suspended_until)->toFormattedDateString() . '. Please try again later.',
                 ], 403);
             }
+        }
+
 
             // Generate JWT token
         try {
@@ -434,10 +442,17 @@ public function handleGoogleCallback()
             ], 403);
         }
 
-        if ($user->status === 'suspended' && $user->suspended_until && now()->lt($user->suspended_until)) {
-            return response()->json([
-                'error' => 'Your account is suspended until ' . $user->suspended_until->toFormattedDateString(),
-            ], 403);
+        if ($user->status === 'suspended') {
+            $latestViolation = $user->violations()
+                ->where('action_taken', 'suspension')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($latestViolation && $latestViolation->suspended_until && now()->lt($latestViolation->suspended_until)) {
+                return response()->json([
+                    'error' => 'Your account is suspended until ' . \Carbon\Carbon::parse($latestViolation->suspended_until)->toFormattedDateString(),
+                ], 403);
+            }
         }
 
         try {

@@ -8,6 +8,7 @@ use App\Models\Lesson;
 use App\Models\Quiz;
 use App\Models\ForumPost;
 use App\Models\Question;
+use App\Models\User;
 use App\Models\Violation;
 use App\Notifications\ViolationNotification;
 use Illuminate\Http\Request;
@@ -70,13 +71,12 @@ class ReportController extends Controller
 
         if ($existingReport) {
             return response()->json([
-                'message' => 'Bạn đã gửi báo cáo cho khóa học này và nó đang chờ duyệt.'
+                'message' => 'You have already submitted a report for this course. Please wait for the admin to review it.'
             ], 404); // Conflict
         }
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'reason' => 'required|string|max:1000',
-            'report_type' => 'required|in:inappropriate_content,technical_issue,copyright_violation,spam,other',
+            'reason' => 'required|string|max:1000'
         ]);
 
         $user = Auth::user();
@@ -88,7 +88,6 @@ class ReportController extends Controller
             'user_id' => $user->id,
             'course_id' => $request->course_id,
             'reason' => $request->reason,
-            'report_type' => $request->report_type,
             'status' => 'pending',
         ]);
 
@@ -111,8 +110,7 @@ public function searchCourseWithReportSummary($courseId)
 
     // lấy thống kê report
     $reportSummary = Report::where('course_id', $course->id)
-        ->selectRaw('report_type, COUNT(*) as total')
-        ->groupBy('report_type')
+        ->selectRaw('COUNT(*) as total')
         ->get();
 
     return response()->json([
@@ -221,13 +219,12 @@ public function handleReport(Request $request, Report $report)
 {
     try {
         // Cập nhật trạng thái report
-        // $report->update([
-        //     'status' => $request->status,
-        //     'admin_id' => Auth::user()->admin->id,
-        //     'admin_notes' => $request->admin_notes,
-        //     'reviewed_at' => now(),
-        //     'instructor_confirmed_at' => null, // Reset instructor confirmation
-        // ]);
+        $report->update([
+            'status' => $request->status,
+            'admin_id' => Auth::user()->admin->id,
+            'admin_notes' => $request->admin_notes,
+            'reviewed_at' => now(),
+        ]);
         Report::where('course_id', $report->course_id)
         ->where('status', 'pending')
         ->update([
@@ -247,19 +244,12 @@ public function handleReport(Request $request, Report $report)
         switch ($request->action) {
             case 'ban':
                 $course->update(values: [
-                    'status' => 'unavailable',
+                    'status' => 'banned',
                 ]);
-                $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);
+                // $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);
                 break;
-
-            case 'delete':
-                $course->delete(); // soft delete
-                $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);
-                break;
-
             case 'ignore':
             default:
-                // Không làm gì thêm
                 break;
         }
 
@@ -282,48 +272,67 @@ public function confirmFix(Report $report)
     return response()->json(['message' => 'Instructor confirmed fix, please review again']);
 }
 
-    protected function handleUserViolation($user, $report, $adminNotes)
-    {
-        // Count previous violations
-        $violationCount = $user->violations()->count();
+   public function handleUserViolation(Request $request)
+{
+    $validated = $request->validate([
+        'user_id' => 'required|exists:users,id',
+        'report_id' => 'required|exists:reports,id',
+        'action_taken' => 'required|in:warning,suspension,ban',
+        'admin_notes' => 'nullable|string',
+        'suspended_until' => 'nullable|date',
+    ]);
 
-        // Determine action based on violation count
-        $action = 'warning';
-        $suspendedUntil = null;
+    $user = User::findOrFail($validated['user_id']);
+    $report = Report::findOrFail($validated['report_id']);
+    $action = $validated['action_taken'];
+    $adminNotes = $validated['admin_notes'] ?? null;
+    $suspendedUntil = null;
 
-        if ($violationCount == 1) {
-            $action = 'suspension';
-            $suspendedUntil = now()->addDays(7);
+    // Áp dụng hành động
+    switch ($action) {
+        case 'suspension':
+            $suspendedUntil = $validated['suspended_until'] ?? now()->addDays(7);
             $user->update([
                 'status' => 'suspended',
                 'suspended_until' => $suspendedUntil,
             ]);
-        } elseif ($violationCount >= 2) {
-            $action = 'ban';
+            break;
+
+        case 'ban':
             $user->update([
                 'status' => 'banned',
                 'suspended_until' => null,
             ]);
-        }
+            break;
 
-        // Record the violation
-        $violation = Violation::create([
-            'user_id' => $user->id,
-            'report_id' => $report->id,
-            'action_taken' => $action,
-            'admin_notes' => $adminNotes,
-            'suspended_until' => $suspendedUntil,
-        ]);
-
-        // Send email notification
-        $user->notify(new ViolationNotification($violation, $report));
+        case 'warning':
+        default:
+            // Không cần cập nhật user
+            break;
     }
+
+    // Lưu vi phạm
+    $violation = Violation::create([
+        'user_id' => $user->id,
+        'report_id' => $report->id,
+        'action_taken' => $action,
+        'admin_notes' => $adminNotes,
+        'suspended_until' => $suspendedUntil,
+    ]);
+
+    // Gửi thông báo
+    $user->notify(new ViolationNotification($violation, $report));
+
+    return response()->json([
+        'message' => 'Xử lý vi phạm thành công.',
+        'violation' => $violation
+    ]);
+}
    public function store(Request $request)
     {
     $request->validate([
         'course_id' => 'required|exists:courses,id',
-        'reason' => 'required|string|max:1000',
-        'report_type' => 'required|in:inappropriate_content,technical_issue,copyright_violation,spam,other',
+        'reason' => 'required|string|max:1000'
     ]);
 
     $user = Auth::user();
@@ -337,7 +346,6 @@ public function confirmFix(Report $report)
         'user_id'     => $user->id,
         'course_id'   => $course->id,
         'reason'      => $request->reason,
-        'report_type' => $request->report_type,
         'status'      => 'pending',
     ]);
 
@@ -430,18 +438,6 @@ public function confirmFix(Report $report)
         $reports = $query->paginate(10);
         return response()->json($reports);
     }
-public function reportSummary($courseId)
-{
-    $summary = Report::where('course_id', $courseId)
-        ->selectRaw('report_type, COUNT(*) as total')
-        ->groupBy('report_type')
-        ->get();
-
-    return response()->json([
-        'message' => 'Report statistics by type',
-        'data' => $summary
-    ]);
-}
 
 public function resolveAllReports($courseId)
 {

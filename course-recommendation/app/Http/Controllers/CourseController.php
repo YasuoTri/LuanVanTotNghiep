@@ -1165,14 +1165,6 @@ public function getPendingCourses()
                 ], 401);
             }
 
-            // Kiểm tra vai trò người dùng
-            if ($user->role !== 'student') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only students can access this feature',
-                ], 403);
-            }
-
             // Tìm học viên dựa trên user_id
             $student = Student::where('user_id', $user->id)->first();
             if (!$student) {
@@ -1758,5 +1750,4 @@ public function refundCourse(Request $request, $id)
         'results' => $refunds
     ]);
 }
-
 }

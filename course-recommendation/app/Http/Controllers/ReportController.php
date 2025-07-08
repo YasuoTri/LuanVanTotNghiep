@@ -12,6 +12,7 @@ use App\Models\Violation;
 use App\Notifications\ViolationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ReportController extends Controller
@@ -20,6 +21,39 @@ class ReportController extends Controller
     public function submitReport(Request $request)
     {
         $userId = Auth::user()->id;
+         if ($request->reason) {
+            $response = Http::asForm()->post('https://neutrinoapi.net/bad-word-filter', [
+                'user-id' => 'phamminhtri26102003',
+                'api-key' => '2pHRUxWhHr0hVLDVGR8BPmF7lTGNPPSTeFTiVPsrHgIRnDXM',
+                'content' => $request->reason,
+                'censor-character' => '*' // Optional: dùng để thay từ vi phạm nếu cần
+            ]);
+            Log::info('Bad word filter response', ['response' => $response->body()]); 
+            if ($response->successful()) {
+                $result = $response->json();
+                if ($result['is-bad']) {
+                    return response()->json([
+                        'message' => 'The reason contain inapproriate content'
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'message' => "Unable to check content at this time. Please try again later."
+                ], 500);
+            }
+        }
+        $reason = strtolower($request->reason);
+        $badWords = json_decode(file_get_contents(storage_path('app/vi_badwords.json')), true);
+
+        foreach ($badWords as $category => $words) {
+            foreach ($words as $word) {
+                if (stripos($reason, $word) !== false) {
+                    return response()->json([
+                        'message' => 'Your reason contains inappropriate language: '
+                    ], 422);
+                }
+            }
+        }
         $courseId = $request->course_id;
          $existingReport = Report::where('user_id', $userId)
         ->where('course_id', $courseId)

@@ -8,8 +8,11 @@ use App\Models\Review;
 use Illuminate\Http\Request;;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use Illuminate\Container\Attributes\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log as FacadesLog;
 
 class ReviewController extends Controller
 {
@@ -104,10 +107,44 @@ public function storeStudent(Request $request, $course_id)
 
         $progressPercent = $totalLessons > 0 ? ($completed / $totalLessons) * 100 : 0;
 
-        if ($progressPercent < 30) {
-            return response()->json([
-                'message' => 'Bạn cần hoàn thành ít nhất 30% khóa học để đánh giá.'
-            ], 403);
+        // if ($progressPercent < 30) {
+        //     return response()->json([
+        //         'message' => 'Bạn cần hoàn thành ít nhất 30% khóa học để đánh giá.'
+        //     ], 403);
+        // }
+          // Kiểm tra từ ngữ phản cảm nếu có comment
+        if ($request->comment) {
+            $response = Http::asForm()->post('https://neutrinoapi.net/bad-word-filter', [
+                'user-id' => 'phamminhtri26102003',
+                'api-key' => '2pHRUxWhHr0hVLDVGR8BPmF7lTGNPPSTeFTiVPsrHgIRnDXM',
+                'content' => $request->comment,
+                'censor-character' => '*' // Optional: dùng để thay từ vi phạm nếu cần
+            ]);
+            FacadesLog::info('Bad word filter response', ['response' => $response->body()]); 
+            if ($response->successful()) {
+                $result = $response->json();
+                if ($result['is-bad']) {
+                    return response()->json([
+                        'message' => 'The comment contain inapproriate content'
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'message' => "Unable to check content at this time. Please try again later."
+                ], 500);
+            }
+        }
+        $comment = strtolower($request->comment);
+        $badWords = json_decode(file_get_contents(storage_path('app/vi_badwords.json')), true);
+
+        foreach ($badWords as $category => $words) {
+            foreach ($words as $word) {
+                if (stripos($comment, $word) !== false) {
+                    return response()->json([
+                        'message' => 'Your comment contains inappropriate language: '
+                    ], 422);
+                }
+            }
         }
 
         // Nếu đã review trước đó, cập nhật

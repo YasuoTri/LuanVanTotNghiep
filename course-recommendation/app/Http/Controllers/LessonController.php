@@ -732,6 +732,7 @@ class LessonController extends Controller
                 'lesson_progress.completed_at',
                 'lesson_progress.status as progress'
             )
+            ->orderBy('lessons.sort_order', 'asc')
             ->get();
 
         $finalLessons = collect();

@@ -400,6 +400,9 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
 
 
 });
+Route::middleware(['EnsureUserHasRole','jwt_cookie', 'all_user'])->group(function () {
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
+});
     // Advanced Search Routes (one per table)
 Route::get('/search/lessons', [LessonController::class, 'search']);
 Route::get('/search/quizzes', [QuizController::class, 'search']);
@@ -440,7 +443,7 @@ Route::get('/payments/vnpay/callback', [PaymentController::class, 'handleVNPayCa
 Route::get('/vnpay/ipn', [PaymentController::class, 'handleVNPayIPN'])->name('vnpay.ipn');
 Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::post('/password/reset', [AuthController::class, 'reset'])->name('password.reset');
-Route::post('/change-password', [AuthController::class, 'changePassword']);
+
 Route::post('/courses/{id}/restore', [CourseController::class, 'restoreCourse']);
 Route::get('/cors-test', function () {
     return response()->json(['message' => 'CORS is working!']);

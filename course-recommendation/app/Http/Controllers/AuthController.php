@@ -969,11 +969,12 @@ public function changePassword(Request $request)
 {
     $request->validate([
         'old_password' => 'required',
-        'new_password' => 'required|min:8',
+        'new_password' => 'required|min:6',
         'repeat_password' => 'required|same:new_password',
     ]);
 
     $usernow =Auth::user();
+    Log::info($usernow);
     $user=User::find($usernow->id);
     // kiểm tra mật khẩu cũ
     if (!Hash::check($request->old_password, $user->password)) {

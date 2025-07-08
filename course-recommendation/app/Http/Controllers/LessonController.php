@@ -524,7 +524,7 @@ class LessonController extends Controller
             }
 
             // Kiểm tra xem có learner nào đã học lesson này chưa
-            $hasProgress = LessonProgress::where('lesson_id', $lesson_id)->exists();
+            $hasProgress = LessonProgress::where('lesson_id', $lesson_id)->where('status','in_progress')->exists();
 
             $data = $request->validated();
             $data['course_id'] = $course_id;

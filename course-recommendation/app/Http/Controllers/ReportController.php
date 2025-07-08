@@ -22,6 +22,7 @@ class ReportController extends Controller
     public function submitReport(Request $request)
     {
         $userId = Auth::user()->id;
+        
          if ($request->reason) {
             $response = Http::asForm()->post('https://neutrinoapi.net/bad-word-filter', [
                 'user-id' => 'phamminhtri26102003',
@@ -243,7 +244,7 @@ public function handleReport(Request $request, Report $report)
         // Tùy hành động
         switch ($request->action) {
             case 'ban':
-                $course->update(values: [
+                $course->update( [
                     'status' => 'banned',
                 ]);
                 // $this->handleUserViolation($course->instructor->user, $report, $request->admin_notes);

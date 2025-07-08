@@ -873,7 +873,7 @@ public function handleGoogleCallback()
             $instructorIsDirty = false;
             $categoryChanged = false;
             // Update role-based data
-           if ($user->role === 'student') {
+           if ($user->student) {
                 $student = $user->student;
                 if ($student) {
                     $studentDataToUpdate = array_intersect_key($validatedData, array_flip(['learning_goals','LoE_DI']));
@@ -887,7 +887,8 @@ public function handleGoogleCallback()
                         $categoryChanged = array_diff($existingIds, $incomingIds) || array_diff($incomingIds, $existingIds);
                     }
                 }
-            } elseif ($user->role === 'instructor') {
+            } 
+            if ($user->instructor) {
                 $instructor = $user->instructor;
                 if ($instructor) {
                     $instructorDataToUpdate = array_intersect_key($validatedData, array_flip([

@@ -695,115 +695,121 @@ class LessonController extends Controller
         }
     }
 
-    public function getCourseLessons($id): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $enrollment = Enrollment::with('course.instructors')->where('id', $id)
-                ->where('user_id', $user->id)
-                ->firstOrFail();
+   public function getCourseLessons($id): JsonResponse
+{
+    try {
+        $user = Auth::user();
+        $enrollment = Enrollment::with('course.instructors')->where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
 
-            $course = Course::where('id', $enrollment->course_id)
-                ->whereIn('status', ['approved', 'unavailable'])
-                ->first();
+        $course = Course::where('id', $enrollment->course_id)
+            ->whereIn('status', ['approved', 'unavailable'])
+            ->first();
 
-            if (!$course) {
-                return response()->json(['message' => 'Course not found'], 403);
+        if (!$course) {
+            return response()->json(['message' => 'Course not found'], 403);
+        }
+
+        $review = Review::with('user', 'user.student')->where('course_id', $course->id)->get();
+        $baseLessons = Lesson::withTrashed()
+            ->where('course_id', $course->id)
+            ->whereNull('origin_id')
+            ->where('is_visible', true)
+            ->leftJoin('lesson_progress', function ($join) use ($user) {
+                $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
+                    ->where('lesson_progress.user_id', '=', $user->id);
+            })
+            ->select(
+                'lessons.id',
+                'lessons.title',
+                'lessons.video_url',
+                'lessons.duration',
+                'lessons.is_preview',
+                'lessons.sort_order',
+                'lessons.deleted_at',
+                'lessons.is_visible as visibility',
+                'lesson_progress.completed_at',
+                'lesson_progress.status as progress'
+            )
+            ->get();
+
+        $finalLessons = collect();
+
+        foreach ($baseLessons as $lesson) {
+            // Skip if lesson is soft-deleted after enrollment and has no meaningful progress
+            if ($lesson->deleted_at !== null && $enrollment->enrolled_at > $lesson->deleted_at) {
+                if (!($lesson->progress && $lesson->progress !== 'not_started')) {
+                    continue;
+                }
             }
 
-            $review = Review::with('user', 'user.student')->where('course_id', $course->id)->get();
-            $baseLessons = Lesson::withTrashed()
-                ->where('course_id', $course->id)
-                ->whereNull('origin_id')
-                ->where('is_visible', true) // Chỉ lấy bài học hiển thị
-                ->leftJoin('lesson_progress', function ($join) use ($user) {
-                    $join->on('lessons.id', '=', 'lesson_progress.lesson_id')
-                        ->where('lesson_progress.user_id', '=', $user->id);
-                })
-                ->select(
-                    'lessons.id',
-                    'lessons.title',
-                    'lessons.video_url',
-                    'lessons.duration',
-                    'lessons.is_preview',
-                    'lessons.sort_order',
-                    'lessons.deleted_at',
-                    'lessons.is_visible as visibility',
-                    'lesson_progress.completed_at',
-                    'lesson_progress.status as progress'
-                )
+            // Fetch up to 2 latest visible versions, ordered by id ascending
+            $versions = Lesson::where('origin_id', $lesson->id)
+                ->where('is_visible', true)
+                ->orderBy('version', 'asc') // Ascending order for versions
+                // ->limit(2)
                 ->get();
 
-            $finalLessons = collect();
+            // Prepare the parent lesson
+            $parentLesson = (object)[
+                'id' => $lesson->id,
+                'title' => $lesson->title,
+                'video_url' => $lesson->video_url,
+                'duration' => $lesson->duration,
+                'is_preview' => $lesson->is_preview,
+                'sort_order' => $lesson->sort_order,
+                'version_of' => null,
+                'visibility' => $lesson->visibility,
+                'completed_at' => $lesson->completed_at,
+                'progress' => $lesson->progress,
+                'versions' => [] // Nested versions array
+            ];
 
-            foreach ($baseLessons as $lesson) {
-                // Bỏ qua nếu bị xóa sau khi học viên đăng ký và không có progress
-                if ($lesson->deleted_at !== null && $enrollment->enrolled_at > $lesson->deleted_at) {
-                    if (!($lesson->progress && $lesson->progress !== 'not_started')) {
-                        continue;
-                    }
-                }
+            // Add versions to the parent lesson
+            foreach ($versions as $version) {
+                $progress = DB::table('lesson_progress')
+                    ->where('lesson_id', $version->id)
+                    ->where('user_id', $user->id)
+                    ->first();
 
-                // Thêm bài học gốc
-                $finalLessons->push((object)[
-                    'id' => $lesson->id,
-                    'title' => $lesson->title,
-                    'video_url' => $lesson->video_url,
-                    'duration' => $lesson->duration,
-                    'is_preview' => $lesson->is_preview,
+                $parentLesson->versions[] = (object)[
+                    'id' => $version->id,
+                    'title' => $version->title,
+                    'video_url' => $version->video_url,
+                    'duration' => $version->duration,
+                    'is_preview' => $version->is_preview,
                     'sort_order' => $lesson->sort_order,
-                    'version_of' => null,
-                    'visibility' => $lesson->visibility,
-                    'completed_at' => $lesson->completed_at,
-                    'progress' => $lesson->progress
-                ]);
-
-                // Lấy tối đa 2 phiên bản mới nhất đã visible
-                $versions = Lesson::where('origin_id', $lesson->id)
-                    ->where('is_visible', true)
-                    ->orderByDesc('id')
-                    ->limit(2)
-                    ->get();
-
-                foreach ($versions as $version) {
-                    $progress = DB::table('lesson_progress')
-                        ->where('lesson_id', $version->id)
-                        ->where('user_id', $user->id)
-                        ->first();
-
-                    $finalLessons->push((object)[
-                        'id' => $version->id,
-                        'title' => $version->title,
-                        'video_url' => $version->video_url,
-                        'duration' => $version->duration,
-                        'is_preview' => $version->is_preview,
-                        'sort_order' => $lesson->sort_order,
-                        'version_of' => $lesson->id,
-                        'visibility' => $version->is_visible,
-                        'completed_at' => $progress->completed_at ?? null,
-                        'progress' => $progress->status ?? null
-                    ]);
-                }
+                    'version_of' => $version->version,
+                    'visibility' => $version->is_visible,
+                    'completed_at' => $progress->completed_at ?? null,
+                    'progress' => $progress->status ?? null
+                ];
             }
 
-            $finalLessons = $finalLessons->sortBy('sort_order')->values();
-            return response()->json([
-                'data' => [
-                    'enrollment_id' => $enrollment->id,
-                    'course' => $course,
-                    'lessons' => $finalLessons,
-                    'reviews' => $review
-                ]
-            ]);
-        } catch (Exception $e) {
-            Log::error('Get course lessons error:', ['message' => $e->getMessage()]);
-            return response()->json([
-                'status' => 500,
-                'error' => 'An error occurred while retrieving lessons.',
-                'message' => $e->getMessage()
-            ], 500);
+            $finalLessons->push($parentLesson);
         }
+
+        // Sort by sort_order of parent lessons
+        $finalLessons = $finalLessons->sortBy('sort_order')->values();
+
+        return response()->json([
+            'data' => [
+                'enrollment_id' => $enrollment->id,
+                'course' => $course,
+                'lessons' => $finalLessons,
+                'reviews' => $review
+            ]
+        ]);
+    } catch (Exception $e) {
+        Log::error('Get course lessons error:', ['message' => $e->getMessage()]);
+        return response()->json([
+            'status' => 500,
+            'error' => 'An error occurred while retrieving lessons.',
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function approve($course_id, $lesson_id): JsonResponse
     {

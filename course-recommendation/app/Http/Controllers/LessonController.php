@@ -217,7 +217,7 @@ class LessonController extends Controller
 
             $lesson->update($data);
             return response()->json([
-                'message' => 'Lesson updated successfully' . (isset($data['is_visible']) ? ', awaiting approval' : ''),
+                'message' => 'Lesson updated successfully',
                 'data' => $lesson
             ]);
         } catch (UploadMissingFileException $e) {
@@ -487,171 +487,324 @@ class LessonController extends Controller
             ], 500);
         }
     }
-    public function updateForInstructor(UpdateLessonRequest $request, $course_id, $lesson_id): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            $lesson = Lesson::where('id', $lesson_id)
-                ->where('course_id', $course_id)
-                ->first();
+    // public function updateForInstructor(UpdateLessonRequest $request, $course_id, $lesson_id): JsonResponse
+    // {
+    //     try {
+    //         $user = Auth::user();
+    //         $lesson = Lesson::where('id', $lesson_id)
+    //             ->where('course_id', $course_id)
+    //             ->first();
 
-            if (!$lesson) {
-                return response()->json(['message' => 'Lesson not found'], 404);
-            }
+    //         if (!$lesson) {
+    //             return response()->json(['message' => 'Lesson not found'], 404);
+    //         }
 
-            // Kiểm tra trạng thái course
-            $course = Course::findOrFail($course_id);
-            if ($course->status === 'rejected') {
-                return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
-            }
+    //         // Kiểm tra trạng thái course
+    //         $course = Course::findOrFail($course_id);
+    //         if ($course->status === 'rejected') {
+    //             return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
+    //         }
 
-            // Kiểm tra xem user hiện tại có phải là instructor của course này không
-            if ($course->instructor_id !== $user->instructor->id) {
-                return response()->json(['message' => 'You are not the instructor for this course'], 403);
-            }
+    //         // Kiểm tra xem user hiện tại có phải là instructor của course này không
+    //         if ($course->instructor_id !== $user->instructor->id) {
+    //             return response()->json(['message' => 'You are not the instructor for this course'], 403);
+    //         }
 
-            // Kiểm tra phiên bản bài học
-            $originId = $lesson->origin_id ?? $lesson->id;
-            $latestLesson = Lesson::where('origin_id', $originId)
-                ->orWhere('id', $originId)
-                ->orderByDesc('version')
-                ->first();
+    //         // Kiểm tra phiên bản bài học
+    //         $originId = $lesson->origin_id ?? $lesson->id;
+    //         $latestLesson = Lesson::where('origin_id', $originId)
+    //             ->orWhere('id', $originId)
+    //             ->orderByDesc('version')
+    //             ->first();
 
-            if ($lesson->id !== $latestLesson->id) {
-                return response()->json([
-                    'message' => 'Only the latest version of the lesson can be updated.'
-                ], 400);
-            }
+    //         if ($lesson->id !== $latestLesson->id) {
+    //             return response()->json([
+    //                 'message' => 'Only the latest version of the lesson can be updated.'
+    //             ], 400);
+    //         }
 
-            // Kiểm tra xem có learner nào đã học lesson này chưa
-            $hasProgress = LessonProgress::where('lesson_id', $lesson_id)->where('status','in_progress')->exists();
+    //         // Kiểm tra xem có learner nào đã học lesson này chưa
+    //         $hasProgress = LessonProgress::where('lesson_id', $lesson_id)->where('status','in_progress')->exists();
 
-            $data = $request->validated();
-            $data['course_id'] = $course_id;
+    //         $data = $request->validated();
+    //         $data['course_id'] = $course_id;
 
-            // Xử lý chunked upload nếu có video mới
-            if ($request->hasFile('video')) {
-                $receiver = new FileReceiver('video', $request, HandlerFactory::classFromRequest($request));
+    //         // Xử lý chunked upload nếu có video mới
+    //         if ($request->hasFile('video')) {
+    //             $receiver = new FileReceiver('video', $request, HandlerFactory::classFromRequest($request));
 
-                if ($receiver->isUploaded() === false) {
-                    throw new UploadMissingFileException();
-                }
+    //             if ($receiver->isUploaded() === false) {
+    //                 throw new UploadMissingFileException();
+    //             }
 
-                $save = $receiver->receive();
+    //             $save = $receiver->receive();
 
-                if ($save->isFinished()) {
-                    // File hoàn chỉnh
-                    $file = $save->getFile();
-                    $fileName = $this->createFilename($file);
+    //             if ($save->isFinished()) {
+    //                 // File hoàn chỉnh
+    //                 $file = $save->getFile();
+    //                 $fileName = $this->createFilename($file);
 
-                    // Lưu tạm file
-                    $disk = Storage::disk('local');
-                    $path = $disk->putFileAs('videos', $file, $fileName);
+    //                 // Lưu tạm file
+    //                 $disk = Storage::disk('local');
+    //                 $path = $disk->putFileAs('videos', $file, $fileName);
 
-                    // Tạo UploadedFile từ file tạm
-                    $uploadedFile = new \Illuminate\Http\UploadedFile(
-                        storage_path('app/private/' . $path),
-                        $fileName,
-                        $file->getClientMimeType(),
-                        null,
-                        true
-                    );
+    //                 // Tạo UploadedFile từ file tạm
+    //                 $uploadedFile = new \Illuminate\Http\UploadedFile(
+    //                     storage_path('app/private/' . $path),
+    //                     $fileName,
+    //                     $file->getClientMimeType(),
+    //                     null,
+    //                     true
+    //                 );
 
-                    // Xóa video cũ trên Cloudinary nếu có
-                    if ($lesson->video_url) {
-                        $this->cloudinaryService->deleteByUrl($lesson->video_url);
-                    }
+    //                 // Xóa video cũ trên Cloudinary nếu có
+    //                 if ($lesson->video_url) {
+    //                     $this->cloudinaryService->deleteByUrl($lesson->video_url);
+    //                 }
 
-                    // Upload lên Cloudinary
-                    $apiResponse = $this->cloudinaryService->upload(
-                        $uploadedFile,
-                        'lessons/course_' . $course_id
-                    );
-                    $data['video_url'] = $apiResponse['secure_url'] ?? '';
-                    if (isset($apiResponse['duration'])) {
-                        $data['duration'] = round($apiResponse['duration'] / 60, 2);
-                    } else {
-                        Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
-                        $data['duration'] = 0;
-                    }
+    //                 // Upload lên Cloudinary
+    //                 $apiResponse = $this->cloudinaryService->upload(
+    //                     $uploadedFile,
+    //                     'lessons/course_' . $course_id
+    //                 );
+    //                 $data['video_url'] = $apiResponse['secure_url'] ?? '';
+    //                 if (isset($apiResponse['duration'])) {
+    //                     $data['duration'] = round($apiResponse['duration'] / 60, 2);
+    //                 } else {
+    //                     Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+    //                     $data['duration'] = 0;
+    //                 }
 
-                    // Xóa file tạm
-                    $disk->delete($path);
+    //                 // Xóa file tạm
+    //                 $disk->delete($path);
 
-                    // Đặt is_visible = false khi có video mới
-                    // $data['is_visible'] = false;
-                } else {
-                    // Trả về tiến trình upload chunk
-                    $handler = $save->handler();
-                    return response()->json([
-                        'done' => $handler->getPercentageDone(),
-                        'status' => true
-                    ]);
-                }
-            }
+    //                 // Đặt is_visible = false khi có video mới
+    //                 // $data['is_visible'] = false;
+    //             } else {
+    //                 // Trả về tiến trình upload chunk
+    //                 $handler = $save->handler();
+    //                 return response()->json([
+    //                     'done' => $handler->getPercentageDone(),
+    //                     'status' => true
+    //                 ]);
+    //             }
+    //         }
 
-            // Đặt is_visible = false nếu có thay đổi metadata quan trọng
-            // if (isset($data['title']) || isset($data['duration']) || isset($data['is_preview']) || isset($data['sort_order'])) {
-            //     $data['is_visible'] = false;
-            // }
+    //         // Đặt is_visible = false nếu có thay đổi metadata quan trọng
+    //         // if (isset($data['title']) || isset($data['duration']) || isset($data['is_preview']) || isset($data['sort_order'])) {
+    //         //     $data['is_visible'] = false;
+    //         // }
 
-            if ($hasProgress) {
-                // Nếu đã có learner học, tạo lesson mới với version mới
-                $data['version'] = $lesson->version + 1;
-                $data['origin_id'] = $lesson->origin_id ?? $lesson->id;
+    //         if ($hasProgress) {
+    //             // Nếu đã có learner học, tạo lesson mới với version mới
+    //             $data['version'] = $lesson->version + 1;
+    //             $data['origin_id'] = $lesson->origin_id ?? $lesson->id;
 
-                $newLesson = Lesson::create($data);
+    //             $newLesson = Lesson::create($data);
 
-                // Thêm lesson_progress not_started cho tất cả user đã enroll
-                $enrolledUsers = Enrollment::where('course_id', $course_id)
-                    ->pluck('user_id');
+    //             // Thêm lesson_progress not_started cho tất cả user đã enroll
+    //             $enrolledUsers = Enrollment::where('course_id', $course_id)
+    //                 ->pluck('user_id');
                 
-                $newLesson->is_visible=true;
-                $lesson->is_visible=false;
-                foreach ($enrolledUsers as $userId) {
-                    LessonProgress::firstOrCreate(
-                        [
-                            'user_id' => $userId,
-                            'lesson_id' => $newLesson->id,
-                        ],
-                        [
-                            'status' => 'not_started'
-                        ]
-                    );
+    //             $newLesson->is_visible=true;
+    //             $lesson->is_visible=false;
+    //             foreach ($enrolledUsers as $userId) {
+    //                 LessonProgress::firstOrCreate(
+    //                     [
+    //                         'user_id' => $userId,
+    //                         'lesson_id' => $newLesson->id,
+    //                     ],
+    //                     [
+    //                         'status' => 'not_started'
+    //                     ]
+    //                 );
+    //             }
+
+    //             return response()->json([
+    //                 'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
+    //                 'data' => $newLesson
+    //             ]);
+    //         } else {
+    //             // Nếu chưa có learner học, cập nhật trực tiếp lesson hiện tại
+    //             $lesson->update($data);
+
+    //             return response()->json([
+    //                 'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
+    //                 'data' => $lesson
+    //             ]);
+    //         }
+    //     } catch (UploadMissingFileException $e) {
+    //         return response()->json([
+    //             'status' => 400,
+    //             'error' => 'No file uploaded.'
+    //         ], 400);
+    //     } catch (\Exception $e) {
+    //         Log::error('Lesson update for instructor error:', [
+    //             'course_id' => $course_id,
+    //             'lesson_id' => $lesson_id,
+    //             'message' => $e->getMessage()
+    //         ]);
+    //         return response()->json([
+    //             'status' => 500,
+    //             'error' => 'An error occurred while updating the lesson.',
+    //             'message' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+public function updateForInstructor(UpdateLessonRequest $request, $course_id, $lesson_id): JsonResponse
+{
+    try {
+        $user = Auth::user();
+        $lesson = Lesson::where('id', $lesson_id)
+            ->where('course_id', $course_id)
+            ->first();
+
+        if (!$lesson) {
+            return response()->json(['message' => 'Lesson not found'], 404);
+        }
+
+        // Kiểm tra trạng thái course
+        $course = Course::findOrFail($course_id);
+        if ($course->status === 'rejected') {
+            return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
+        }
+
+        // Kiểm tra xem user hiện tại có phải là instructor của course này không
+        if ($course->instructor_id !== $user->instructor->id) {
+            return response()->json(['message' => 'You are not the instructor for this course'], 403);
+        }
+
+        // Kiểm tra phiên bản bài học
+        $originId = $lesson->origin_id ?? $lesson->id;
+        $latestLesson = Lesson::where('origin_id', $originId)
+            ->orWhere('id', $originId)
+            ->orderByDesc('version')
+            ->first();
+
+        if ($lesson->id !== $latestLesson->id) {
+            return response()->json([
+                'message' => 'Only the latest version of the lesson can be updated.'
+            ], 400);
+        }
+
+        $data = $request->validated();
+        $data['course_id'] = $course_id;
+        $isVideoUpdate = $request->hasFile('video');
+
+        // Xử lý chunked upload nếu có video mới
+        if ($isVideoUpdate) {
+            $receiver = new FileReceiver('video', $request, HandlerFactory::classFromRequest($request));
+
+            if ($receiver->isUploaded() === false) {
+                throw new UploadMissingFileException();
+            }
+
+            $save = $receiver->receive();
+
+            if ($save->isFinished()) {
+                // File hoàn chỉnh
+                $file = $save->getFile();
+                $fileName = $this->createFilename($file);
+
+                // Lưu tạm file
+                $disk = Storage::disk('local');
+                $path = $disk->putFileAs('videos', $file, $fileName);
+
+                // Tạo UploadedFile từ file tạm
+                $uploadedFile = new \Illuminate\Http\UploadedFile(
+                    storage_path('app/private/' . $path),
+                    $fileName,
+                    $file->getClientMimeType(),
+                    null,
+                    true
+                );
+
+                // Xóa video cũ trên Cloudinary nếu có
+                if ($lesson->video_url) {
+                    $this->cloudinaryService->deleteByUrl($lesson->video_url);
                 }
 
-                return response()->json([
-                    'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
-                    'data' => $newLesson
-                ]);
-            } else {
-                // Nếu chưa có learner học, cập nhật trực tiếp lesson hiện tại
-                $lesson->update($data);
+                // Upload lên Cloudinary
+                $apiResponse = $this->cloudinaryService->upload(
+                    $uploadedFile,
+                    'lessons/course_' . $course_id
+                );
+                $data['video_url'] = $apiResponse['secure_url'] ?? '';
+                if (isset($apiResponse['duration'])) {
+                    $data['duration'] = round($apiResponse['duration'] / 60, 2);
+                } else {
+                    Log::warning('Cloudinary response missing duration', ['upload_result' => $apiResponse]);
+                    $data['duration'] = 0;
+                }
 
+                // Xóa file tạm
+                $disk->delete($path);
+            } else {
+                // Trả về tiến trình upload chunk
+                $handler = $save->handler();
                 return response()->json([
-                    'message' => 'Lesson updated successfully' . (isset($data['is_visible']) && $data['is_visible'] === false ? ', awaiting approval' : ''),
-                    'data' => $lesson
+                    'done' => $handler->getPercentageDone(),
+                    'status' => true
                 ]);
             }
-        } catch (UploadMissingFileException $e) {
-            return response()->json([
-                'status' => 400,
-                'error' => 'No file uploaded.'
-            ], 400);
-        } catch (\Exception $e) {
-            Log::error('Lesson update for instructor error:', [
-                'course_id' => $course_id,
-                'lesson_id' => $lesson_id,
-                'message' => $e->getMessage()
-            ]);
-            return response()->json([
-                'status' => 500,
-                'error' => 'An error occurred while updating the lesson.',
-                'message' => $e->getMessage()
-            ], 500);
         }
-    }
 
+        // Nếu có cập nhật video, tạo lesson mới với version mới
+        if ($isVideoUpdate) {
+            $data['version'] = $lesson->version + 1;
+            $data['origin_id'] = $lesson->origin_id ?? $lesson->id;
+            $data['is_visible'] = true; // New version is visible
+            $lesson->is_visible = false; // Old version is hidden
+
+            $newLesson = Lesson::create($data);
+
+            // Thêm lesson_progress not_started cho tất cả user đã enroll
+            $enrolledUsers = Enrollment::where('course_id', $course_id)
+                ->pluck('user_id');
+
+            foreach ($enrolledUsers as $userId) {
+                LessonProgress::firstOrCreate(
+                    [
+                        'user_id' => $userId,
+                        'lesson_id' => $newLesson->id,
+                    ],
+                    [
+                        'status' => 'not_started'
+                    ]
+                );
+            }
+
+            return response()->json([
+                'message' => 'Lesson updated successfully with new version',
+                'data' => $newLesson
+            ]);
+        } else {
+            // Nếu không có video, cập nhật trực tiếp lesson hiện tại
+            $lesson->update($data);
+
+            return response()->json([
+                'message' => 'Lesson updated successfully',
+                'data' => $lesson
+            ]);
+        }
+    } catch (UploadMissingFileException $e) {
+        return response()->json([
+            'status' => 400,
+            'error' => 'No file uploaded.'
+        ], 400);
+    } catch (\Exception $e) {
+        Log::error('Lesson update for instructor error:', [
+            'course_id' => $course_id,
+            'lesson_id' => $lesson_id,
+            'message' => $e->getMessage()
+        ]);
+        return response()->json([
+            'status' => 500,
+            'error' => 'An error occurred while updating the lesson.',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
     public function destroyForInstructor($course_id, $lesson_id): JsonResponse
     {
         try {

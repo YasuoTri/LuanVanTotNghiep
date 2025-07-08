@@ -388,8 +388,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             if ($user->role === 'student' && !$user->instructor) {
                 return response()->json([
                     'message' => 'Instructor profile not found. Please complete your instructor profile.',
-                    'redirect' => true,
-                    'url' =>'localhost:4200/instructor/profile/create' // Frontend URL for instructor profile creation
                 ], 200);
             }
 

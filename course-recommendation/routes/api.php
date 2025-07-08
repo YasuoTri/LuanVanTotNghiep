@@ -64,12 +64,13 @@ Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithout
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
 
 //instructor thêm profile student
-Route::post('/updateProfile/student/profile', [StudentController::class, 'createStudentProfile']);
 Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
 Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
 Route::get('/recommend/export-send', [ExportRecommendController::class, 'exportAndSend']);
 // Student Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->group(function () {
+    Route::post('/updateProfile/student/profile', [StudentController::class, 'createStudentProfile']);
+    Route::post('/updateProfile/instructor/profile', [InstructorController::class, 'createInstructorProfile']);
     Route::get('/quizzes/lesson/{lessonId}', [QuizController::class, 'getQuizzesByLessonId']);
     Route::get('/student/courses/studentByInterest', [CourseController::class, 'getCoursesByStudentCategories']);
     Route::put('/enrollments/{id}', [EnrollmentController::class, 'update']);//xong

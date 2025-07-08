@@ -585,8 +585,6 @@ class EnrollmentController extends Controller
         if ($user->role == 'instructor' && !$user->student) {
             return response()->json([
                 'message' => 'Student profile not found. Please complete your profile.',
-                'redirect' => true,
-                'url' => 'localhost:4200/student/profile/create' // Frontend URL for student profile creation
             ], 200);
         }
         if ($course->price <= 0) {

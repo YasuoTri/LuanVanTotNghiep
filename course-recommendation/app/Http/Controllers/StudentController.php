@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
 use App\Models\Student;
+use App\Models\StudentCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
 {
@@ -106,6 +108,21 @@ public function createStudentProfile(Request $request): JsonResponse
         ], 409);
     }
 
+    // Validate request data
+    $validator = Validator::make($request->all(), [
+        'LoE_DI' => 'string|nullable|max:50',
+        'learning_goals' => 'string|nullable',
+        'category_ids' => 'array|nullable',
+        'category_ids.*' => 'integer|exists:categories,id',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
     // Create student profile
     $student = Student::create([
         'user_id' => $user->id,
@@ -114,9 +131,20 @@ public function createStudentProfile(Request $request): JsonResponse
         'total_courses_completed' => 0,
     ]);
 
+    // Associate categories if provided
+    if ($request->has('category_ids') && !empty($request->input('category_ids'))) {
+        $categoryIds = $request->input('category_ids');
+        foreach ($categoryIds as $categoryId) {
+            StudentCategory::create([
+                'student_id' => $student->id,
+                'category_id' => $categoryId,
+            ]);
+        }
+    }
+
     return response()->json([
         'message' => 'Student profile created successfully',
-        'data' => $student
+        'data' => $student->load('categories') // Eager load categories for response
     ], 201);
 }
 }

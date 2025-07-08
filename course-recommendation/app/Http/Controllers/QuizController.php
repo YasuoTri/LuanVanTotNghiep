@@ -1394,7 +1394,8 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
                 'completed_at' => now(),
             ]);
             // Tính thời gian làm bài (phút)
-            $timeTaken =round(($quizResult->started_at - $quizResult->completed_at) / 60);
+  $timeTaken = $quizResult->started_at->diffInMinutes($quizResult->completed_at);
+
             DB::commit();
 
             return response()->json([

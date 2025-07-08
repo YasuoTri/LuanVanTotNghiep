@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ReportHandledNotification;
 use App\Models\Report;
 use App\Models\Course;
 use App\Models\Lesson;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class ReportController extends Controller
 {
@@ -252,6 +254,11 @@ public function handleReport(Request $request, Report $report)
             case 'ignore':
             default:
                 break;
+        }
+            // ✅ Gửi email tới instructor
+        if ($course->instructors && $course->instructors->user) {
+            $instructorUser = $course->instructors->user;
+            Mail::to($instructorUser->email)->send(new ReportHandledNotification($course, $report, $request->status, $request->admin_notes));
         }
 
         return response()->json(['message' => 'Report handled successfully']);

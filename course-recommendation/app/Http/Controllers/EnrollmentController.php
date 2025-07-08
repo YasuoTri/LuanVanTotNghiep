@@ -354,10 +354,6 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
-
         $enrollment = Enrollment::where('id', $id)
             ->where('user_id', $user->id)
             ->with(['course' => function ($query) {
@@ -371,10 +367,6 @@ class EnrollmentController extends Controller
      public function completeEnrollment($id): JsonResponse
     {
         $user = Auth::user();
-
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
 
         $enrollment = Enrollment::where('id', $id)
             ->where('user_id', $user->id)
@@ -425,10 +417,6 @@ class EnrollmentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
-
         $enrollment = Enrollment::where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();
@@ -463,11 +451,6 @@ class EnrollmentController extends Controller
      public function submitReview(Request $request, $id): JsonResponse
     {
         $user = Auth::user();
-
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
-
         $enrollment = Enrollment::where('id', $id)
             ->where('user_id', $user->id)
             ->firstOrFail();

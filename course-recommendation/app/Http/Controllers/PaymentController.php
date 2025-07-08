@@ -124,10 +124,6 @@ class PaymentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
-
         $payments = Payment::where('user_id', $user->id)
                           ->with(['course', 'coupon'])
                           ->paginate(10);
@@ -145,9 +141,6 @@ class PaymentController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Unauthorized: Only students can access this endpoint'], 403);
-        }
 
         $payment = Payment::where('id', $id)
                       ->where('user_id', $user->id)

@@ -1476,41 +1476,102 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
     }
 // * API: Lấy danh sách khóa học có rating cao
 //      * Title: Lấy khóa học được đánh giá cao
-    public function getHighRatedCourses(Request $request)
-    {
-        $perPage = $request->query('per_page', 10);
+   public function getHighRatedCourses(Request $request)
+{
+    $perPage = $request->query('per_page', 10);
+    $page = $request->query('page', 1);
 
-        $courses = Course::query()
-            ->where('status', 'approved')
-            ->where('course_rating', '>', 0) // Chỉ lấy khóa học có rating
-            ->orderBy('course_rating', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+    // Lấy course có rating cao, đã approved, có lesson
+    $courses = Course::with(['instructors', 'reviews', 'lessons'])
+        ->where('status', 'approved')
+        ->where('course_rating', '>', 0)
+        ->has('lessons', '>', 1)
+        ->orderBy('course_rating', 'desc')
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($course) {
+            return [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'difficulty_level' => $course->difficulty_level,
+                'course_rating' => $course->course_rating,
+                'course_url' => $course->course_url,
+                'image' => $course->image,
+                'course_description' => $course->course_description,
+                'is_certificate_enabled' => $course->is_certificate_enabled,
+                'price' => $course->price,
+                'skills' => $course->skills,
+                'status' => $course->status,
+                'instructor' => $course->instructors,
+                'total_lessons' => $course->lessons->count(),
+                'total_time' => $course->lessons->sum('duration'),
+                'number_of_ratings' => $course->reviews->count(),
+                'created_at' => $course->created_at,
+                'updated_at' => $course->updated_at,
+            ];
+        });
 
-        return response()->json($courses, 200);
-    }
+    // Phân trang thủ công
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $courses->forPage($page, $perPage),
+        $courses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json($paginatedCourses);
+}
 
     // * API: Lấy danh sách khóa học đang có người học (active enrollments)
     //  * Title: Lấy khóa học đang có người học
 public function getActiveCourses(Request $request)
 {
     $perPage = $request->query('per_page', 10);
+    $page = $request->query('page', 1);
 
-    $courses = Course::query()
-        ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
-        ->where('courses.status', 'approved')
-        ->where('enrollments.status', 'active')
-        ->selectRaw('courses.*, COUNT(enrollments.id) as active_enrollments_count')
-        ->groupBy([
-            'courses.id', 'courses.course_name', 'courses.difficulty_level', 'courses.course_rating',
-            'courses.course_url', 'courses.image', 'courses.course_description', 'courses.price',
-            'courses.skills', 'courses.status', 'courses.is_certificate_enabled',
-            'courses.created_at', 'courses.updated_at', 'courses.deleted_at', 'courses.instructor_id'
-        ])
-        ->orderBy('courses.created_at', 'desc')
-        ->paginate($perPage);
+    // Lấy danh sách course có active enrollment
+    $courseIds = \App\Models\Enrollment::where('status', 'active')
+        ->pluck('course_id')
+        ->unique();
 
-    return response()->json($courses, 200);
+    // Lấy chi tiết course + quan hệ (instructors, reviews, lessons)
+    $courses = Course::with(['instructors', 'reviews', 'lessons'])
+        ->where('status', 'approved')
+        ->whereIn('id', $courseIds)
+        ->get()
+        ->map(function ($course) {
+            return [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'difficulty_level' => $course->difficulty_level,
+                'course_rating' => $course->course_rating,
+                'course_url' => $course->course_url,
+                'image' => $course->image,
+                'course_description' => $course->course_description,
+                'is_certificate_enabled' => $course->is_certificate_enabled,
+                'price' => $course->price,
+                'skills' => $course->skills,
+                'status' => $course->status,
+                'instructor' => $course->instructors,
+                'total_lessons' => $course->lessons->count(),
+                'total_time' => $course->lessons->sum('duration'),
+                'number_of_ratings' => $course->reviews->count(),
+                'created_at' => $course->created_at,
+                'updated_at' => $course->updated_at,
+            ];
+        });
+
+    // Thực hiện phân trang thủ công vì đã map()
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $courses->forPage($page, $perPage),
+        $courses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json($paginatedCourses);
 }
 
 // * API: Lấy danh sách khóa học phổ biến (dựa trên số lượng đăng ký)
@@ -1518,89 +1579,190 @@ public function getActiveCourses(Request $request)
 public function getPopularCourses(Request $request)
 {
     $perPage = $request->query('per_page', 10);
+    $page = $request->query('page', 1);
 
-    $courses = Course::query()
-        ->leftJoin('enrollments', 'courses.id', '=', 'enrollments.course_id')
-        ->where('courses.status', 'approved')
-        ->selectRaw('courses.*, COUNT(enrollments.id) as enrollments_count')
-        ->groupBy([
-            'courses.id', 'courses.course_name', 'courses.difficulty_level', 'courses.course_rating',
-            'courses.course_url', 'courses.image', 'courses.course_description', 'courses.price',
-            'courses.skills', 'courses.status', 'courses.is_certificate_enabled',
-            'courses.created_at', 'courses.updated_at', 'courses.deleted_at', 'courses.instructor_id'
-        ])
+    // Lấy danh sách course cùng tổng số enrollments
+    $popularCourses = \App\Models\Course::with(['instructors', 'reviews', 'lessons'])
+        ->withCount(['enrollments as enrollments_count' => function ($query) {
+            $query->where('status', 'active');
+        }])
+        ->where('status', 'approved')
+        ->has('lessons', '>', 1)
         ->orderByDesc('enrollments_count')
-        ->orderBy('courses.created_at', 'desc')
-        ->paginate($perPage);
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($course) {
+            return [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'difficulty_level' => $course->difficulty_level,
+                'course_rating' => $course->course_rating,
+                'course_url' => $course->course_url,
+                'image' => $course->image,
+                'course_description' => $course->course_description,
+                'is_certificate_enabled' => $course->is_certificate_enabled,
+                'price' => $course->price,
+                'skills' => $course->skills,
+                'status' => $course->status,
+                'instructor' => $course->instructors,
+                'total_lessons' => $course->lessons->count(),
+                'total_time' => $course->lessons->sum('duration'),
+                'number_of_ratings' => $course->reviews->count(),
+                'enrollments_count' => $course->enrollments_count,
+                'created_at' => $course->created_at,
+                'updated_at' => $course->updated_at,
+            ];
+        });
 
-    return response()->json($courses, 200);
+    // Thực hiện phân trang thủ công
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $popularCourses->forPage($page, $perPage),
+        $popularCourses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json($paginatedCourses);
 }
 
     
     //Danh sách khóa học mới nhất
-    public function getCoursesByCriteria(Request $request)
-    {
-        $criteria = $request->query('criteria', 'latest'); // Mặc định là mới nhất
-        $perPage = $request->query('per_page', 10); // Số lượng bản ghi mỗi trang
+  public function getCoursesByCriteria(Request $request)
+{
+    $criteria = $request->query('criteria', 'latest'); // Mặc định: mới nhất
+    $perPage = $request->query('per_page', 10); // Số bản ghi mỗi trang
+    $page = $request->query('page', 1); // Trang hiện tại
 
-        $query = Course::query()->where('status', 'approved'); // Chỉ lấy khóa học đã được phê duyệt
+    // Query cơ bản
+    $query = Course::with(['instructors', 'reviews', 'lessons'])
+        ->where('status', 'approved')
+        ->has('lessons', '>', 1);
 
-        switch ($criteria) {
-            case 'price_low':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_high':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'latest':
-            default:
-                $query->orderBy('created_at', 'desc');
-                break;
-        }
-
-        $courses = $query->paginate($perPage);
-
-        return response()->json($courses);
+    // Xử lý tiêu chí lọc
+    switch ($criteria) {
+        case 'price_low':
+            $query->orderBy('price', 'asc');
+            break;
+        case 'price_high':
+            $query->orderBy('price', 'desc');
+            break;
+        case 'latest':
+        default:
+            $query->orderBy('created_at', 'desc');
+            break;
     }
-    public function getPopularCoursesInRandomCategory(Request $request)
+
+    // Lấy kết quả phân trang
+    $courses = $query->get()->map(function ($course) {
+        return [
+            'id' => $course->id,
+            'course_name' => $course->course_name,
+            'difficulty_level' => $course->difficulty_level,
+            'course_rating' => $course->course_rating,
+            'course_url' => $course->course_url,
+            'image' => $course->image,
+            'course_description' => $course->course_description,
+            'price' => $course->price,
+            'is_certificate_enabled' => $course->is_certificate_enabled,
+            'skills' => $course->skills,
+            'status' => $course->status,
+            'instructor' => $course->instructors,
+            'total_lessons' => $course->lessons->count(),
+            'total_time' => $course->lessons->sum('duration'), // Tổng thời lượng
+            'number_of_ratings' => $course->reviews->count(),
+            'created_at' => $course->created_at,
+            'updated_at' => $course->updated_at,
+        ];
+    });
+
+    // Phân trang thủ công
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $courses->forPage($page, $perPage),
+        $courses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json($paginatedCourses);
+}
+
+  public function getPopularCoursesInRandomCategory(Request $request)
 {
     $perPage = $request->query('per_page', 10);
+    $page = $request->query('page', 1);
 
-    // Lấy một danh mục ngẫu nhiên
+    // Lấy danh mục ngẫu nhiên
     $category = Category::inRandomOrder()->first();
 
     if (!$category) {
         return response()->json([
             'success' => false,
-            'message' => 'Không có danh mục nào tồn tại'
+            'message' => 'No category found'
         ], 404);
     }
 
-    $courses = Course::query()
-        ->join('course_category', 'courses.id', '=', 'course_category.course_id')
-        ->leftJoin('enrollments', 'courses.id', '=', 'enrollments.course_id')
-        ->where('course_category.category_id', $category->id)
-        ->where('courses.status', 'approved')
-        ->selectRaw('courses.*, COUNT(enrollments.id) as enrollments_count')
-        ->groupBy([
-            'courses.id', 'courses.course_name', 'courses.difficulty_level', 'courses.course_rating',
-            'courses.course_url', 'courses.image', 'courses.course_description', 'courses.price',
-            'courses.skills', 'courses.status', 'courses.is_certificate_enabled',
-            'courses.created_at', 'courses.updated_at', 'courses.deleted_at', 'courses.instructor_id'
-        ])
+    // Lấy danh sách khóa học phổ biến trong danh mục
+    $courses = Course::with(['instructors', 'reviews', 'lessons'])
+        ->whereHas('categories', function ($query) use ($category) {
+            $query->where('categories.id', $category->id);
+        })
+        ->withCount(['enrollments as enrollments_count' => function ($q) {
+            $q->where('status', 'active');
+        }])
+        ->where('status', 'approved')
+        ->has('lessons', '>', 1)
         ->orderByDesc('enrollments_count')
-        ->orderBy('courses.created_at', 'desc')
-        ->paginate($perPage);
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($course) {
+            return [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'difficulty_level' => $course->difficulty_level,
+                'course_rating' => $course->course_rating,
+                'course_url' => $course->course_url,
+                'image' => $course->image,
+                'course_description' => $course->course_description,
+                'is_certificate_enabled' => $course->is_certificate_enabled,
+                'price' => $course->price,
+                'skills' => $course->skills,
+                'status' => $course->status,
+                'instructor' => $course->instructors,
+                'total_lessons' => $course->lessons->count(),
+                'total_time' => $course->lessons->sum('duration'),
+                'number_of_ratings' => $course->reviews->count(),
+                'enrollments_count' => $course->enrollments_count,
+                'created_at' => $course->created_at,
+                'updated_at' => $course->updated_at,
+            ];
+        });
 
-    return response()->json([
-        'success' => true,
-        'data' => $courses,
-        'category' => [
-            'id' => $category->id,
-            'name' => $category->name
-        ],
-        'message' => 'Danh sách khóa học phổ biến trong danh mục ' . $category->name
-    ], 200);
+    // Phân trang thủ công
+    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
+        $courses->forPage($page, $perPage),
+        $courses->count(),
+        $perPage,
+        $page,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+ return response()->json([
+    'success' => true,
+    'message' => 'Popular courses in category "' . $category->name . '"',
+    'category' => [
+        'id' => $category->id,
+        'name' => $category->name
+    ],
+    'data' => $paginatedCourses->items(), // dữ liệu course thuần
+    'meta' => [
+        'current_page' => $paginatedCourses->currentPage(),
+        'last_page' => $paginatedCourses->lastPage(),
+        'per_page' => $paginatedCourses->perPage(),
+        'total' => $paginatedCourses->total(),
+    ]
+]);
+
 }
 
 public function banAndRefundCourse($id)

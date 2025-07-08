@@ -456,34 +456,48 @@ class LessonController extends Controller
                 // Xóa file tạm
                 $disk->delete($path);
 
-                // Lưu lesson với is_visible = false
-                $data['course_id'] = $course_id;
-                $data['is_visible'] = false;
-                $lesson = Lesson::create($data);
+                // Start transaction
+                DB::beginTransaction();
+                try {
+                    // Lưu lesson với is_visible = false
+                    $data['course_id'] = $course_id;
+                    $data['is_visible'] = false;
+                    $lesson = Lesson::create($data);
 
-                // Create lesson progress for all enrolled users
-                $enrolledUsers = Enrollment::where('course_id', $course_id)
-                    ->where('status', 'active')
-                    ->pluck('user_id');
+                    // Create lesson progress for all enrolled users
+                    $enrolledUsers = Enrollment::where('course_id', $course_id)
+                        ->where('status', 'active')
+                        ->pluck('user_id');
 
-                foreach ($enrolledUsers as $userId) {
-                    LessonProgress::firstOrCreate(
-                        [
-                            'user_id' => $userId,
-                            'lesson_id' => $lesson->id,
-                        ],
-                        [
-                            'status' => 'not_started',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]
-                    );
+                    foreach ($enrolledUsers as $userId) {
+                        LessonProgress::firstOrCreate(
+                            [
+                                'user_id' => $userId,
+                                'lesson_id' => $lesson->id,
+                            ],
+                            [
+                                'status' => 'not_started',
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]
+                        );
+                    }
+
+                    DB::commit();
+
+                    return response()->json([
+                        'message' => 'Lesson created successfully',
+                        'data' => $lesson
+                    ], 201);
+                } catch (Exception $e) {
+                    DB::rollBack();
+                    Log::error('Lesson creation transaction failed:', ['message' => $e->getMessage()]);
+                    return response()->json([
+                        'status' => 500,
+                        'error' => 'An error occurred while creating lesson progress.',
+                        'message' => $e->getMessage()
+                    ], 500);
                 }
-
-                return response()->json([
-                    'message' => 'Lesson created successfully',
-                    'data' => $lesson
-                ], 201);
             }
 
             // Trả về tiến trình upload chunk

@@ -532,7 +532,7 @@ public function instructorViewReports($courseId)
         // ->get();
         // Nếu không cần phân trang thì bỏ paginate đi
         // ->paginate(10) hoặc ->get() tùy nhu cầu
-    // ->where('report_type', ['spam','technical_issue'])
+    ->where('report_type', ['spam','technical_issue'])
         // ->select('id', 'user_id', 'reason', 'report_type', 'created_at')
         ->orderBy('created_at', 'desc')
         ->get();

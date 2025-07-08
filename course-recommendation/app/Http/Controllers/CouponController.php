@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Coupon;
+use App\Models\Course;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CouponController extends Controller
 {
@@ -52,5 +54,37 @@ class CouponController extends Controller
         $coupon->delete();
         return response()->json(['message' => 'Coupon deleted successfully']);
     }
-    //
+    
+    public function createCoupon(Request $request)
+{
+    $user = Auth::user();
+
+    // Kiểm tra quyền
+    if (!$user->instructor) {
+        return response()->json(['message' => 'Only instructors can create coupons.'], 403);
+    }
+
+    // Kiểm tra course có thuộc instructor không
+    $course = Course::where('id', $request->course_id)
+        ->where('instructor_id', $user->instructor->id)
+        ->first();
+
+    if (!$course) {
+        return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
+    }
+
+    // Tạo coupon
+    $coupon = Coupon::create([
+        'code' => $request->code,
+        'discount_type' => $request->discount_type,
+        'discount_value' => $request->discount_value,
+        'course_id' => $course->id,
+        'start_date' => $request->start_date,
+        'end_date' => $request->end_date,
+        'usage_limit' => $request->usage_limit,
+    ]);
+
+    return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);
+}
+
 }

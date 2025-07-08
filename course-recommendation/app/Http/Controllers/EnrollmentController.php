@@ -487,10 +487,6 @@ class EnrollmentController extends Controller
     public function enrollFreeCourse(Request $request, $course_id): JsonResponse
     {
         $user = Auth::user();
-
-        if ($user->role == 'instructor') {
-
-        }
          // Tìm khóa học
         $course = Course::withCount('lessons')->find($course_id);
 
@@ -538,9 +534,21 @@ class EnrollmentController extends Controller
             'user_id' => $user->id,
             'course_id' => $course_id,
             'enrolled_at' => now(),
-            'expires_at' => Carbon::now()->addMonths(3), // Hết hạn sau 3 tháng
             'status' => 'active',
         ]);
+
+         // ✅ Tạo lesson_progress cho tất cả bài học (mọi version)
+        $allLessons = Lesson::where('course_id', $course_id)->get();
+
+        foreach ($allLessons as $lesson) {
+            LessonProgress::create([
+                'user_id' => $user->id,
+                'lesson_id' => $lesson->id,
+                'status' => 'not_started',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
         
         return response()->json([
             'message' => 'Successfully enrolled in free course',

@@ -111,5 +111,9 @@ public function choices()
 {
     return $this->hasMany(QuestionChoice::class, 'question_id');
 }
+public function coupons()
+{
+    return $this->hasMany(Coupon::class);
+}
 
 }

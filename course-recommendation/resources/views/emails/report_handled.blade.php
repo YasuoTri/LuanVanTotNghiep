@@ -183,7 +183,7 @@
 <body>
     <div class="email-container">
         <div class="email-header">
-            <h2>Thông báo về khóa học</h2>
+            <h2>Annoucement about Course</h2>
         </div>
 
         <div class="email-body">

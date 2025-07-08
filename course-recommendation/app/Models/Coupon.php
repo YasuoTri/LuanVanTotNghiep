@@ -9,7 +9,7 @@ class Coupon extends Model
     protected $table = 'coupons';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $fillable = [
+    protected $fillable = ['course_id',
         'code', 'discount_type', 'discount_value', 'min_order', 'start_date',
         'end_date', 'usage_limit', 'used_count', 'is_active'
     ];
@@ -22,4 +22,9 @@ class Coupon extends Model
     {
         return $this->hasMany(Payment::class, 'coupon_id');
     }
+    public function course()
+{
+    return $this->belongsTo(Course::class);
+}
+
 }

@@ -163,7 +163,7 @@ class PaymentController extends Controller
         ]);
     }
 
-  public function store(array $paymentData, int $userId, int $courseId): JsonResponse
+    public function store(array $paymentData, int $userId, int $courseId): JsonResponse
 {
     $user = Auth::user();
     // Validate payment data
@@ -189,7 +189,7 @@ class PaymentController extends Controller
         ], 500);
     }
     // Apply coupon if provided
-      if ($paymentData['method'] == 'vnpay') {
+    if ($paymentData['method'] == 'vnpay') {
         $finalAmount = round($paymentData['amount'] * $vndRate);
     } else {
         $finalAmount = $paymentData['amount'];
@@ -206,17 +206,12 @@ class PaymentController extends Controller
     if (!$coupon) {
         return response()->json(['message' => 'Invalid or expired coupon'], 400);
     }
-    $paymentData['coupon_id'] = $coupon->id;
-        $coupon = Coupon::where('id', $paymentData['coupon_id'])
-            ->where('is_active', true)
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
-            ->whereColumn('used_count', '<', 'usage_limit')
-            ->first();
-
-        if (!$coupon) {
-            return response()->json(['message' => 'Invalid or expired coupon'], 400);
+      // Check if coupon is valid for the specified course
+        if ($coupon->course_id !== null && $coupon->course_id != $courseId) {
+            return response()->json(['message' => 'Coupon is not valid for this course'], 400);
         }
+    
+    $paymentData['coupon_id'] = $coupon->id;
 
         if ($coupon->discount_type === 'percent') {
             $finalAmount = $finalAmount * (1 - $coupon->discount_value / 100);

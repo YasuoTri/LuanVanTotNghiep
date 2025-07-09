@@ -318,6 +318,7 @@ class AuthController extends Controller
             ], 500);
         }
     }
+    
 public function redirectToGoogle()
 {
     try {
@@ -375,7 +376,7 @@ public function handleGoogleCallback()
         }
     }
 
-   protected function handleSocialLogin($socialUser, $provider)
+    protected function handleSocialLogin($socialUser, $provider)
 {
     try {
         Log::info("Handling social login for provider: {$provider}");
@@ -462,6 +463,7 @@ public function handleGoogleCallback()
         }
 
         try {
+            Log::info("Attempting to generate JWT token for user: {$user}");
             $token = JWTAuth::fromUser($user);
         } catch (\Exception $e) {
             dd('JWT ERROR', $e->getMessage(), $user);

@@ -54,6 +54,9 @@ return Application::configure(basePath: dirname(__DIR__))
             // Thêm middleware mặc định cho route API nếu cần
             // Cors::class,
         ]);
+        $middleware->encryptCookies(except: [
+        'jwt_token',
+    ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

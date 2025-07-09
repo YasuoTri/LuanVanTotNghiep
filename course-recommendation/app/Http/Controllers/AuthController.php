@@ -474,20 +474,19 @@ public function handleGoogleCallback()
             'Strict'
         );
 
-        if ($user->role === null) {
-            return response()->json([
-                'message' => 'Social login successful, but role not set',
-                'require_role_selection' => true,
-                'user' => $user,
-            ])->withCookie($cookie);
-        }
+        // if ($user->role === null) {
+        //     return response()->json([
+        //         'message' => 'Social login successful, but role not set',
+        //         'require_role_selection' => true,
+        //         'user' => $user,
+        //     ])->withCookie($cookie);
+        // }
 
          // Redirect về frontend với token
         $baseUrl = 'http://localhost:4200/social-callback';
 
         // Thêm role flag nếu chưa chọn role
         $query = http_build_query([
-            'token' => $token,
             'user'=> $user,
             'require_role' => $user->role ? 'false' : 'true'
         ]);

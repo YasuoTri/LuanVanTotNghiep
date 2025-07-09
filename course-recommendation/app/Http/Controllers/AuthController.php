@@ -479,7 +479,6 @@ public function handleGoogleCallback()
                 'message' => 'Social login successful, but role not set',
                 'require_role_selection' => true,
                 'user' => $user,
-                'token' => $token,
             ])->withCookie($cookie);
         }
 
@@ -489,6 +488,7 @@ public function handleGoogleCallback()
         // Thêm role flag nếu chưa chọn role
         $query = http_build_query([
             'token' => $token,
+            'user'=> $user,
             'require_role' => $user->role ? 'false' : 'true'
         ]);
 
@@ -661,22 +661,12 @@ public function handleGoogleCallback()
             }
             if ($user->role === 'instructor') {
                 $instructor = Instructors::where('user_id', $user->id)->first();
-                if (!$instructor) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Instructor not found',
-                    ], 404);
-                }
+              
                 $user->instructor = $instructor;
             }
             if ($user->role === 'student') {
                 $student = Student::where('user_id', $user->id)->first();
-                if (!$student) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Student not found',
-                    ], 404);
-                }
+            
                 $user->student = $student;
             }
             return response()->json([

@@ -851,6 +851,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
     /**
  * Bắt đầu một phiên làm bài quiz.
  */
+
 public function startQuiz(Request $request, $quiz_id): JsonResponse
 {
     $user = Auth::user();
@@ -946,12 +947,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     $limit = request()->query('limit', null);
     $page = request()->query('page', 1);
 
-    $quiz = Quiz::with(['questions' => function ($query) use ($limit, $page) {
-        if ($limit) {
-            $query->forPage($page, $limit);
-        }
-        $query->with('choices');
-    }])->find($quiz_id);
+    $quiz = Quiz::with(['questions.choices'])->find($quiz_id);
 
     if (!$quiz) {
         return response()->json(['message' => 'Quiz không tìm thấy'], 404);
@@ -966,10 +962,26 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
     }
 
-    $totalQuestions = $quiz->questions()->count();
+    // Lấy toàn bộ questions rồi phân trang thủ công (vì cần xử lý từng câu hỏi)
+    $questions = $quiz->questions;
+
+    // Gắn thêm `is_multiple_correct` cho từng câu hỏi
+    $questions->each(function ($question) {
+        $correctCount = $question->choices->where('is_correct', true)->count();
+        $question->is_multiple_correct = $correctCount > 1;
+    });
+
+    // Phân trang nếu cần
+    if ($limit) {
+        $totalQuestions = $questions->count();
+        $pagedQuestions = $questions->forPage($page, $limit)->values(); // reset key
+    } else {
+        $pagedQuestions = $questions;
+        $totalQuestions = null;
+    }
 
     return response()->json([
-        'data' => $quiz->questions,
+        'data' => $pagedQuestions,
         'pagination' => $limit ? [
             'page' => (int)$page,
             'per_page' => (int)$limit,
@@ -977,6 +989,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         ] : null
     ], 200);
 }
+
 
     /**
      * Hiển thị chi tiết quiz cho sinh viên, bao gồm phản hồi.

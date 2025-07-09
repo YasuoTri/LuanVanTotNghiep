@@ -484,7 +484,7 @@ public function handleGoogleCallback()
         }
 
          // Redirect về frontend với token
-        $baseUrl = 'localhost:4200/social-callback';
+        $baseUrl = 'http://localhost:4200/social-callback';
 
         // Thêm role flag nếu chưa chọn role
         $query = http_build_query([

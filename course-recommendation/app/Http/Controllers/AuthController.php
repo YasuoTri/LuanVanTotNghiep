@@ -468,10 +468,10 @@ public function handleGoogleCallback()
             60,
             '/',
             null,
-            false,
+            true,
             true,
             false,
-            'Lax'
+            'Strict'
         );
 
         // if ($user->role === null) {

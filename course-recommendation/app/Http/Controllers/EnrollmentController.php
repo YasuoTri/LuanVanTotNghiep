@@ -21,6 +21,7 @@ use Carbon\Carbon;
 use App\Http\Controllers\PaymentController;
 use App\Http\Requests\Enrollment\Renew;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class EnrollmentController extends Controller
 {
@@ -468,6 +469,41 @@ class EnrollmentController extends Controller
 
         if ($existingReview) {
             return response()->json(['message' => 'You have already reviewed this course'], 400);
+        }
+
+   // Kiểm tra từ ngữ phản cảm nếu có comment
+        if ($request->comment) {
+            $response = Http::asForm()->post('https://neutrinoapi.net/bad-word-filter', [
+                'user-id' => 'phamminhtri26102003',
+                'api-key' => '2pHRUxWhHr0hVLDVGR8BPmF7lTGNPPSTeFTiVPsrHgIRnDXM',
+                'content' => $request->comment,
+                'censor-character' => '*' // Optional: dùng để thay từ vi phạm nếu cần
+            ]);
+            Log::info('Bad word filter response', ['response' => $response->body()]); 
+            if ($response->successful()) {
+                $result = $response->json();
+                if ($result['is-bad']) {
+                    return response()->json([
+                        'message' => 'The comment contain inapproriate content'
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'message' => "Unable to check content at this time. Please try again later."
+                ], 500);
+            }
+        }
+        $comment = strtolower($request->comment);
+        $badWords = json_decode(file_get_contents(storage_path('app/vi_badwords.json')), true);
+
+        foreach ($badWords as $category => $words) {
+            foreach ($words as $word) {
+                if (stripos($comment, $word) !== false) {
+                    return response()->json([
+                        'message' => 'Your comment contains inappropriate language: '
+                    ], 422);
+                }
+            }
         }
 
         $review = Review::create([

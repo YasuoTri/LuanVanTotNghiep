@@ -89,18 +89,56 @@ public function getSubcategories()
     public function store(Request $request)
     {
         // Create a new category
+    $request->validate([
+        'name' => 'required|unique:categories,name',
+        'parent_id' => 'nullable|exists:categories,id',
+    ]);
+
+    // Kiểm tra nếu parent_id có cha ⇒ vi phạm 2 cấp
+    if ($request->parent_id) {
+        $parent = Category::find($request->parent_id);
+        if ($parent && $parent->parent_id) {
+            return response()->json([
+                'error' => '❌ Không được tạo subcategory trong subcategory (chỉ 2 cấp được phép).'
+            ], 422);
+        }
+    }
         $category = Category::create($request->all());
         return response()->json($category, 201);
     }
+        
     public function update(Request $request, $id)
     {
-        // Update an existing category
+        // Tìm category theo ID
         $category = Category::find($id);
+        
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
-        return $this->updateIfChanged($category,$request->all(), 'Category');
+
+        // Nếu có truyền parent_id, kiểm tra nó không phải là con của một category khác
+        $parentId = $request->input('parent_id');
+        if ($parentId) {
+            if ($parentId == $id) {
+                return response()->json(['error' => '❌ Category không thể là cha của chính nó'], 422);
+            }
+
+            $parent = Category::find($parentId);
+            if (!$parent) {
+                return response()->json(['error' => '❌ parent_id không tồn tại'], 422);
+            }
+
+            if ($parent->parent_id) {
+                return response()->json([
+                    'error' => '❌ Không được gán category cấp 3. Chỉ cho phép 2 cấp.'
+                ], 422);
+            }
+        }
+
+        // Cập nhật thông tin nếu hợp lệ
+        return $this->updateIfChanged($category, $request->all(), 'Category');
     }
+
     public function destroy($id)
     {
         // Delete a category

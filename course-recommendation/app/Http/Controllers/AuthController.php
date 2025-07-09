@@ -323,10 +323,7 @@ public function redirectToGoogle()
     try {
         /** @var \Laravel\Socialite\Two\GoogleProvider  */
         $driver = Socialite::driver('google');
-        $url= $driver->stateless()->redirect()->getTargetUrl();
-        return response()->json([
-            'url' => $url,
-        ]);
+        return $driver->stateless()->redirect();
     } catch (\Exception $e) {
         Log::error('Google redirect error: ' . $e->getMessage());
         return response()->json([
@@ -354,10 +351,8 @@ public function handleGoogleCallback()
     {
             /** @var \Laravel\Socialite\Two\GoogleProvider  */
         $driver = Socialite::driver('facebook');
-        $url= $driver->stateless()->redirect()->getTargetUrl();
-        return response()->json([
-            'url' => $url,
-        ]);
+        return $driver->stateless()->redirect();
+        
     }
 
     public function handleFacebookCallback()

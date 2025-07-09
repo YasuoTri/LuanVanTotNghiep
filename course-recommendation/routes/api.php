@@ -210,7 +210,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
     Route::get('/instructor/courses/{courseId}/progress', [CertificateController::class, 'getCourseProgress']);
     Route::get('/instructor/InfoFull/courses', [InstructorController::class, 'getInstructorCourses']);
-    
+    Route::get('/instructor/course/{courseId}/comment-statistics', [ReviewController::class, 'commentStatistics']);
+
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {

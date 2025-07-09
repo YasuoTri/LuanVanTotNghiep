@@ -2321,57 +2321,55 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
             ], 404);
         }
 
-        // Xác định instructor chủ khóa
         $course = $lesson->course;
         $isOwner = false;
         if ($user->instructor && $course && $course->instructor_id == $user->instructor->id) {
             $isOwner = true;
         }
 
-        // Query quiz tùy loại user
         $quizQuery = Quiz::where('lesson_id', $lessonId);
         if (!$isOwner) {
             $quizQuery->where('is_visible', 1);
         }
-        // Sắp xếp theo origin_id và version (null origin_id lên đầu, sau đó sort version tăng dần)
+
         $quizQuery->orderByRaw('COALESCE(origin_id, id), version');
 
-        // Lấy quizzes kèm count questions
         $quizzes = $quizQuery
             ->withCount('questions')
             ->get(['id', 'origin_id', 'version', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at']);
 
-        // Map kết quả như cũ
-        $results = $quizzes->map(function ($quiz) use ($user) {
-            // Đếm số lần user đã làm
+        // 👉 Truy xuất quiz_min_score nếu có từ bảng certificate_rules
+        $certificateRule = \App\Models\CertificateRule::where('course_id', $course->id)->first();
+        $quizMinScore = $certificateRule ? $certificateRule->quiz_min_score : 70;
+
+        $results = $quizzes->map(function ($quiz) use ($user, $quizMinScore) {
             $userAttempts = $quiz->quizResults()
                 ->where('user_id', $user->id)
                 ->count();
 
             $remainingAttempts = $quiz->max_attempts - $userAttempts;
 
-            // Lấy kết quả chi tiết các lần làm
             $results = $quiz->quizResults()
                 ->where('user_id', $user->id)
                 ->get();
 
             return [
-                'quiz_id'           => $quiz->id,
-                'origin_id'         => $quiz->origin_id,
-                'version'           => $quiz->version,
-                'title'             => $quiz->title,
-                'max_attempts'      => $quiz->max_attempts,
-                'time_limit'        => $quiz->time_limit,
-                'is_visible'        => $quiz->is_visible,
-                'questions_count'   => $quiz->questions_count,
-                'remaining_attempts'=> $remainingAttempts,
-                'results'           => $results,
-                'created_at'        => $quiz->created_at,
-                'updated_at'        => $quiz->updated_at,
+                'quiz_id'            => $quiz->id,
+                'origin_id'          => $quiz->origin_id,
+                'version'            => $quiz->version,
+                'title'              => $quiz->title,
+                'max_attempts'       => $quiz->max_attempts,
+                'time_limit'         => $quiz->time_limit,
+                'is_visible'         => $quiz->is_visible,
+                'questions_count'    => $quiz->questions_count,
+                'remaining_attempts' => $remainingAttempts,
+                'results'            => $results,
+                'quiz_min_score'     => (int)$quizMinScore, // ✅ Thêm ở đây
+                'created_at'         => $quiz->created_at,
+                'updated_at'         => $quiz->updated_at,
             ];
         });
 
-        // Trả về danh sách quiz
         return response()->json([
             'status' => 'success',
             'message' => 'Quizzes retrieved successfully.',
@@ -2379,7 +2377,6 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
         ], 200);
 
     } catch (\Exception $e) {
-        // Xử lý lỗi nếu có
         return response()->json([
             'status' => 'error',
             'message' => 'An error occurred while retrieving quizzes.',

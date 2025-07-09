@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Review\StoreReviewRequest;
 use App\Http\Requests\Review\UpdateReviewRequest;
+use App\Models\Course;
 use App\Models\Review;
 use Illuminate\Http\Request;;
 use App\Models\Lesson;
@@ -158,4 +159,65 @@ public function storeStudent(Request $request, $course_id)
             'review' => $review
         ]);
     }
+   public function commentStatistics(Request $request, $courseId): JsonResponse
+{
+    $user = Auth::user();
+
+    // 1. Kiểm tra quyền instructor
+    $course = Course::where('id', $courseId)
+        ->where('instructor_id', $user->instructor->id ?? null)
+        ->first();
+
+    if (!$course) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Bạn không có quyền truy cập khóa học này.'
+        ], 403);
+    }
+
+    // 2. Nhận tham số lọc types (nếu có)
+    $types = $request->query('types'); // ?types[]=instructor...
+
+    // Danh sách loại mặc định trong hệ thống
+    $allTypes = ['content_quality', 'instructor', 'not_interested'];
+
+    // Nếu không truyền types → dùng toàn bộ loại
+    $selectedTypes = (is_array($types) && count($types)) ? $types : $allTypes;
+
+    // 3. Lấy danh sách comment theo course & feedback_type
+    $query = Review::where('course_id', $course->id)
+        ->whereIn('feedback_type', $selectedTypes)
+        ->orderByDesc('created_at');
+
+    $reviews = $query->get();
+
+    // 4. Group comment theo feedback_type
+    $groupedComments = collect($selectedTypes)->mapWithKeys(function ($type) use ($reviews) {
+        $comments = $reviews->where('feedback_type', $type)->values()->map(function ($review) {
+            return [
+                'id'         => $review->id,
+                'user_id'    => $review->user_id,
+                'comment'    => $review->comment,
+                'created_at' => $review->created_at->toDateTimeString(),
+            ];
+        });
+
+        return [$type => $comments];
+    });
+
+    // 5. Đếm số lượng comment theo loại
+    $counts = collect($selectedTypes)->mapWithKeys(function ($type) use ($reviews) {
+        return [$type => $reviews->where('feedback_type', $type)->count()];
+    });
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Thống kê và danh sách comment theo loại',
+        'data' => [
+            'counts'   => $counts,
+            'comments' => $groupedComments
+        ]
+    ]);
+}
+
 }

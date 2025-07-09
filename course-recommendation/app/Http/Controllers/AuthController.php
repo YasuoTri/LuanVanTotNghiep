@@ -468,10 +468,10 @@ public function handleGoogleCallback()
             60,
             '/',
             null,
-            true,
+            false,
             true,
             false,
-            'Strict'
+            'Lax'
         );
 
         // if ($user->role === null) {
@@ -487,6 +487,7 @@ public function handleGoogleCallback()
 
         // Thêm role flag nếu chưa chọn role
         $query = http_build_query([
+            'token' => $token,
             'require_role' => $user->role ? 'true' : 'false'
         ]);
 

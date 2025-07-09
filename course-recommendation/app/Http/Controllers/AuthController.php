@@ -432,7 +432,12 @@ public function handleGoogleCallback()
                 'provider_id' => $socialUser->getId(),
                 'status' => 'active',
             ]);
-
+            Student::create([
+                'user_id' => $user->id,
+                'learning_goals' => 'No goals set',
+                'LoE_DI' => 'Unknown',
+                'total_courses_completed' => 0,
+            ]);
             Log::info("Created new user via {$provider}: " . $user->id);
         }
 
@@ -461,7 +466,7 @@ public function handleGoogleCallback()
         } catch (\Exception $e) {
             dd('JWT ERROR', $e->getMessage(), $user);
         }
-
+        Log::info("Generated JWT token for user: {$token}");
         $cookie = cookie(
             'jwt_token',
             $token,
@@ -473,7 +478,7 @@ public function handleGoogleCallback()
             false,
             'Strict'
         );
-
+        Log::info("JWT cookie created for user: {$cookie}");
         // if ($user->role === null) {
         //     return response()->json([
         //         'message' => 'Social login successful, but role not set',
@@ -667,6 +672,11 @@ public function handleGoogleCallback()
                 $student = Student::where('user_id', $user->id)->first();
             
                 $user->student = $student;
+            }
+               if ($user->role === 'admin') {
+                $admin = Admins::where('user_id', $user->id)->first();
+            
+                $user->admin = $admin;
             }
             return response()->json([
                 'success' => true,

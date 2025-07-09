@@ -115,7 +115,6 @@ class User extends Authenticatable implements JWTSubject
             'id' => $this->id,
             'role' => $this->role,
             'email' => $this->email,
-
         ];
     }
     public function violations()

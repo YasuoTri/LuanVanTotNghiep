@@ -334,6 +334,7 @@ public function redirectToGoogle()
         ], 500);
     }
 }
+
 public function handleGoogleCallback()
 {
     try {
@@ -482,11 +483,16 @@ public function handleGoogleCallback()
             ])->withCookie($cookie);
         }
 
-        return response()->json([
-            'message' => 'Social login successful',
-            'user' => $user,
+         // Redirect về frontend với token
+        $baseUrl = 'localhost:4200/social-callback';
+
+        // Thêm role flag nếu chưa chọn role
+        $query = http_build_query([
             'token' => $token,
-        ])->withCookie($cookie);
+            'require_role' => $user->role ? 'false' : 'true'
+        ]);
+
+        return redirect()->away($baseUrl . '?' . $query)->withCookie($cookie);
 
     } catch (\Exception $e) {
         Log::error("Social login error for {$provider}: " . $e->getMessage());

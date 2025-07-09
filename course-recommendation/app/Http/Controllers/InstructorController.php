@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Interaction\UpdateInteractionRequest;
 use App\Http\Requests\StoreInstructorRequest;
+use App\Models\Course;
 use Illuminate\Http\Request;
 use App\Models\Instructors;
 use App\Models\User;
@@ -206,4 +207,95 @@ public function createInstructorProfile(Request $request): JsonResponse
         'data' => $instructor
     ], 201);
 }
+public function getInstructorCourses(Request $request)
+    {
+        $instructorId = Auth::user()->instructor->id;
+
+        // Lấy thông tin instructor từ bảng users và instructors
+        $instructor = Instructors::select(
+            'instructors.id as instructor_id',
+            'instructors.bio',
+            'instructors.organization',
+            'instructors.email_paypal',
+            'users.username',
+            'users.fullname',
+            'users.email',
+            'users.birthdate',
+            'users.gender',
+            'users.avatar',
+            'users.role',
+            'users.status'
+        )
+        ->join('users', 'instructors.user_id', '=', 'users.id')
+        ->where('instructors.id', $instructorId)
+        ->first();
+
+        if (!$instructor) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Instructor not found.',
+            ], 404);
+        }
+
+        // Lấy danh sách khóa học của instructor
+        $courses = Course::select(
+            'courses.id as course_id',
+            'courses.course_name',
+            'courses.difficulty_level',
+            'courses.course_rating',
+            'courses.course_url',
+            'courses.image',
+            'courses.course_description',
+            'courses.is_certificate_enabled',
+            'courses.price',
+            'courses.skills',
+            'courses.status',
+            'courses.is_certificate_enabled',
+            DB::raw('COUNT(DISTINCT enrollments.user_id) as total_students'),
+            DB::raw('COUNT(DISTINCT reviews.id) as total_reviews'),
+            DB::raw('COUNT(DISTINCT reports.id) as total_reports')
+        )
+        ->leftJoin('enrollments', 'courses.id', '=', 'enrollments.course_id')
+        ->leftJoin('reviews', 'courses.id', '=', 'reviews.course_id')
+        ->leftJoin('reports', 'courses.id', '=', 'reports.course_id')
+        ->where('courses.instructor_id', $instructorId)
+        ->groupBy(
+            'courses.id',
+            'courses.course_name',
+            'courses.difficulty_level',
+            'courses.course_rating',
+            'courses.course_url',
+            'courses.image',
+            'courses.course_description',
+            'courses.price',
+            'courses.skills',
+            'courses.status',
+            'courses.is_certificate_enabled'
+        )
+        ->get();
+
+        // Tính tổng của tổng
+        $totalSummary = [
+            'total_students' => Course::where('instructor_id', $instructorId)
+                ->join('enrollments', 'courses.id', '=', 'enrollments.course_id')
+                ->distinct('enrollments.user_id')
+                ->count('enrollments.user_id'),
+            'total_reviews' => Course::where('instructor_id', $instructorId)
+                ->join('reviews', 'courses.id', '=', 'reviews.course_id')
+                ->count('reviews.id'),
+            'total_reports' => Course::where('instructor_id', $instructorId)
+                ->join('reports', 'courses.id', '=', 'reports.course_id')
+                ->count('reports.id'),
+        ];
+
+        // Trả về response JSON
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'instructor' => $instructor,
+                'courses' => $courses,
+                'total_summary' => $totalSummary,
+            ],
+        ], 200);
+    }
 }

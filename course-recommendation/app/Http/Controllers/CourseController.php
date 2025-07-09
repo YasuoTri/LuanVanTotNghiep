@@ -1604,7 +1604,7 @@ public function getPopularCourses(Request $request)
                 'price' => $course->price,
                 'skills' => $course->skills,
                 'status' => $course->status,
-                'instructor' => $course->instructors,
+                'instructor' => $course->instructors::with('user')->get(),
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'),
                 'number_of_ratings' => $course->reviews->count(),

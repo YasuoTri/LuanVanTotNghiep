@@ -14,6 +14,7 @@ class Report extends Model
         'user_id',
         'course_id',
         'reason',
+        'report_type',
         'status',
         'admin_id',
         'admin_notes',

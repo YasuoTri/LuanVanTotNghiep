@@ -209,6 +209,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/reports/{report}/confirm-fix', [ReportController::class, 'confirmFix']);
     Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
     Route::get('/instructor/courses/{courseId}/progress', [CertificateController::class, 'getCourseProgress']);
+    Route::get('/instructor/InfoFull/courses', [InstructorController::class, 'getInstructorCourses']);
     
 });
 // Admin Routes

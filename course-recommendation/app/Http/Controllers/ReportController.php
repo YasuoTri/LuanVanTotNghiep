@@ -14,6 +14,7 @@ use App\Models\Violation;
 use App\Notifications\ViolationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -106,21 +107,22 @@ public function index(Request $request)
 
     return response()->json($reports);
 }
-
 public function searchCourseWithReportSummary($courseId)
 {
     $course = Course::with('instructors.user')->findOrFail($courseId);
 
-    // lấy thống kê report
+    // Nhóm và đếm số lượng report theo từng loại report_type
     $reportSummary = Report::where('course_id', $course->id)
-        ->selectRaw('COUNT(*) as total')
+        ->select('report_type', DB::raw('COUNT(*) as total'))
+        ->groupBy('report_type')
         ->get();
 
     return response()->json([
-        'course' =>$course,
+        'course' => $course,
         'report_summary' => $reportSummary,
     ]);
 }
+
 public function viewReports(Request $request)
 {
     $reports = Report::with(['user.student', 'user.instructor', 'course'])

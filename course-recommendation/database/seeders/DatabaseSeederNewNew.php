@@ -222,7 +222,7 @@ class DatabaseSeederNewNew extends Seeder
     foreach ($subjects as $subject) {
         Category::create([
             'name' => $subject,
-            'parent_id' => $parent->id,
+            'parent_id' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

@@ -46,7 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // (Tùy chọn) Áp dụng middleware cho các route hoặc group
         // Ví dụ: Áp dụng middleware 'student' cho một group route
         $middleware->web(append: [
-            StartSession::class,
+            // StartSession::class,
             
         ]);
 

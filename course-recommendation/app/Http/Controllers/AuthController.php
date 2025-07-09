@@ -487,8 +487,7 @@ public function handleGoogleCallback()
 
         // Thêm role flag nếu chưa chọn role
         $query = http_build_query([
-            'user'=> $user,
-            'require_role' => $user->role ? 'false' : 'true'
+            'require_role' => $user->role ? 'true' : 'false'
         ]);
 
         return redirect()->away($baseUrl . '?' . $query)->withCookie($cookie);

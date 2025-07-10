@@ -826,7 +826,7 @@ public function handleGoogleCallback()
                 'username' =>'nullable|string|max:50',
                 'fullname' => 'nullable|string|max:100', // Updated from name to full_name
                 'LoE_DI' => 'nullable|string|max:50',
-                'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate
+                'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->format('Y-m-d'),
                 'gender' => 'nullable|string|in:Male,Female,other',
                 'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'learning_goals' => 'nullable|string',

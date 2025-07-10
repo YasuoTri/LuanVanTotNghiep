@@ -287,6 +287,7 @@ public function getInstructorCourses(Request $request,$instructorId)
             'total_reports' => Course::where('instructor_id', $instructorId)
                 ->join('reports', 'courses.id', '=', 'reports.course_id')
                 ->count('reports.id'),
+            'total_courses' => Course::where('instructor_id', $instructorId)->count(),
         ];
 
         // Trả về response JSON

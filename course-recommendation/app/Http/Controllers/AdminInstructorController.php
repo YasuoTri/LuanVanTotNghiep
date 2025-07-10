@@ -45,11 +45,15 @@ class AdminInstructorController extends Controller
 }
 public function getInstructorDetail(Request $request)
 {
-    $id=Auth::user()->instructor->id;
+    $id = Auth::user()->instructor->id;
     $month = $request->query('month');
     $year = $request->query('year');
 
-    $instructor = DB::table('instructors')->where('id', $id)->first();
+    $instructor = DB::table('instructors')
+        ->join('users', 'users.id', '=', 'instructors.user_id')
+        ->select('instructors.id', 'users.fullname')
+        ->where('instructors.id', $id)
+        ->first();
 
     if (!$instructor) {
         return response()->json(['message' => 'Instructor not found'], 404);
@@ -85,7 +89,7 @@ public function getInstructorDetail(Request $request)
 
     return response()->json([
         'instructor_id' => $instructor->id,
-        'name' => $instructor->name,
+        'name' => $instructor->fullname,
         'courses' => $courses
     ]);
 }

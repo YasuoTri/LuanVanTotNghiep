@@ -97,6 +97,10 @@ class SearchController extends Controller
                     $q->whereIn('categories.id', $categoryIds);
                 });
             }
+                        // Instructor filter
+            if ($instructorId = $request->query('instructor_id')) {
+                $query->where('instructor_id', $instructorId);
+            }
 
             // Difficulty filter
             if ($difficulty = $request->query('difficulty')) {

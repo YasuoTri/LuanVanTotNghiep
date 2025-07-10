@@ -1291,6 +1291,9 @@ public function searchCourseAdmin(Request $request)
                   $cat->where('name', 'like', "%{$keyword}%");
               });
         })
+        ->when($request->instructor_id, function ($q) use ($request) {
+            $q->where('instructor_id', $request->instructor_id);
+        })
         ->when($request->status, function ($q) use ($request) {
             $q->where('status', $request->status);
         })

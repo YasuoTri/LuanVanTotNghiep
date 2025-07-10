@@ -210,7 +210,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
     Route::get('/instructor/courses/{courseId}/progress', [CertificateController::class, 'getCourseProgress']);
     Route::get('/instructor/course/{courseId}/comment-statistics', [ReviewController::class, 'commentStatistics']);
-
+    Route::apiResource('/instructor/coupons', CouponController::class);
+    Route::post('/instructor/createCoupon', [CouponController::class, 'createCoupon']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {
@@ -346,8 +347,6 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
 
     Route::put('/instructor/request/{requestId}/review', [AuthController::class, 'reviewInstructorRequest']);
 
-    Route::apiResource('/admin/coupons', CouponController::class);
-
     // Route để lấy danh sách pending requests
     Route::get('/admin/instructor-requests/pending', [InstructorRequestController::class, 'getLatestPendingRequests'])
     ->name('api.instructor-requests.pending');
@@ -358,6 +357,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::post('/admin/revenue-sessions/{id}/distribute', [RevenueSessionController::class, 'distributeRevenue']);
     Route::post('/admin/revenue-sessions/paypal/{id}/distribute', [RevenueDistributePaypal::class, 'distributeRevenue']);
     Route::post('/admin/revenue-sessions', [RevenueSessionController::class, 'createMonthlySession']);
+    Route::get('/admin/getAllrevenuesession', [RevenueSessionController::class, 'getAllRevenueSessions']);
+    Route::get('/admin/checkRevenueSession/{id}/check', [RevenueSessionController::class, 'checkRevenueDistributed']);
 
     Route::get('/admin/courses/{courseId}/pending-lessons', [LessonController::class, 'getPendingLessons']);
     Route::put('/admin/lessons/{lessonId}/review', [LessonController::class, 'approveLesson']);

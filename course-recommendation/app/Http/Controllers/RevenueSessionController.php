@@ -204,4 +204,46 @@ class RevenueSessionController extends Controller
             }
         }
     }
+
+public function checkRevenueDistributed($sessionId)
+{
+    $session = RevenueSession::find($sessionId);
+
+    if (!$session) {
+        return response()->json(['message' => 'Revenue session not found'], 404);
+    }
+
+    // Trả về true nếu chưa chia tiền (status khác 'distributed')
+    $notDistributed = $session->status !== 'distributed';
+
+    return response()->json([
+        'session_id' => $session->id,
+        'month' => $session->month,
+        'year' => $session->year,
+        'status' => $session->status,
+        'need_distribution' => $notDistributed // true = cần chia, false = đã chia
+    ]);
+}
+public function getAllRevenueSessions()
+{
+    $sessions = RevenueSession::all()->map(function ($session) {
+        return [
+            'session_id' => $session->id,
+            'month' => $session->month,
+            'year' => $session->year,
+            'total_revenue' => $session->total_revenue,
+            'admin_share' => $session->admin_share,
+            'instructor_share' => $session->instructor_share,
+            'status' => $session->status,
+            'need_distribution' => $session->status !== 'distributed',
+            'created_at' => $session->created_at,
+            'updated_at' => $session->updated_at,
+        ];
+    });
+
+    return response()->json([
+        'message' => 'Revenue sessions fetched successfully',
+        'data' => $sessions
+    ]);
+}
 }

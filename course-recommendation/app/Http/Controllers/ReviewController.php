@@ -94,7 +94,8 @@ public function storeStudent(Request $request, $course_id)
     {
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string'
+            'comment' => 'nullable|string',
+            'feedback_type' => 'nullable|string|in:content_quality,instructor,not_interested', // Thêm trường feedback_type
         ]);
 
         $user_id = Auth::id();
@@ -151,7 +152,7 @@ public function storeStudent(Request $request, $course_id)
         // Nếu đã review trước đó, cập nhật
         $review = Review::updateOrCreate(
             ['user_id' => $user_id, 'course_id' => $course_id],
-            ['rating' => $request->rating, 'comment' => $request->comment]
+            ['rating' => $request->rating, 'comment' => $request->comment, 'feedback_type' => $request->feedback_type]           
         );
 
         return response()->json([

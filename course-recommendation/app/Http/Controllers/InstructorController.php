@@ -207,9 +207,9 @@ public function createInstructorProfile(Request $request): JsonResponse
         'data' => $instructor
     ], 201);
 }
-public function getInstructorCourses(Request $request)
+
+public function getInstructorCourses(Request $request,$instructorId)
     {
-        $instructorId = Auth::user()->instructor->id;
 
         // Lấy thông tin instructor từ bảng users và instructors
         $instructor = Instructors::select(

@@ -62,7 +62,7 @@ Route::get('/categories', [CategoryController::class, 'getCategoryWithSubcategor
 Route::get('/subcategories', [CategoryController::class, 'getSubcategories']);
 Route::get('/all/getAllInstructors', [InstructorController::class, 'indexWithoutAuthentication'])->name('instructors.indexWithoutAuthentication');
 Route::get('/top-instructors', [InstructorController::class, 'getTopInstructors']);
-
+Route::get('/instructor/InfoFull/{instructor_id}/courses', [InstructorController::class, 'getInstructorCourses']);
 //instructor thêm profile student
 Route::get('/save/courses', [ExportController::class, 'saveCoursesToFile']);
 Route::get('/save/enrollments', [ExportController::class, 'saveEnrollmentsToFile']);
@@ -209,7 +209,6 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/reports/{report}/confirm-fix', [ReportController::class, 'confirmFix']);
     Route::get('/instructor/eachinstructors/details', [AdminInstructorController::class, 'getInstructorDetail']);
     Route::get('/instructor/courses/{courseId}/progress', [CertificateController::class, 'getCourseProgress']);
-    Route::get('/instructor/InfoFull/courses', [InstructorController::class, 'getInstructorCourses']);
     Route::get('/instructor/course/{courseId}/comment-statistics', [ReviewController::class, 'commentStatistics']);
 
 });

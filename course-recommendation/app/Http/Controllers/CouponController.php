@@ -72,7 +72,23 @@ class CouponController extends Controller
     if (!$course) {
         return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
     }
+     // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
+    $startDate = $request->start_date;
+    $endDate = $request->end_date;
 
+    $overlapCoupons = Coupon::where('course_id', $course->id)
+        ->where('is_active', 1)
+        ->where(function($query) use ($startDate, $endDate) {
+            $query->where(function($q) use ($startDate, $endDate) {
+                $q->where('start_date', '<=', $endDate)
+                  ->where('end_date', '>=', $startDate);
+            });
+        })
+        ->count();
+
+    if ($overlapCoupons >= 3) {
+        return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
+    }
     // Tạo coupon
     $coupon = Coupon::create([
         'code' => $request->code,

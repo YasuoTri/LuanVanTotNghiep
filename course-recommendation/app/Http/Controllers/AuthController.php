@@ -671,7 +671,6 @@ public function handleGoogleCallback()
             }
                if ($user->admin) {
                 $admin = Admins::where('user_id', $user->id)->first();
-            
                 $user->admin = $admin;
             }
             return response()->json([

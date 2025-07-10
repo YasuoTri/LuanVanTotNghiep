@@ -433,12 +433,6 @@ public function handleGoogleCallback()
                 'provider_id' => $socialUser->getId(),
                 'status' => 'active',
             ]);
-            Student::create([
-                'user_id' => $user->id,
-                'learning_goals' => 'No goals set',
-                'LoE_DI' => 'Unknown',
-                'total_courses_completed' => 0,
-            ]);
             Log::info("Created new user via {$provider}: " . $user->id);
         }
 

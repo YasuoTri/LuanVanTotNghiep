@@ -9,6 +9,7 @@ use App\Models\Review;
 use Illuminate\Http\Request;;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\Payment;
 use Illuminate\Container\Attributes\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
@@ -99,7 +100,15 @@ public function storeStudent(Request $request, $course_id)
         ]);
 
         $user_id = Auth::id();
-
+        $payment=Payment::where('user_id', $user_id)
+            ->where('course_id', $course_id)
+            ->where('status', 'completed')
+            ->first();
+        if(!$payment) {
+            return response()->json([
+                'message' => 'Bạn cần thanh toán khóa học trước khi đánh giá.'
+            ], 403);
+        }
         // Kiểm tra tiến độ học
         $totalLessons = Lesson::where('course_id', $course_id)->count();
 

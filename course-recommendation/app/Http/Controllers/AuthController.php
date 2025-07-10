@@ -659,17 +659,17 @@ public function handleGoogleCallback()
                     'message' => 'Unauthorized or user not found',
                 ], 401);
             }
-            if ($user->role === 'instructor') {
+            if ($user->instructor) {
                 $instructor = Instructors::where('user_id', $user->id)->first();
               
                 $user->instructor = $instructor;
             }
-            if ($user->role === 'student') {
+            if ($user->student) {
                 $student = Student::where('user_id', $user->id)->first();
-            
                 $user->student = $student;
+                $user->categories = $student->categories()->get();
             }
-               if ($user->role === 'admin') {
+               if ($user->admin) {
                 $admin = Admins::where('user_id', $user->id)->first();
             
                 $user->admin = $admin;

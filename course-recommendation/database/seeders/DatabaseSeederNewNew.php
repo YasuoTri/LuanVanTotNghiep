@@ -517,7 +517,7 @@ private function seedCourses()
                 Lesson::create([
                     'course_id' => $course->id,
                     'title' => "Lesson $i: Topic $i",
-                    'video_url' => "https://res.cloudinary.com/dj11e209p/video/upload/v1751885690/lessons/course_2/vihnuuncpdmdoyicvkvk.mp4",
+                    'video_url' => "https://res.cloudinary.com/dj11e209p/video/upload/v1751963122/lessons/course_1/hvektrkr9gzf7qivnwiq.mp4",
                     'duration' => 10,
                     'is_preview' => $i == 1,
                     'sort_order' => $i,

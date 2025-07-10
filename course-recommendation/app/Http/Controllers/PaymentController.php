@@ -739,7 +739,7 @@ public function handlePayPalSuccess(Request $request)
                 'transaction_code' => $payment->transaction_code
             ]);
 
-            return redirect()->away('http://localhost:4200/payment/success?payment_id=' . $payment->id);
+            return redirect()->away('http://localhost:4200/my-course');
 
         } catch (\Exception $e) {
             DB::rollBack();

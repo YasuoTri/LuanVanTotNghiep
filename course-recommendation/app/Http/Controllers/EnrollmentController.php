@@ -593,9 +593,7 @@ class EnrollmentController extends Controller
     }
    public function storePaid(StorePaidEnrollmentRequest $request, $course_id): JsonResponse
     {
-        $user = Auth::user();
-
-            
+        $user = Auth::user();            
         // Check if course exists and is paid
         $course = Course::find($course_id);
         if (!$course) {
@@ -609,7 +607,7 @@ class EnrollmentController extends Controller
             ], 403);
         }
               // Check if user is a student but not yet registered in students table
-        if ($user->role == 'instructor' && !$user->student) {
+        if (!$user->student) {
             return response()->json([
                 'message' => 'Student profile not found. Please complete your profile.',
             ], 200);

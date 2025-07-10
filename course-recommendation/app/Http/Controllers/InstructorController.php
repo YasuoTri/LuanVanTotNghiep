@@ -272,6 +272,7 @@ public function getInstructorCourses(Request $request,$instructorId)
             'courses.status',
             'courses.is_certificate_enabled'
         )
+        ->limit(3)
         ->get();
 
         // Tính tổng của tổng

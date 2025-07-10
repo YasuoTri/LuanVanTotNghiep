@@ -823,7 +823,7 @@ public function handleGoogleCallback()
 
             // Validate input
             $validatedData = $request->validate([
-                'username' =>'required|string|max:50',
+                'username' =>'nullable|string|max:50',
                 'fullname' => 'nullable|string|max:100', // Updated from name to full_name
                 'LoE_DI' => 'nullable|string|max:50',
                 'birthdate' => 'nullable|date_format:Y-m-d|before_or_equal:' . now()->subYears(13)->format('Y-m-d'), // Updated from YoB to birthdate

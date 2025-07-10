@@ -32,6 +32,7 @@ public function index()
 
 //     return $categories;
 // }
+
 public function getCategoryWithSubcategories()
 {
     $categories = Category::with([

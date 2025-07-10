@@ -91,7 +91,7 @@ function search(Request $request) {
         ->paginate(10);
 }
 
-public function storeStudent(Request $request, $course_id)
+    public function storeStudent(Request $request, $course_id)
     {
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
@@ -106,7 +106,7 @@ public function storeStudent(Request $request, $course_id)
             ->first();
         if(!$payment) {
             return response()->json([
-                'message' => 'Bạn cần thanh toán khóa học trước khi đánh giá.'
+                'message' => 'You must complete the course payment before submitting a review.'
             ], 403);
         }
         // Kiểm tra tiến độ học
@@ -165,7 +165,7 @@ public function storeStudent(Request $request, $course_id)
         );
 
         return response()->json([
-            'message' => 'Đánh giá thành công.',
+            'message' => 'Review submitted successfully',
             'review' => $review
         ]);
     }
@@ -181,7 +181,7 @@ public function storeStudent(Request $request, $course_id)
     if (!$course) {
         return response()->json([
             'status' => 'error',
-            'message' => 'Bạn không có quyền truy cập khóa học này.'
+            'message' => 'you do not have permission to access this course.'
         ], 403);
     }
 
@@ -222,7 +222,7 @@ public function storeStudent(Request $request, $course_id)
 
     return response()->json([
         'status' => 'success',
-        'message' => 'Thống kê và danh sách comment theo loại',
+        'message' => 'Comment statistics retrieved successfully.',
         'data' => [
             'counts'   => $counts,
             'comments' => $groupedComments

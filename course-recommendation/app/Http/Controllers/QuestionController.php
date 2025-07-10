@@ -81,7 +81,7 @@ public function update(UpdateQuestionRequest $request, Question $question)
 
     if ($hasAttempt) {
         return response()->json([
-            'message' => 'Quiz đã có học viên thực hiện, không thể chỉnh sửa. Vui lòng tạo quiz mới.'
+            'message' => 'Cannot update question because the quiz has been attempted by students.'
         ], 403);
     }
 

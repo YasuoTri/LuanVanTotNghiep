@@ -171,14 +171,14 @@ class PaymentController extends Controller
     $response = Http::get($apiUrl);
      if ($response->failed()) {
         return response()->json([
-            'error' => 'Không gọi được tỷ giá từ ExchangeRate API'
+            'error' => 'Cannot fetch exchange rate'
         ], 500);
     }
     $rateData = $response->json();
     $vndRate = $rateData['conversion_rates']['VND'] ?? null;
     if (!$vndRate) {
         return response()->json([
-            'error' => 'Không tìm thấy tỷ giá VND trong kết quả trả về'
+            'error' => 'Cannot find VND exchange rate in the response from ExchangeRate API'
         ], 500);
     }
     // Apply coupon if provided

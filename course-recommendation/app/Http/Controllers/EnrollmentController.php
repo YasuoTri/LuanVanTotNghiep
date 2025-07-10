@@ -55,7 +55,7 @@ class EnrollmentController extends Controller
 
     if ($existingEnrollment) {
         return response()->json([
-            'message' => 'Bạn đã đăng ký khóa học này rồi'
+            'message' => 'You are already enrolled in this course',
         ], 409); // HTTP 409 Conflict là phù hợp cho trường hợp trùng lặp
     }
 

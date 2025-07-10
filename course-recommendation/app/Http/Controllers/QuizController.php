@@ -716,7 +716,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         $quiz = Quiz::with('lesson')->find($quiz_id);
 
         if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+            return response()->json(['message' => 'Quiz not found'], 404);
         }
 
         // Kiểm tra đăng ký khóa học
@@ -726,7 +726,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
         // Tìm bản nháp
@@ -739,7 +739,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             ->first();
 
         if (!$draft) {
-            return response()->json(['message' => 'Không tìm thấy bản nháp'], 404);
+            return response()->json(['message' => 'Can not find draft answer'], 404);
         }
 
         return response()->json([
@@ -757,7 +757,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         $quiz = Quiz::with('lesson')->find($quiz_id);
 
         if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+            return response()->json(['message' => 'Quiz not found'], 404);
         }
 
         // Kiểm tra đăng ký khóa học
@@ -767,7 +767,7 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            return response()->json(['message' => 'You are not enroll in this course'], 403);
         }
 
         // Lấy kết quả quiz
@@ -784,11 +784,11 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
             ->first();
 
         if (!$quizResult) {
-            return response()->json(['message' => 'Kết quả quiz không tìm thấy'], 404);
+            return response()->json(['message' => 'Quiz result not found'], 404);
         }
 
         return response()->json([
-            'message' => 'Lấy kết quả chi tiết thành công',
+            'message' => 'Get detailed quiz result successfully',
             'data' => $quizResult
         ], 200);
     }
@@ -858,7 +858,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     $quiz = Quiz::with(['lesson', 'questions.choices'])->find($quiz_id);
 
     if (!$quiz) {
-        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        return response()->json(['message' => 'Quiz not found'], 404);
     }
 
     // Kiểm tra đăng ký khóa học
@@ -867,7 +867,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         ->first();
 
     if (!$enrollment) {
-        return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        return response()->json(['message' => 'You are not enrolled in this course'], 403);
     }
 
     // Kiểm tra số lần làm bài
@@ -876,12 +876,12 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         ->count();
 
     if ($attempts >= $quiz->max_attempts) {
-        return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+        return response()->json(['message' => 'Out of amount to take the quiz'], 403);
     }
 
     // Kiểm tra quiz có hiển thị không
     if (!$quiz->is_visible) {
-        return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+        return response()->json(['message' => 'Quiz is unavailable at the moment'], 403);
     }
 
     // Xóa bản nháp cũ nếu có (chưa hoàn thành)
@@ -926,7 +926,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     ]);
 
     return response()->json([
-        'message' => 'Bắt đầu quiz thành công',
+        'message' => 'Start Quiz successfully',
         'data' => [
             'quiz_result_id' => $quizResult->id,
             'course_id' => $quiz->lesson->course_id,
@@ -950,7 +950,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     $quiz = Quiz::with(['questions.choices'])->find($quiz_id);
 
     if (!$quiz) {
-        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        return response()->json(['message' => 'Quiz not found'], 404);
     }
 
     // Kiểm tra đăng ký khóa học
@@ -959,7 +959,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         ->first();
 
     if (!$enrollment) {
-        return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+        return response()->json(['message' => 'You are not enrolled in this course'], 403);
     }
 
     // Lấy toàn bộ questions rồi phân trang thủ công (vì cần xử lý từng câu hỏi)
@@ -1000,7 +1000,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         $quiz = Quiz::with('lesson')->find($quiz_id);
 
         if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+            return response()->json(['message' => 'Quiz not found'], 404);
         }
 
         // Kiểm tra đăng ký khóa học
@@ -1010,7 +1010,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
         // Lấy các lần làm bài trước với phản hồi chi tiết
@@ -1250,7 +1250,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
 
         if (!$quizResult) {
             return response()->json([
-                'message' => 'Không tìm thấy phiên làm bài đang hoạt động. Vui lòng bắt đầu quiz trước.'
+                'message' => 'Cant find ongoing quiz attempt or you have already submitted this quiz.'
             ], 400);
         }
 
@@ -1280,7 +1280,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
 
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
         return response()->json([
-            'message' => 'Quiz không tìm thấy'
+            'message' => 'Quiz not found'
         ], 404);
     } catch (\Exception $e) {
         Log::error('Submit quiz error:', [
@@ -1289,7 +1289,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
             'message' => $e->getMessage()
         ]);
         return response()->json([
-            'message' => 'Lỗi khi nộp bài quiz',
+            'message' => 'An error occurred while submitting the quiz',
             'error' => $e->getMessage()
         ], 500);
     }
@@ -1305,7 +1305,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
     {
         // Kiểm tra quiz có hiển thị không
         if (!$quiz->is_visible) {
-            return response()->json(['message' => 'Quiz hiện không khả dụng'], 403);
+            return response()->json(['message' => 'Quiz is unavailable at the moment'], 403);
         }
 
         // Kiểm tra đăng ký khóa học
@@ -1314,7 +1314,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
         return true;
@@ -1323,14 +1323,14 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
    private function validateQuizAnswers($answers, $questions)
 {
     if (!$answers || !is_array($answers)) {
-        return response()->json(['message' => 'Dữ liệu câu trả lời không hợp lệ'], 422);
+        return response()->json(['message' => 'The answer is invalid'], 422);
     }
 
     $questionIds = $questions->pluck('id')->toArray();
     foreach ($questions as $question) {
         if (!isset($answers[$question->id]) || empty($answers[$question->id]) || !is_array($answers[$question->id])) {
             return response()->json([
-                'message' => 'Bạn phải chọn ít nhất một đáp án cho mỗi câu hỏi',
+                'message' => 'You have to choose at least one choice for each question',
                 'question_id' => $question->id
             ], 422);
         }
@@ -1338,7 +1338,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
         foreach ($answers[$question->id] as $choiceId) {
             if (!$question->choices->contains('id', $choiceId)) {
                 return response()->json([
-                    'message' => 'Lựa chọn không hợp lệ cho câu hỏi',
+                    'message' => 'The choice is invalid for question',
                     'question_id' => $question->id,
                     'choice_id' => $choiceId
                 ], 422);
@@ -1350,7 +1350,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
     foreach (array_keys($answers) as $questionId) {
         if (!in_array($questionId, $questionIds)) {
             return response()->json([
-                'message' => 'Câu hỏi không thuộc bài quiz này',
+                'message' => 'The question is invalid for this quiz',
                 'question_id' => $questionId
             ], 422);
         }
@@ -1412,7 +1412,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
             DB::commit();
 
             return response()->json([
-                'message' => 'Nộp bài quiz thành công',
+                'message' => 'Quiz submitted successfully',
                 'data' => [
                     'quiz_result_id' => $quizResult->id,
                     'quiz_info' => [
@@ -1435,8 +1435,8 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
                         'percentage' => $score,
                         'status' => $isPassed ? 'PASSED' : 'FAILED',
                         'message' => $isPassed
-                            ? "Bạn đã vượt qua bài kiểm tra."
-                            : "Bạn cần đạt ít nhất {$passThreshold}% để vượt qua bài kiểm tra."
+                            ? "You have passed the quiz."
+                            : "You need to have at least {$passThreshold}% to pass the quiz."
                     ]
                 ]
             ], 200);
@@ -1449,7 +1449,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
                 'message' => $e->getMessage()
             ]);
             return response()->json([
-                'message' => 'Lỗi khi nộp bài quiz',
+                'message' => 'An error occurred while submitting the quiz',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -1500,8 +1500,8 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
 
         // Giải thích
         $explanation = $isCorrect
-            ? "Chính xác!"
-            : "Sai rồi. Đáp án đúng: " . $correctChoices->pluck('content')->implode(', ');
+            ? "Exactly! You got it right."
+            : "Oh no, the right answer is" . $correctChoices->pluck('content')->implode(', ');
 
         return [
             'question_id' => $question->id,
@@ -1652,7 +1652,7 @@ private function buildResultItem(array $questionData, array $selectedChoices, bo
             'is_correct' => $c['is_correct']
         ]),
         'is_correct' => $isCorrect,
-        'explanation' => $isCorrect ? 'Chính xác!' : 'Sai rồi. Đáp án đúng: ' . $correctChoices->pluck('content')->implode(', ')
+        'explanation' => $isCorrect ? 'Exactly! My Friend !Congratulation' : 'Oh no, the right answer is: ' . $correctChoices->pluck('content')->implode(', ')
     ];
 }
 
@@ -1681,8 +1681,8 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
         'percentage' => $percentage,
         'status' => $isPassed ? 'PASSED' : 'FAILED',
         'message' => $isPassed
-            ? 'Chúc mừng! Bạn đã vượt qua bài kiểm tra.'
-            : 'Bạn cần đạt ít nhất 80% để vượt qua bài kiểm tra.'
+            ? 'Congratulations! You have passed the quiz.'
+            : 'You have fail to pass the quiz.'
     ];
 }
 
@@ -1699,7 +1699,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
     // Find the quiz with its questions and choices
     $quiz = Quiz::with(['questions.choices', 'lesson.course'])->find($quizId);
     if (!$quiz) {
-        return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+        return response()->json(['message' => 'Quiz not found'], 404);
     }
 
     // Check if the instructor owns this course
@@ -1766,13 +1766,13 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
                     ];
                 }),
                 'is_correct' => $isCorrect,
-                'explanation' => $isCorrect ? 'Đúng rồi!' : 'Sai rồi. Đáp án đúng là: ' . $correctChoices->pluck('content')->implode(', ')
+                'explanation' => $isCorrect ? 'Exactly!' : 'Wrong , the right answer is' . $correctChoices->pluck('content')->implode(', ')
             ];
         }
     }
 
     return response()->json([
-        'message' => 'Test quiz thành công',
+        'message' => 'Test Quiz successfully',
         'data' => [
             'quiz_info' => [
                 'id' => $quiz->id,
@@ -1796,7 +1796,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
         $quiz = Quiz::with('questions.choices','lesson')->find($quiz_id);
 
         if (!$quiz) {
-            return response()->json(['message' => 'Quiz không tìm thấy'], 404);
+            return response()->json(['message' => 'Quiz not found'], 404);
         }
 
         // Kiểm tra đăng ký hoặc quyền giảng viên
@@ -1806,7 +1806,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
             ->where('status', 'active')
             ->first();
         if (!$enrollment) {
-            return response()->json(['message' => 'Bạn chưa đăng ký khóa học này'], 403);
+            return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
         // Kiểm tra số lần làm bài
@@ -1815,7 +1815,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
             ->count();
 
         if ($attempts >= $quiz->max_attempts) {
-            return response()->json(['message' => 'Đã đạt số lần làm bài tối đa'], 403);
+            return response()->json(['message' => 'Out of amount to do this quiz'], 403);
         }
 
         // Validate câu trả lời
@@ -1837,7 +1837,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
         // Kiểm tra thời gian tại thời điểm nộp bài
         if ($quiz->time_limit && $quizResult->started_at->diffInMinutes(now()) > $quiz->time_limit) {
             $quizResult->delete();
-            return response()->json(['message' => 'Đã vượt quá thời gian cho phép'], 403);
+            return response()->json(['message' => 'You have passed the time to submit'], 403);
         }
 
         // Xử lý câu trả lời
@@ -1872,7 +1872,7 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
         ]);
 
         return response()->json([
-            'message' => 'Thử lại quiz thành công',
+            'message' => 'Try quiz again successfully',
             'data' => $quizResult->load('userAnswers'),
         ], 201);
     }
@@ -2152,7 +2152,7 @@ public function fullPreviewQuiz($quiz_id): JsonResponse
         }
 
         return response()->json([
-            'message' => 'Lấy thông tin quiz thành công',
+            'message' => 'Get quiz infor successfully',
             'data' => $quiz
         ], 200);
     }

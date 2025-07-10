@@ -42,7 +42,7 @@ class QuestionChoiceController extends Controller
 
         if ($hasAttempt) {
             return response()->json([
-                'message' => 'Quiz đã có học viên thực hiện, không thể chỉnh sửa lựa chọn. Vui lòng tạo quiz mới.'
+                'message' => 'Cannot update choice because the quiz has been attempted by students.'
             ], 403);
         }
         $choice->fill($request->validated());

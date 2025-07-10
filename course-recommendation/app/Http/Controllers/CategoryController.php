@@ -100,7 +100,7 @@ public function getSubcategories()
         $parent = Category::find($request->parent_id);
         if ($parent && $parent->parent_id) {
             return response()->json([
-                'error' => '❌ Không được tạo subcategory trong subcategory (chỉ 2 cấp được phép).'
+                'error' => '❌ Dont create subcategory in subcategory (only 2 levels allowed).'
             ], 422);
         }
     }
@@ -121,17 +121,17 @@ public function getSubcategories()
         $parentId = $request->input('parent_id');
         if ($parentId) {
             if ($parentId == $id) {
-                return response()->json(['error' => '❌ Category không thể là cha của chính nó'], 422);
+                return response()->json(['error' => '❌ Category can not become a father of itself'], 422);
             }
 
             $parent = Category::find($parentId);
             if (!$parent) {
-                return response()->json(['error' => '❌ parent_id không tồn tại'], 422);
+                return response()->json(['error' => '❌ parent_id not exist'], 422);
             }
 
             if ($parent->parent_id) {
                 return response()->json([
-                    'error' => '❌ Không được gán category cấp 3. Chỉ cho phép 2 cấp.'
+                    'error' => '❌ Category can not become a child of a subcategory (only 2 levels allowed).'
                 ], 422);
             }
         }

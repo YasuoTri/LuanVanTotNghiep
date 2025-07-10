@@ -1208,7 +1208,7 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
             if (!$admin || !in_array($admin->admin_level, ['program', 'organization'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Bạn không có quyền duyệt lesson.'
+                    'message' => 'Unauthorized. Only admin can access this endpoint.'
                 ], 403);
             }
 
@@ -1220,7 +1220,7 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
             if (!in_array($newStatus, [true, false])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Trạng thái không hợp lệ. Chỉ chấp nhận: true, false'
+                    'message' => 'Ivalid status.'
                 ], 400);
             }
 
@@ -1243,19 +1243,19 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
 
             return response()->json([
                 'success' => true,
-                'message' => "Lesson đã được cập nhật trạng thái thành '" . ($newStatus ? 'visible' : 'hidden') . "'.",
+                'message' => "Lesson is updated the status into'" . ($newStatus ? 'visible' : 'hidden') . "'.",
                 'data' => $lesson
             ], 200);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy lesson.'
+                'message' => 'Lesson not found.'
             ], 404);
         } catch (\Exception $e) {
-            Log::error('Lỗi khi duyệt lesson: ' . $e->getMessage());
+            Log::error('Error when review lesson' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra. Vui lòng thử lại.'
+                'message' => 'Error occur,please try again later.',
             ], 500);
         }
     }

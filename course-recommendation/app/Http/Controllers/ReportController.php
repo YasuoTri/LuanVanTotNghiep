@@ -334,7 +334,7 @@ public function confirmFix(Report $report)
     $user->notify(new ViolationNotification($violation, $report));
 
     return response()->json([
-        'message' => 'Xử lý vi phạm thành công.',
+        'message' => 'User violation handled successfully',
         'violation' => $violation
     ]);
 }

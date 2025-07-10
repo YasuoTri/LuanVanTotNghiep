@@ -299,7 +299,7 @@ public function destroy($id): JsonResponse
     } else {
         $lessonPercentRequired = 100;
         $lessonVersionRule = 'latest';
-        $quizMinScore = 60;
+        $quizMinScore = 70;
         $quizVersionRule = 'latest';
     }
     // 1. Lấy tất cả lesson gốc trong course
@@ -334,7 +334,7 @@ public function destroy($id): JsonResponse
     } else {
         $missingLessons[] = [
             'lesson_group' => $originId,
-            'message' => 'Learner chưa hoàn thành nhóm bài học này.'
+            'message' => 'Learner has not completed the lesson group.'
         ];
     }
 }
@@ -345,7 +345,7 @@ public function destroy($id): JsonResponse
             'eligible' => false,
             'missing_lessons' => $missingLessons,
             'missing_quizzes' => [],
-            'message' => "Bạn chưa hoàn thành tối thiểu {$lessonPercentRequired}% bài học."
+            'message' => "You havent completed at least {$lessonPercentRequired}% lesson."
         ], 400);
     }
 
@@ -378,7 +378,7 @@ public function destroy($id): JsonResponse
         if (!$hasPassed) {
             $missingQuizzes[] = [
                 'quiz_group' => $originId,
-                'message' => "Learner chưa vượt qua bài kiểm tra với điểm tối thiểu {$quizMinScore}."
+                'message' => "Learner havent completed the quiz with at least {$quizMinScore}."
             ];
         }
     }
@@ -389,7 +389,7 @@ public function destroy($id): JsonResponse
             'eligible' => false,
             'missing_lessons' => [],
             'missing_quizzes' => $missingQuizzes,
-            'message' => 'Bạn chưa hoàn thành đủ điều kiện để được cấp chứng chỉ.'
+            'message' => 'He has not completed the condition to issue the certificate.'
         ], 400);
     }
 
@@ -399,7 +399,7 @@ public function destroy($id): JsonResponse
             'eligible' => false,
             'missing_lessons' => $missingLessons,
             'missing_quizzes' => $missingQuizzes,
-            'message' => 'Bạn chưa hoàn thành đủ điều kiện để được cấp chứng chỉ.'
+            'message' => 'He has not completed the condition to issue the certificate.'
         ], 400);
     }
 
@@ -411,7 +411,7 @@ public function destroy($id): JsonResponse
     if (!$enrollment) {
         return response()->json([
             'eligible' => false,
-            'message' => 'Bạn chưa đăng ký khóa học.'
+            'message' => 'You have not registered for this course.'
         ], 400);
     }
 
@@ -422,7 +422,7 @@ public function destroy($id): JsonResponse
     if ($existingCertificate) {
         return response()->json([
             'eligible' => true,
-            'message' => 'Bạn đã có chứng chỉ cho khóa học này.',
+            'message' => 'You already have a certificate for this course.',
             'certificate_url' => $existingCertificate->download_url
         ]);
     }
@@ -477,7 +477,7 @@ public function destroy($id): JsonResponse
     }
     return response()->json([
         'eligible' => true,
-        'message' => 'Đã cấp chứng chỉ thành công.',
+        'message' => 'Certificate issued successfully.',
         'certificate_url' => $certificate->download_url
     ]);
 }
@@ -508,7 +508,7 @@ public function instructorIssue(Request $request)
 
             if ($enrollments->isEmpty()) {
                 return response()->json([
-                    'message' => 'Không có người dùng nào đăng ký khóa học này',
+                    'message' => 'Dont have any users enrolled in this course',
                     'data' => []
                 ], 200);
             }
@@ -584,7 +584,7 @@ public function instructorIssue(Request $request)
             }
 
             return response()->json([
-                'message' => 'Lấy thông tin tiến độ khóa học thành công',
+                'message' => 'Course progress retrieved successfully',
                 'data' => [
                     'course_id' => $course->id,
                     'course_name' => $course->course_name,
@@ -594,7 +594,7 @@ public function instructorIssue(Request $request)
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'message' => 'Khóa học không tìm thấy'
+                'message' => 'Course not found',
             ], 404);
         } catch (\Exception $e) {
             Log::error('Get course progress error:', [
@@ -602,7 +602,7 @@ public function instructorIssue(Request $request)
                 'message' => $e->getMessage(),
             ]);
             return response()->json([
-                'message' => 'Lỗi khi lấy thông tin tiến độ khóa học',
+                'message' => 'An error occurred while retrieving course progress',
                 'error' => $e->getMessage(),
             ], 500);
         }

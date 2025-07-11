@@ -34,11 +34,13 @@ class UserController extends Controller
         $query = User::query()->select([
             'id',
             'username',
+            'fullname',
             'email',
             'avatar',
             'birthdate',
             'gender',
             'role',
+            'status',
             'created_at',
             'updated_at',
             'deleted_at'
@@ -55,7 +57,10 @@ class UserController extends Controller
         }
 
         if ($request->has('username')) {
-            $query->where('username', $request->input('username'));
+            $query->where('username', 'like', '%' . $request->input('username') . '%');
+        }
+        if ($request->has('fullname')) {
+            $query->where('fullname', 'like', '%' . $request->input('fullname') . '%');
         }
         // Lọc theo role
         if ($request->has('role')) {
@@ -71,7 +76,10 @@ class UserController extends Controller
         if ($request->has('gender')) {
             $query->where('gender', $request->input('gender'));
         }
-
+                // Lọc theo gender
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
         // Lọc theo năm sinh (birthdate)
         if ($request->has('birthdate')) {
             $query->where('birthdate', $request->input('birthdate'));
@@ -108,18 +116,23 @@ class UserController extends Controller
         $query = User::onlyTrashed()->select([
             'id',
             'username',
+            'fullname',
             'email',
             'avatar',
             'birthdate',
             'gender',
             'role',
+            'status',
             'created_at',
             'updated_at',
             'deleted_at'
         ]);
                 // Lọc theo role
-        if ($request->has('username')) {
-            $query->where('username', $request->input('username'));
+         if ($request->has('username')) {
+            $query->where('username', 'like', '%' . $request->input('username') . '%');
+        }
+        if ($request->has('fullname')) {
+            $query->where('fullname', 'like', '%' . $request->input('fullname') . '%');
         }
         // Lọc theo role
         if ($request->has('role')) {
@@ -134,6 +147,10 @@ class UserController extends Controller
         // Lọc theo gender
         if ($request->has('gender')) {
             $query->where('gender', $request->input('gender'));
+        }
+
+             if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
         }
 
         // Lọc theo năm sinh (birthdate)
@@ -206,11 +223,13 @@ public function show($id): JsonResponse
     ])->select([
         'id',
         'username',
+        'fullname',
         'email',
         'avatar',
         'birthdate',
         'gender',
         'role',
+        'status',
         'created_at',
         'updated_at'
     ])
@@ -363,7 +382,6 @@ protected function calculateLessonCompletionRate($user)
         'birthdate' => 'sometimes|date',
         'gender' => 'sometimes|string|max:20',
         'role' => 'sometimes|in:student,instructor,admin',
-        'admin_level' => 'required_if:role,admin|in:organization,program'
     ]);
 
     // Chuẩn bị dữ liệu cập nhật

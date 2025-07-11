@@ -211,7 +211,7 @@
 <body>
     <div class="email-card" id="email-card">
         <div class="header">
-            <h2>Hello {{ $course->instructor->name }}</h2>
+            <h2>Hello {{ $course->instructors->user->fullname }}</h2>
         </div>
 
         <div class="content">
@@ -231,7 +231,7 @@
                 <a href="#" class="action-btn">Review Course</a>
             </center>
 
-                <p>If you need assistance or have any questions, please feel free to contact our support team.</p>
+            <p>If you need assistance or have any questions, please feel free to contact our support team.</p>
         </div>
 
         <div class="footer">

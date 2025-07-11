@@ -1027,6 +1027,7 @@ public function approveCourse(Request $request, $id)
         'status' => 'approved',
         'user_id' => Auth::user()->id, // Giả sử admin_id là ID của người dùng đang đăng nhập
         'notes' => $request->input('notes'),
+        'reviewed_at' => now(),
     ]);
      // Gửi mail instructor
     $instructor = $course->instructor;
@@ -1087,12 +1088,14 @@ public function rejectCourse(Request $request, $id)
     // Lưu lịch sử duyệt
     CourseReview::create([
         'course_id' => $course->id,
+        'user_id'=>Auth::user()->id,
         'status' => 'rejected',
         'notes' => $request->notes,
+        'reviewed_at' => now(),
     ]);
       // Gửi mail instructor
-    $course->load('instructor.user');
-    $instructor = $course->instructor;
+    $course->load('instructors.user');
+    $instructor = $course->instructors;
     if ($instructor && $instructor->user) {
         Mail::to($instructor->user->email)
             ->send(new CourseRejectedMail($course, $request->notes));

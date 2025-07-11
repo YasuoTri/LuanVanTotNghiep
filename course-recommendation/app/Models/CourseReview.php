@@ -5,5 +5,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class CourseReview extends Model
 {
-    protected $fillable = ['course_id', 'admin_id', 'status', 'notes'];
+    protected $fillable = ['course_id', 'user_id', 'status', 'notes','reviewed_at'];
 }

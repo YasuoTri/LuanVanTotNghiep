@@ -323,34 +323,69 @@ protected function calculateLessonCompletionRate($user)
      * @param StoreUserRequest $request
      * @return JsonResponse
      */
-    public function store(StoreUserRequest $request): JsonResponse
-    {
-        DB::beginTransaction();
-        try {
-            $user = User::create($request->validated());
+   
+public function store(Request $request): JsonResponse
+{
+    DB::beginTransaction();
+    try {
+        // Xác thực dữ liệu đầu vào (chỉ email và password)
+        $validated = $request->validate([
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8',
+        ]);
 
-            // Nếu role là admin, tạo bản ghi trong bảng admins
-            // if ($user->role === 'admin') {
-            //     Admins::create([
-            //         'user_id' => $user->id,
-            //         'admin_level' => $request->admin_level,
-            //     ]);
-            // }
+        // Lấy người dùng hiện tại (nếu có)
+        $currentUser = Auth::user();
+        $baseUsername = $currentUser ? $currentUser->username : 'user';
 
-            DB::commit();
-
-            return response()->json([
-                'message' => 'User created successfully',
-                'data' => $user
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Failed to create user',
-                'error' => $e->getMessage()
-            ], 500);
+        // Tạo username duy nhất
+        $username = $baseUsername . '-' . rand(1000, 9999);
+        $counter = 1;
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername . '-' . rand(1000, 9999) . '-' . $counter;
+            $counter++;
         }
+
+        // Tạo dữ liệu cho người dùng mới
+        $userData = [
+            'username' => $username,
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'fullname' => 'User ' . strtoupper(substr(uniqid(), -6)), // Tự động tạo fullname
+            'role' => 'admin', // Lấy role từ request
+            'status' => 'active', // Mặc định active
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        // Tạo người dùng mới
+        $user = User::create($userData);
+
+     
+        // Nếu role là admin, tạo bản ghi trong bảng admins (nếu bảng tồn tại)
+        // if ($user->role === 'admin') {
+        //     \App\Models\Admin::create([
+        //         'user_id' => $user->id,
+        //         'admin_level' => 'default', // Giá trị mặc định
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ]);
+        // }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'User created successfully',
+            'data' => $user
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Failed to create user',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
   public function update(UpdateUserRequest $request, $id): JsonResponse
 {

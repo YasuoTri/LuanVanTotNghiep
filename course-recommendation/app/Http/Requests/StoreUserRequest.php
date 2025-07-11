@@ -27,22 +27,7 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'email' => 'nullable|email|max:255|unique:users,email',
-            'username' => 'required|string|max:50|unique:users,username',
-            'fullname' => 'nullable|string|max:100',
             'password' => 'required|string|min:8|max:255',
-            'avatar' => ['nullable', 'string', 'max:255'],
-            'final_cc_cname_DI' => 'required|string|max:100',
-            'LoE_DI' => 'required|string|max:50',
-            'birthdate' => 'required|date_format:Y-m-d|before_or_equal:today',
-            'gender' => 'required|string|max:20',
-            'role' => 'required|in:student,instructor,admin',
-            'provider' => 'nullable|string|max:50',
-            'provider_id' => 'nullable|string|max:255',
-            'admin_level' => [
-                'required_if:role,admin',
-                Rule::in(['organization', 'program'])
-            ]
-            
         ];
     }
 

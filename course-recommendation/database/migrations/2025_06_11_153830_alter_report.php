@@ -23,8 +23,6 @@ return new class extends Migration
                 'other'
             ])->default('other')->comment('Loại báo cáo');
             $table->enum('status', ['pending', 'reviewed', 'resolved'])->default('pending');
-            $table->foreignId('admin_id')->nullable()->constrained('admins')->onDelete('set null');
-            $table->text('admin_notes')->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

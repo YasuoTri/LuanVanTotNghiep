@@ -36,12 +36,14 @@ class DatabaseSeederNewNewNew extends Seeder
     public function run(): void
     {
         $this->seedUsers();
-        $this->seedAdmins();
+        // $this->seedAdmins();
         $this->seedInstructors();
         $this->seedStudents();
         $this->seedCategories();
         $this->seedCourses();
         $this->seedStudentCategories();
+        $this->seedLessons();
+        $this->seedLessonProgress();
         $this->seedEnrollments();
         $this->seedCertificates();
         $this->seedCertificateRules();
@@ -50,8 +52,7 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->seedAuditLogs();
         $this->seedRevenueSessions();
         $this->seedRevenueDistributions();
-        $this->seedLessons();
-        $this->seedLessonProgress();
+  
         $this->seedQuizzes();
         $this->seedQuestions();
         $this->seedQuestionChoices();
@@ -176,7 +177,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'user_id' => $studentUser->id,
                 'LoE_DI' => $levels[array_rand($levels)],
                 'learning_goals' => $goals[array_rand($goals)],
-                'total_courses_completed' => rand(0, 5),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -675,7 +675,6 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->command->info('Seeding reports...');
 
         $enrollments = Enrollment::all();
-        $admins = Admins::all()->pluck('id')->toArray();
         $reportTypes = ['inappropriate_content', 'technical_issue', 'copyright_violation', 'spam', 'other'];
 
         foreach ($enrollments as $enrollment) {
@@ -691,16 +690,11 @@ class DatabaseSeederNewNewNew extends Seeder
                         'Other issues',
                     ])->random(),
                     'report_type' => $reportTypes[array_rand($reportTypes)],
-                    'status' => collect(['pending', 'resolve', 'ignore'])->random(),
-                    'admin_id' => $admins[array_rand($admins)],
-                    'admin_notes' => rand(0, 1) ? 'Investigated and resolved' : null,
-                    'reviewed_at' => rand(0, 1) ? now()->subDays(rand(1, 5)) : null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
         }
-
         $this->command->info('Reports seeded successfully!');
     }
 }

@@ -15,10 +15,6 @@ class Report extends Model
         'course_id',
         'reason',
         'report_type',
-        'status',
-        'admin_id',
-        'admin_notes',
-        'reviewed_at',
     ];
 
     public function user()

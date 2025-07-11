@@ -1202,16 +1202,6 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
     public function approveLesson(Request $request, $lessonId)
     {
         try {
-            // Kiểm tra quyền admin
-            $admin = Admins::where('user_id', Auth::id())->first();
-
-            if (!$admin || !in_array($admin->admin_level, ['program', 'organization'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Only admin can access this endpoint.'
-                ], 403);
-            }
-
             // Tìm lesson
             $lesson = Lesson::findOrFail($lessonId);
 
@@ -1228,18 +1218,6 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
             $lesson->is_visible = $newStatus;
             $lesson->updated_at = now();
             $lesson->save();
-
-            // Ghi log hoạt động vào activity_log
-            $activityLog = json_decode($admin->activity_log, true) ?? [];
-            $activityLog[] = [
-                'action' => 'update_lesson_visibility',
-                'lesson_id' => $lesson->id,
-                'new_status' => $newStatus ? 'visible' : 'hidden',
-                'timestamp' => now()->toDateTimeString()
-            ];
-
-            $admin->activity_log = json_encode($activityLog);
-            $admin->save();
 
             return response()->json([
                 'success' => true,

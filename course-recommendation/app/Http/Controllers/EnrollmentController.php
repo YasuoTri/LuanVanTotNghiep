@@ -405,13 +405,6 @@ class EnrollmentController extends Controller
         $enrollment->completed_at = now();
         $enrollment->save();
 
-        // Cập nhật số khóa học hoàn thành của student
-        $student = $user->student;
-        if ($student) {
-            $student->total_courses_completed += 1;
-            $student->save();
-        }
-
         return response()->json(['message' => 'Enrollment marked as completed', 'data' => $enrollment]);
     }
       public function getLearningProgress($id): JsonResponse

@@ -1025,7 +1025,7 @@ public function approveCourse(Request $request, $id)
     CourseReview::create([
         'course_id' => $course->id,
         'status' => 'approved',
-        'admin_id' => Auth::user()->admin->id, // Giả sử admin_id là ID của người dùng đang đăng nhập
+        'user_id' => Auth::user()->id, // Giả sử admin_id là ID của người dùng đang đăng nhập
         'notes' => $request->input('notes'),
     ]);
      // Gửi mail instructor

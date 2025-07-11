@@ -128,7 +128,6 @@ public function createStudentProfile(Request $request): JsonResponse
         'user_id' => $user->id,
         'LoE_DI' => $request->input('LoE_DI', 'Unknown'),
         'learning_goals' => $request->input('learning_goals'),
-        'total_courses_completed' => 0,
     ]);
 
     // Associate categories if provided

@@ -90,10 +90,10 @@ class AuthController extends Controller
             ]);
         }else if ($user->role === 'admin') {
             // Create admin record if role is admin
-            Admins::create([
-                'user_id' => $user->id,
-                'admin_level' => $validatedData['admin_level'] ?? 'organization', // Default admin level is organization
-            ]);
+            // Admins::create([
+            //     'user_id' => $user->id,
+            //     'admin_level' => $validatedData['admin_level'] ?? 'organization', // Default admin level is organization
+            // ]);
         }else if ($user->role === 'student') {
             // Create student record if role is student
             // Create record in students table
@@ -101,7 +101,6 @@ class AuthController extends Controller
             'user_id' => $user->id,
             'learning_goals' => $validatedData['learning_goals'],
             'LoE_DI' => $validatedData['LoE_DI'] ?? 'Unknown',
-            'total_courses_completed' => 0,
         ]);
             // Sync categories if provided
             if (isset($validatedData['category_ids']) && !empty($validatedData['category_ids'])) {
@@ -669,10 +668,10 @@ public function handleGoogleCallback()
                 $user->student = $student;
                 $user->categories = $student->categories()->get();
             }
-               if ($user->admin) {
-                $admin = Admins::where('user_id', $user->id)->first();
-                $user->admin = $admin;
-            }
+            //    if ($user->admin) {
+            //     $admin = Admins::where('user_id', $user->id)->first();
+            //     $user->admin = $admin;
+            // }
             return response()->json([
                 'success' => true,
                 'user' => $user,

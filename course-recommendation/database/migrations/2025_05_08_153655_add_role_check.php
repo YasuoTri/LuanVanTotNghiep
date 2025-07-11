@@ -20,18 +20,18 @@ return new class extends Migration
             END
         ');
 
-        // Trigger cho bảng admins
-        DB::unprepared('
-            CREATE TRIGGER check_admin_role
-            BEFORE INSERT ON admins
-            FOR EACH ROW
-            BEGIN
-                IF (SELECT role FROM users WHERE id = NEW.user_id) != "admin" THEN
-                    SIGNAL SQLSTATE "45000"
-                    SET MESSAGE_TEXT = "User must have role \"admin\" to be added to admins table";
-                END IF;
-            END
-        ');
+        // // Trigger cho bảng admins
+        // DB::unprepared('
+        //     CREATE TRIGGER check_admin_role
+        //     BEFORE INSERT ON admins
+        //     FOR EACH ROW
+        //     BEGIN
+        //         IF (SELECT role FROM users WHERE id = NEW.user_id) != "admin" THEN
+        //             SIGNAL SQLSTATE "45000"
+        //             SET MESSAGE_TEXT = "User must have role \"admin\" to be added to admins table";
+        //         END IF;
+        //     END
+        // ');
     }
 
     public function down()

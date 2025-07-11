@@ -25,7 +25,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->text('admin_notes')->nullable()->comment('Ghi chú từ admin');
             $table->timestamp('reviewed_at')->nullable();
-            $table->foreignId('admin_id')->nullable()->constrained('admins')->onDelete('set null');          
+            // $table->foreignId('admin_id')->nullable()->constrained('admins')->onDelete('set null');          
             $table->timestamps();
         });
     }

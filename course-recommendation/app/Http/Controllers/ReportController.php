@@ -220,22 +220,19 @@ public function viewReports(Request $request)
 //     }
 // }
 
+
 public function handleReport(Request $request, Report $report)
 {
     try {
         // Cập nhật trạng thái report
         $report->update([
             'status' => $request->status,
-            'admin_id' => Auth::user()->admin->id,
-            'admin_notes' => $request->admin_notes,
             'reviewed_at' => now(),
         ]);
         Report::where('course_id', $report->course_id)
         ->where('status', 'pending')
         ->update([
             'status' =>  $request->status,
-            'admin_notes' => $request->admin_notes,
-            'admin_id' => Auth::user()->id,
             'reviewed_at' => now(),
         ]);
 
@@ -260,7 +257,7 @@ public function handleReport(Request $request, Report $report)
             // ✅ Gửi email tới instructor
         if ($course->instructors && $course->instructors->user) {
             $instructorUser = $course->instructors->user;
-            Mail::to($instructorUser->email)->send(new ReportHandledNotification($course, $report, $request->status, $request->admin_notes));
+            Mail::to($instructorUser->email)->send(new ReportHandledNotification($course, $report, $request->status, ""));
         }
 
         return response()->json(['message' => 'Report handled successfully']);
@@ -288,14 +285,12 @@ public function confirmFix(Report $report)
         'user_id' => 'required|exists:users,id',
         'report_id' => 'required|exists:reports,id',
         'action_taken' => 'required|in:warning,suspension,ban',
-        'admin_notes' => 'nullable|string',
         'suspended_until' => 'nullable|date',
     ]);
 
     $user = User::findOrFail($validated['user_id']);
     $report = Report::findOrFail($validated['report_id']);
     $action = $validated['action_taken'];
-    $adminNotes = $validated['admin_notes'] ?? null;
     $suspendedUntil = null;
 
     // Áp dụng hành động
@@ -326,7 +321,6 @@ public function confirmFix(Report $report)
         'user_id' => $user->id,
         'report_id' => $report->id,
         'action_taken' => $action,
-        'admin_notes' => $adminNotes,
         'suspended_until' => $suspendedUntil,
     ]);
 
@@ -370,13 +364,12 @@ public function confirmFix(Report $report)
     public function update(Request $request, Report $report)
     {
         $request->validate([
-            'status' => 'required|in:pending,reviewed,resolved',
-            'admin_notes' => 'nullable|string|max:1000',
+            // 'status' => 'required|in:pending,reviewed,resolved',
+            // 'admin_notes' => 'nullable|string|max:1000',
         ]);
 
         $report->update([
             'status' => $request->status,
-            'admin_notes' => $request->admin_notes,
             'reviewed_at' => now(),
         ]);
 
@@ -455,8 +448,6 @@ public function resolveAllReports($courseId)
                 ->where('status', 'pending')
                 ->update([
                     'status' => 'resolved',
-                    'admin_id' => Auth::id(),
-                    'admin_notes' => 'Batch auto-resolved due to course suspended',
                     'reviewed_at' => now()
                 ]);
 

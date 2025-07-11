@@ -36,7 +36,7 @@ class DatabaseSeederNewNew extends Seeder
     public function run(): void
     {
         $this->seedUsers();
-        $this->seedAdmins();
+        // $this->seedAdmins();
         $this->seedInstructors();
         $this->seedStudents();
         $this->seedCategories();
@@ -673,14 +673,13 @@ private function seedCourses()
         $this->command->info('Seeding 1 report...');
 
         $enrollment = Enrollment::first();
-        $admin = Admins::first();
+        // $admin = Admins::first();
 
         Report::create([
             'user_id' => $enrollment->user_id,
             'course_id' => $enrollment->course_id,
             'reason' => 'Technical issue with video playback',
             'status' => 'pending',
-            'admin_id' => $admin->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

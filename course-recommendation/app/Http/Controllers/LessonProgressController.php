@@ -119,7 +119,6 @@ class LessonProgressController extends Controller
             Enrollment::where('user_id', $user_id)
             ->where('course_id', $course_id)
             ->update([
-                'status' => 'completed',
                 'completed_at' => now(),
             ]);
         }

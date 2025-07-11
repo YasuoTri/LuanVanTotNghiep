@@ -74,7 +74,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'birthdate' => Carbon::now()->subYears(rand(18, 30))->subDays(rand(0, 365)),
                 'gender' => $this->randomGender(),
                 'role' => 'student',
-                'status' => $this->randomStatus(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -90,7 +89,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'birthdate' => Carbon::now()->subYears(rand(25, 40))->subDays(rand(0, 365)),
                 'gender' => $this->randomGender(),
                 'role' => 'admin',
-                'status' => 'active',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -106,7 +104,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'birthdate' => Carbon::now()->subYears(rand(25, 50))->subDays(rand(0, 365)),
                 'gender' => $this->randomGender(),
                 'role' => 'instructor',
-                'status' => $this->randomStatus(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -335,7 +332,6 @@ class DatabaseSeederNewNewNew extends Seeder
                     'user_id' => $student->id,
                     'course_id' => $courseId,
                     'enrolled_at' => now()->subDays(rand(1, 30)),
-                    'status' => collect(['active', 'completed'])->random(),
                     'completed_at' => rand(0, 1) ? now()->subDays(rand(1, 10)) : null,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -350,7 +346,7 @@ class DatabaseSeederNewNewNew extends Seeder
     {
         $this->command->info('Seeding certificates...');
 
-        $enrollments = Enrollment::where('status', 'completed')->get();
+        $enrollments = Enrollment::where('completed_at', '!=',null)->get();
         foreach ($enrollments as $enrollment) {
             $course = Course::find($enrollment->course_id);
             if ($course->is_certificate_enabled) {

@@ -8,12 +8,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 class ViolationNotification extends Notification
 {
     protected $violation;
-    protected $report;
 
-    public function __construct($violation, $report)
+    public function __construct($violation)
     {
         $this->violation = $violation;
-        $this->report = $report;
     }
 
     public function via($notifiable)
@@ -26,7 +24,7 @@ class ViolationNotification extends Notification
         $action = $this->violation->action_taken;
         $message = new MailMessage;
 
-        $message->subject('Action Taken on Your Content')
+        $message->subject('Violation Notification on your account')
                 ->greeting('Hello ' . $notifiable->username . ',')
                 ->line('We have reviewed a report regarding your content.');
 
@@ -39,8 +37,7 @@ class ViolationNotification extends Notification
             $message->line('Your account has been permanently banned due to multiple violations.');
         }
 
-        $message->line('Report Details: ' . $this->report->reason)
-                ->line('Admin Notes: ' . ($this->violation->admin_notes ?? 'None'))
+        $message->line('Admin Notes: ' . ($this->violation->admin_notes ?? 'None'))
                 ->action('Review Guidelines', url('/community-guidelines'))
                 ->line('Thank you for your attention.');
 

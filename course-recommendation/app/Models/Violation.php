@@ -8,7 +8,6 @@ class Violation extends Model
 {
     protected $fillable = [
         'user_id',
-        'report_id',
         'action_taken',
         'admin_notes',
         'suspended_until',
@@ -23,8 +22,4 @@ class Violation extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function report()
-    {
-        return $this->belongsTo(Report::class);
-    }
 }

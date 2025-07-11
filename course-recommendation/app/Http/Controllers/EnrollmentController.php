@@ -81,12 +81,12 @@ class EnrollmentController extends Controller
         $enrollment = Enrollment::findOrFail($id);
 
         // Kiểm tra trạng thái enrollment
-        if ($enrollment->status !== 'active') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Only active enrollments can be updated.'
-            ], 400);
-        }
+        // if ($enrollment->status !== 'active') {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Only active enrollments can be updated.'
+        //     ], 400);
+        // }
 
         // Cập nhật enrollment với dữ liệu hợp lệ
         $enrollment->update($request->validated());
@@ -127,21 +127,21 @@ class EnrollmentController extends Controller
                 ], 404);
             }
 
-            // Check enrollment status
-            if ($enrollment->status !== 'active') {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Only active enrollments can be renewed.'
-                ], 400);
-            }
+            // // Check enrollment status
+            // if ($enrollment->status !== 'active') {
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'message' => 'Only active enrollments can be renewed.'
+            //     ], 400);
+            // }
 
-            // Check if expires_at is still valid or close to expiring
-            if (!$enrollment->expires_at || Carbon::parse($enrollment->expires_at)->isPast()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Enrollment has expired and cannot be renewed.'
-                ], 400);
-            }
+            // // Check if expires_at is still valid or close to expiring
+            // if (!$enrollment->expires_at || Carbon::parse($enrollment->expires_at)->isPast()) {
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'message' => 'Enrollment has expired and cannot be renewed.'
+            //     ], 400);
+            // }
 
             // Get course details for renewal fee
             $course = Course::find($enrollment->course_id);
@@ -336,7 +336,7 @@ class EnrollmentController extends Controller
         ->with(['course', 'course.reports' => function($query) use ($user) {
             $query->where('user_id', $user->id); // chỉ lấy report của user này
         }])
-        ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status')
+        ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at')
         ->orderBy('enrolled_at', 'desc')
         ->paginate(10);
 
@@ -360,7 +360,7 @@ class EnrollmentController extends Controller
             ->with(['course' => function ($query) {
                 $query->select('id', 'course_name', 'university');
             }])
-            ->select('id', 'user_id', 'course_id', 'status', 'enrolled_at', 'completed_at', 'expires_at')
+            ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at')
             ->firstOrFail();
 
         return response()->json(['data' => $enrollment]);
@@ -374,7 +374,7 @@ class EnrollmentController extends Controller
             ->firstOrFail();
 
         // Kiểm tra xem enrollment đã hoàn thành chưa
-        if ($enrollment->status === 'completed') {
+        if ($enrollment->completed_at !=null) {
             return response()->json(['message' => 'Enrollment is already completed'], 400);
         }
 
@@ -401,9 +401,14 @@ class EnrollmentController extends Controller
         }
 
         // Cập nhật trạng thái enrollment
-        $enrollment->status = 'completed';
         $enrollment->completed_at = now();
         $enrollment->save();
+
+        // Cập nhật số khóa học hoàn thành của student
+        $student = $user->student;
+        if ($student) {
+            $student->save();
+        }
 
         return response()->json(['message' => 'Enrollment marked as completed', 'data' => $enrollment]);
     }
@@ -419,15 +424,19 @@ class EnrollmentController extends Controller
             ->whereIn('lesson_id', function ($query) use ($enrollment) {
                 $query->select('id')
                     ->from('lessons')
-                    ->where('course_id', $enrollment->course_id);
+                    ->where('course_id', $enrollment->course_id)
+                    ->where('is_visible', true);
             })
             ->with(['lesson' => function ($query) {
                 $query->select('id', 'title', 'duration', 'is_preview', 'sort_order');
             }])
-            ->select('id', 'user_id', 'lesson_id', 'status', 'completed_at')
+            ->select('id', 'user_id', 'lesson_id', 'status')
             ->get();
         
-        $totalLessons = $lessons = Lesson::where('course_id', $enrollment->course_id)->count();
+        $totalLessons = Lesson::where('course_id', $enrollment->course_id)
+        ->where('is_visible', true)
+        ->count();
+
         $completedLessons = $progress->where('status', 'completed')->count();
         $progressPercentage = $totalLessons > 0 ? ($completedLessons / $totalLessons) * 100 : 0;
 
@@ -562,8 +571,7 @@ class EnrollmentController extends Controller
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course_id,
-            'enrolled_at' => now(),
-            'status' => 'active',
+            'enrolled_at' => now()
         ]);
 
          // ✅ Tạo lesson_progress cho tất cả bài học (mọi version)
@@ -663,7 +671,7 @@ class EnrollmentController extends Controller
     return Enrollment::query()
         ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
         ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->input('course_id')))
-        ->when($request->filled('status'), fn($q) => $q->where('status', $request->input('status')))
+        ->when($request->filled('completed_at'), fn($q) => $q->where('completed_at', $request->input('completed_at')))
         ->paginate(10);
 }
 }

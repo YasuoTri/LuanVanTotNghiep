@@ -192,7 +192,7 @@ public function show($id): JsonResponse
     // Find user with relevant relationships
     $user = User::with([
         'enrollments' => function ($query) {
-            $query->select('id', 'user_id', 'course_id', 'status', 'enrolled_at', 'completed_at');
+            $query->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at');
         },
         // 'certificates' => function ($query) {
         //     $query->select('id', 'user_id', 'course_id', 'certificate_code', 'issued_at');
@@ -260,7 +260,7 @@ public function show($id): JsonResponse
     // Analytics calculations
     $analytics = [
         'total_courses_enrolled' => $user->enrollments->count(),
-        'courses_completed' => $user->enrollments->where('status', 'completed')->count(),
+        'courses_completed' => $user->enrollments->whereNotNull('completed_at')->count(),
         // 'certificates_earned' => $user->certificates->count(),
         'total_payments_made' => $user->payments->where('status', 'completed')->sum('amount'),
         'average_rating_given' => $user->reviews->count() > 0

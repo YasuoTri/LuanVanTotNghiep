@@ -299,7 +299,6 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         // Check if the user is enrolled in the course
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {
@@ -461,7 +460,6 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         // Check enrollment
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {
@@ -656,7 +654,6 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
     // Check enrollment
     $enrollment = Enrollment::where('user_id', $user->id)
         ->where('course_id', $quiz->lesson->course_id)
-        ->where('status', 'active')
         ->first();
 
     if (!$enrollment) {
@@ -722,7 +719,6 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         // Kiểm tra đăng ký khóa học
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $quiz->lesson->course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {
@@ -763,7 +759,6 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
         // Kiểm tra đăng ký khóa học
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $quiz->lesson->course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {
@@ -1006,7 +1001,6 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         // Kiểm tra đăng ký khóa học
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $quiz->lesson->course_id)
-            ->where('status', 'active')
             ->first();
 
         if (!$enrollment) {
@@ -1803,7 +1797,6 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
         $lesson = Lesson::find($quiz->lesson_id);
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $lesson->course_id)
-            ->where('status', 'active')
             ->first();
         if (!$enrollment) {
             return response()->json(['message' => 'You are not enrolled in this course'], 403);

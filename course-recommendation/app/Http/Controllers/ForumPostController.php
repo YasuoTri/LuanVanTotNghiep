@@ -54,7 +54,7 @@ class ForumPostController extends Controller
         $user = Auth::user();
         $enrollment = Enrollment::where('user_id', $user->id)
             ->where('course_id', $course_id)
-            ->where('status', 'active')
+            ->whereNotNull('completed_at')
             ->first();
 
         if (!$enrollment) {

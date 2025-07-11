@@ -33,6 +33,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\UserAnswerController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ViolationController;
 use App\Http\Controllers\VNPay;
 use App\Http\Controllers\RevenueSessionController;
 use App\Http\Controllers\ZaloPayController;
@@ -396,11 +397,13 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::post('/reports/{courseId}/batch-resolve', [ReportController::class, 'resolveAllReports']);
     Route::post('/reports/{courseId}/check-threshold', [ReportController::class, 'checkThreshold']);
 
+    Route::post('/admin/violation/fines', [ViolationController::class, 'handleUserViolation']);
+    Route::get('/admin/violation/ofOne/{user_id}', [ViolationController::class, 'getUserViolations']);
+
     //hoàn tiền refund trừ tiền cho merchant
     Route::post('/admin/process_ban/courses/{id}/ban-and-refund', [CourseController::class, 'banAndRefundCourse']);
     Route::post('/admin/courses/{id}/ban', [CourseController::class, 'banCourse']);
     Route::post('/admin/courses/{id}/refund', [CourseController::class, 'refundCourse']);
-
 
 });
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'all_user'])->group(function () {

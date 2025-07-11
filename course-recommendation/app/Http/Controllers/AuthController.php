@@ -216,27 +216,7 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            // Check user status
-            if ($user->status === 'banned') {
-                Auth::logout(); // Log out the user to prevent token generation
-                return response()->json([
-                    'error' => 'Your account has been permanently banned. Please contact support.',
-                ], 403);
-            }
-
-          if ($user->status === 'suspended') {
-            $latestViolation = $user->violations
-                ->where('action_taken', 'suspension')
-                ->orderByDesc('created_at')
-                ->first();
-
-            if ($latestViolation && $latestViolation->suspended_until && now()->lt($latestViolation->suspended_until)) {
-                Auth::logout(); // Log out the user
-                return response()->json([
-                    'error' => 'Your account is suspended until ' . \Carbon\Carbon::parse($latestViolation->suspended_until)->toFormattedDateString() . '. Please try again later.',
-                ], 403);
-            }
-        }
+  
 
 
             // Generate JWT token
@@ -430,30 +410,11 @@ public function handleGoogleCallback()
                 'role' => 'student', // Will be set later
                 'provider' => $provider,
                 'provider_id' => $socialUser->getId(),
-                'status' => 'active',
             ]);
             Log::info("Created new user via {$provider}: " . $user->id);
         }
 
-        // Check user status
-        if ($user->status === 'banned') {
-            return response()->json([
-                'error' => 'Your account has been permanently banned.',
-            ], 403);
-        }
-
-        if ($user->status === 'suspended') {
-            $latestViolation = $user->violations()
-                ->where('action_taken', 'suspension')
-                ->orderByDesc('created_at')
-                ->first();
-
-            if ($latestViolation && $latestViolation->suspended_until && now()->lt($latestViolation->suspended_until)) {
-                return response()->json([
-                    'error' => 'Your account is suspended until ' . \Carbon\Carbon::parse($latestViolation->suspended_until)->toFormattedDateString(),
-                ], 403);
-            }
-        }
+      
 
         try {
             Log::info("Attempting to generate JWT token for user: {$user}");

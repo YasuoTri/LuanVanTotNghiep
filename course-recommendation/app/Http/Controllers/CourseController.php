@@ -1538,7 +1538,7 @@ public function getActiveCourses(Request $request)
     $page = $request->query('page', 1);
 
     // Lấy danh sách course có active enrollment
-    $courseIds = \App\Models\Enrollment::where('status', 'active')
+    $courseIds = Enrollment::whereNotNull('completed_at')
         ->pluck('course_id')
         ->unique();
 
@@ -1590,9 +1590,9 @@ public function getPopularCourses(Request $request)
     $page = $request->query('page', 1);
 
     // Lấy danh sách course cùng tổng số enrollments
-    $popularCourses = \App\Models\Course::with(['instructors', 'reviews', 'lessons'])
+    $popularCourses = Course::with(['instructors', 'reviews', 'lessons'])
         ->withCount(['enrollments as enrollments_count' => function ($query) {
-            $query->where('status', 'active');
+            $query->whereNotNull('completed_at');
         }])
         ->where('status', 'approved')
         ->has('lessons', '>', 1)
@@ -1719,7 +1719,7 @@ public function getPopularCourses(Request $request)
             $query->where('categories.id', $category->id);
         })
         ->withCount(['enrollments as enrollments_count' => function ($q) {
-            $q->where('status', 'active');
+            $q->whereNotNull('completed_at');
         }])
         ->where('status', 'approved')
         ->has('lessons', '>', 1)

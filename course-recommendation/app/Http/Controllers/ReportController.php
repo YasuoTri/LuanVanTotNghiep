@@ -69,7 +69,7 @@ class ReportController extends Controller
         if (!$course) {
             return response()->json(['message' => 'Course not found'], 404);
         }
-        if($course->status == 'rejected' || $course->status == 'banned') {
+        if($course->status == 'rejected' || $course->status == 'banned'|| $course->status == 'draft') {
             return response()->json(['message' => 'Can not report course have status invalid'], 403);
         }
 
@@ -279,59 +279,6 @@ public function confirmFix(Report $report)
     return response()->json(['message' => 'Instructor confirmed fix, please review again']);
 }
 
-   public function handleUserViolation(Request $request)
-{
-    $validated = $request->validate([
-        'user_id' => 'required|exists:users,id',
-        'report_id' => 'required|exists:reports,id',
-        'action_taken' => 'required|in:warning,suspension,ban',
-        'suspended_until' => 'nullable|date',
-    ]);
-
-    $user = User::findOrFail($validated['user_id']);
-    $report = Report::findOrFail($validated['report_id']);
-    $action = $validated['action_taken'];
-    $suspendedUntil = null;
-
-    // Áp dụng hành động
-    switch ($action) {
-        case 'suspension':
-            $suspendedUntil = $validated['suspended_until'] ?? now()->addDays(7);
-            $user->update([
-                'status' => 'suspended',
-                'suspended_until' => $suspendedUntil,
-            ]);
-            break;
-
-        case 'ban':
-            $user->update([
-                'status' => 'banned',
-                'suspended_until' => null,
-            ]);
-            break;
-
-        case 'warning':
-        default:
-            // Không cần cập nhật user
-            break;
-    }
-
-    // Lưu vi phạm
-    $violation = Violation::create([
-        'user_id' => $user->id,
-        'report_id' => $report->id,
-        'action_taken' => $action,
-        'suspended_until' => $suspendedUntil,
-    ]);
-
-    // Gửi thông báo
-    $user->notify(new ViolationNotification($violation, $report));
-
-    return response()->json([
-        'message' => 'User violation handled successfully',
-        'violation' => $violation
-    ]);
-}
    public function store(Request $request)
     {
     $request->validate([

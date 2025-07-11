@@ -364,7 +364,6 @@ class PaymentController extends Controller
         ],
         [
             'enrolled_at' => now(),
-            'status' => 'active',
         ]
     );
 }
@@ -443,8 +442,6 @@ try{
                 ],
                 [
                     'enrolled_at' => now(),
-                    'expires_at' => now()->addMonths(3), // Hết hạn sau 3 tháng
-                    'status' => 'active',
                 ]
             );
 
@@ -545,7 +542,6 @@ public function handleVNPayIPN(Request $request): JsonResponse
                 ],
                 [
                     'enrolled_at' => now(),
-                    'status' => 'active',
                 ]
             );
         }
@@ -709,7 +705,6 @@ public function handlePayPalSuccess(Request $request)
                 ],
                 [
                     'enrolled_at' => now(),
-                    'status' => 'active',
                 ]
             );
 

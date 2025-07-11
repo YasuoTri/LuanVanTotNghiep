@@ -26,7 +26,6 @@ return new class extends Migration
             $table->timestamp('enrolled_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->timestamp('completed_at')->nullable();
             $table->timestamp('expires_at')->nullable();
-            $table->enum('status', ['active', 'completed'])->default('active');
             $table->timestamps();
 
             $table->unique(['user_id', 'course_id'], 'enrollments_user_course_unique');

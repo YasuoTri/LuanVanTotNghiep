@@ -31,7 +31,7 @@ class AnalyticsController extends Controller
 
         // Enrollment stats
         $enrollments = $course->enrollments()->count();
-        $completions = $course->enrollments()->where('status', 'completed')->count();
+        $completions = $course->enrollments()->whereNotNull('completed_at')->count();
         $completionRate = $enrollments > 0 ? ($completions / $enrollments) * 100 : 0;
 
         // Quiz performance
@@ -94,7 +94,7 @@ class AnalyticsController extends Controller
         $courses = Course::select('id', 'course_name', 'course_rating')
             ->withCount('enrollments')
             ->withCount(['enrollments as completed_enrollments' => function ($q) {
-                $q->where('status', 'completed');
+                $q->whereNotNull('completed_at');
             }])
             ->paginate(10);
 
@@ -119,7 +119,7 @@ class AnalyticsController extends Controller
         });
 
         $totalEnrollments = Enrollment::count();
-        $totalCompletions = Enrollment::where('status', 'completed')->count();
+        $totalCompletions = Enrollment::whereNotNull('completed_at')->count();
         $totalUsers = User::count();
         $activeUsers = Interaction::distinct('user_id')->count('user_id');
 
@@ -148,7 +148,7 @@ class AnalyticsController extends Controller
             ->select('id', 'final_cc_cname_DI')
             ->withCount('enrollments')
             ->withCount(['enrollments as completed_enrollments' => function ($q) {
-                $q->where('status', 'completed');
+                $q->whereNotNull('completed_at');
             }])
             ->paginate(10);
 

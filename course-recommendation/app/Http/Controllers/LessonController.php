@@ -255,16 +255,8 @@ class LessonController extends Controller
         try {
             // Kiểm tra student đã enroll course
             $user = Auth::user();
-            $enrollmentCheck = Enrollment::where('user_id', $user->id)
-                ->where('course_id', $course_id)
-                ->where('status', 'completed')
-                ->first();
-            if ($enrollmentCheck) {
-                return response()->json(['message' => 'You have completed this course'], 403);
-            }
             $enrollment = Enrollment::where('user_id', $user->id)
                 ->where('course_id', $course_id)
-                ->where('status', 'active')
                 ->first();
 
             if (!$enrollment) {
@@ -466,7 +458,6 @@ class LessonController extends Controller
 
                     // Create lesson progress for all enrolled users
                     $enrolledUsers = Enrollment::where('course_id', $course_id)
-                        ->where('status', 'active')
                         ->pluck('user_id');
 
                     foreach ($enrolledUsers as $userId) {

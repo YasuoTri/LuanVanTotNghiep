@@ -40,7 +40,6 @@ class UserController extends Controller
             'birthdate',
             'gender',
             'role',
-            'status',
             'created_at',
             'updated_at',
             'deleted_at'
@@ -76,10 +75,7 @@ class UserController extends Controller
         if ($request->has('gender')) {
             $query->where('gender', $request->input('gender'));
         }
-                // Lọc theo gender
-        if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
-        }
+
         // Lọc theo năm sinh (birthdate)
         if ($request->has('birthdate')) {
             $query->where('birthdate', $request->input('birthdate'));
@@ -122,7 +118,6 @@ class UserController extends Controller
             'birthdate',
             'gender',
             'role',
-            'status',
             'created_at',
             'updated_at',
             'deleted_at'
@@ -147,10 +142,6 @@ class UserController extends Controller
         // Lọc theo gender
         if ($request->has('gender')) {
             $query->where('gender', $request->input('gender'));
-        }
-
-             if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
         }
 
         // Lọc theo năm sinh (birthdate)
@@ -229,7 +220,6 @@ public function show($id): JsonResponse
         'birthdate',
         'gender',
         'role',
-        'status',
         'created_at',
         'updated_at'
     ])
@@ -353,7 +343,6 @@ public function store(Request $request): JsonResponse
             'password' => bcrypt($validated['password']),
             'fullname' => 'User ' . strtoupper(substr(uniqid(), -6)), // Tự động tạo fullname
             'role' => 'admin', // Lấy role từ request
-            'status' => 'active', // Mặc định active
             'created_at' => now(),
             'updated_at' => now(),
         ];

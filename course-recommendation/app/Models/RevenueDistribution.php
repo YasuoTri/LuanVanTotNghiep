@@ -20,7 +20,6 @@ class RevenueDistribution extends Model
         'instructor_share',
         'status',
         'transaction_code',
-        'distributed_at',
     ];
 
     /**

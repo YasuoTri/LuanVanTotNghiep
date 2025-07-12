@@ -33,10 +33,12 @@ use Illuminate\Support\Facades\Mail;
 class CourseController extends Controller
 {
     protected $cloudinaryService;
+     protected $payPalService;
 
-    public function __construct(CloudinaryService $cloudinaryService)
+    public function __construct(CloudinaryService $cloudinaryService, PayPalService $payPalService)
     {
         $this->cloudinaryService = $cloudinaryService;
+        $this->payPalService = $payPalService;
     }
     //   public function index()
     // {
@@ -1838,6 +1840,7 @@ public function banAndRefundCourse($id)
         'refunds' => $refunds,
     ]);
 }
+
 public function banCourse($id)
 {
     $admin = Auth::user();
@@ -1846,11 +1849,28 @@ public function banCourse($id)
     }
 
     $course = Course::findOrFail($id);
-    $course->status = 'unavailable';
+    $course->status = 'banned';
     $course->save();
 
     return response()->json([
         'message' => 'Course banned successfully',
+        'course_id' => $id
+    ]);
+}
+
+public function unbanCourse($id)
+{
+    $admin = Auth::user();
+    if (!$admin || $admin->role !== 'admin') {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $course = Course::findOrFail($id);
+    $course->status = 'approved';
+    $course->save();
+
+    return response()->json([
+        'message' => 'Course unbanned successfully',
         'course_id' => $id
     ]);
 }
@@ -1921,4 +1941,98 @@ public function refundCourse(Request $request, $id)
         'results' => $refunds
     ]);
 }
+
+public function refundCourseFromInstructor(Request $request): JsonResponse
+    {
+        // Xác thực dữ liệu đầu vào
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'payment_id' => 'required|exists:payments,id',
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Kiểm tra quyền instructor
+        if (!Auth::check() || Auth::user()->role !== 'instructor') {
+            return response()->json([
+                'message' => 'Unauthorized. Only instructors can initiate refunds.'
+            ], 403);
+        }
+
+        // Tìm khóa học và kiểm tra trạng thái
+        $course = Course::findOrFail($validated['course_id']);
+        if ($course->status !== 'banned') {
+            return response()->json([
+                'message' => 'Cannot refund because the course is not banned.'
+            ], 422);
+        }
+
+        // Kiểm tra instructor sở hữu khóa học
+        $instructor = Instructors::where('user_id', Auth::id())->first();
+        if (!$instructor || $course->instructor_id !== $instructor->id) {
+            return response()->json([
+                'message' => 'Unauthorized. You are not the instructor of this course.'
+            ], 403);
+        }
+
+        // Tìm giao dịch thanh toán
+        $payment = Payment::findOrFail($validated['payment_id']);
+        if ($payment->course_id !== $course->id || $payment->status !== 'completed') {
+            return response()->json([
+                'message' => 'Invalid payment. Payment must belong to the course and be completed.'
+            ], 422);
+        }
+
+        // Lấy email PayPal của instructor và email của học viên
+        $instructorEmail = $instructor->email_paypal;
+        $user = \App\Models\User::find($payment->user_id);
+        if (!$instructorEmail || !$user->email) {
+            return response()->json([
+                'message' => 'Missing PayPal email for instructor or email for user.'
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Gửi Payout từ PayPalService
+            $amount = number_format($payment->amount, 2, '.', ''); // Đảm bảo USD, 2 chữ số thập phân
+            $note = $validated['admin_notes'] ?? 'Refund for banned course: ' . $course->course_name;
+            $payoutResponse = $this->payPalService->sendPayout(
+                $user->email, // Email của học viên
+                $amount,
+                'USD',
+                $note
+            );
+
+            // Cập nhật trạng thái thanh toán
+            $payment->update([
+                'status' => 'refunded',
+                'updated_at' => now(),
+            ]);
+
+            // Ghi log vào audit_logs
+            AuditLog::create([
+                'payment_id' => $payment->id,
+                'action' => 'refunded',
+                'details' => 'Refunded by instructor via PayPal Payouts: ' . $note,
+                'user_id' => Auth::id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Refund processed successfully',
+                'payment_id' => $payment->id,
+                'course_id' => $course->id,
+                'payout_batch_id' => $payoutResponse->result->batch_header->payout_batch_id,
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to process refund',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

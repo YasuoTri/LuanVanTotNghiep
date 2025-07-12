@@ -68,10 +68,10 @@ class PaymentController extends Controller
                 'transaction_code',
                 'coupon_id',
                 'status',
-                'payment_date',
+                'created_at as payment_date',
                 'created_at'
             ])
-            ->orderBy('payment_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(20);
         return response()->json([
             'message' => 'Payments retrieved successfully',
@@ -99,7 +99,7 @@ class PaymentController extends Controller
                 'transaction_code',
                 'coupon_id',
                 'status',
-                'payment_date',
+                'created_at as payment_date',
                 'created_at',
                 'updated_at'
             ])
@@ -120,41 +120,50 @@ class PaymentController extends Controller
   /**
      * List payments for the authenticated student.
      */
-    public function index(): JsonResponse
-    {
-        $user = Auth::user();
+   public function index(): JsonResponse
+{
+    $user = Auth::user();
 
-        $payments = Payment::where('user_id', $user->id)
-                          ->with(['course', 'coupon'])
-                          ->paginate(10);
+    $payments = Payment::where('user_id', $user->id)
+        ->with(['course', 'coupon'])
+        ->paginate(10);
 
-        return response()->json([
-            'message' => 'Payments retrieved successfully',
-            'data' => $payments
-        ]);
-    }
+    // Thêm payment_date mà vẫn giữ nguyên tất cả trường gốc
+    $payments->getCollection()->transform(function ($payment) {
+        $payment->payment_date = $payment->created_at->format('Y-m-d H:i:s'); // hoặc toDateTimeString()
+        return $payment;
+    });
+
+    return response()->json([
+        'message' => 'Payments retrieved successfully',
+        'data' => $payments
+    ]);
+}
 
     /**
      * Show a specific payment for the authenticated student.
      */
     public function show($id): JsonResponse
-    {
-        $user = Auth::user();
+{
+    $user = Auth::user();
 
-
-        $payment = Payment::where('id', $id)
-                      ->where('user_id', $user->id)
-                      ->with(['course', 'coupon'])
-                      ->first();
+    $payment = Payment::where('id', $id)
+        ->where('user_id', $user->id)
+        ->with(['course', 'coupon'])
+        ->first();
 
     if (!$payment) {
         return response()->json(['message' => 'Payment not found'], 404);
     }
-        return response()->json([
-            'message' => 'Payment retrieved successfully',
-            'data' => $payment
-        ]);
-    }
+
+    // Thêm trường payment_date từ created_at
+    $payment->payment_date = $payment->created_at->format('Y-m-d H:i:s');
+
+    return response()->json([
+        'message' => 'Payment retrieved successfully',
+        'data' => $payment
+    ]);
+}
 
     public function store(array $paymentData, int $userId, int $courseId): JsonResponse
 {
@@ -261,7 +270,7 @@ class PaymentController extends Controller
             'transaction_code' => $result['transaction_code'],
             'coupon_id' => $paymentData['coupon_id'] ?? null,
             'status' => 'pending',
-            'payment_date' => $paymentData['payment_date'] ?? null,
+            // 'payment_date' => $paymentData['payment_date'] ?? null,
             'revenue_session_id' => $revenueSession->id,
         ]);
         
@@ -350,7 +359,7 @@ class PaymentController extends Controller
 
         $payment->update([
             'status' => $orderData['status'] === 1 ? 'completed' : 'failed',
-            'payment_date' => now(),
+            // 'payment_date' => now(),
         ]);
         if ($orderData['status'] === 1 && $payment->status === 'completed') {
     $embedData = json_decode($orderData['embed_data'], true);
@@ -430,7 +439,7 @@ try{
         // Cập nhật trạng thái thanh toán
         $payment->update([
             'status' => $status,
-            'payment_date' => now(),
+            // 'payment_date' => now(),
         ]);
 
         if ($status === 'completed') {
@@ -529,7 +538,7 @@ public function handleVNPayIPN(Request $request): JsonResponse
     $status = ($result['data']['vnp_ResponseCode'] ?? '99') === '00' ? 'completed' : 'failed';
     $payment->update([
         'status' => $status,
-        'payment_date' => now(),
+        // 'payment_date' => now(),
     ]);
 
     if ($status === 'completed') {
@@ -588,7 +597,7 @@ public function handleVNPayIPN(Request $request): JsonResponse
                     'amount' => $payment->amount,
                     'method' => $payment->method,
                     'status' => $payment->status,
-                    'payment_date' => $payment->payment_date,
+                    'payment_date' => $payment->created_at,
                     'transaction_code' => $payment->transaction_code,
                 ]
             ], 200);
@@ -694,7 +703,7 @@ public function handlePayPalSuccess(Request $request)
             // Update payment status
             $payment->update([
                 'status' => 'completed',
-                'payment_date' => now(),
+                // 'payment_date' => now(),
             ]);
 
             // Create enrollment
@@ -868,7 +877,7 @@ private function handlePaymentCaptureCompleted(array $data)
         // Update payment status via webhook
         $payment->update([
             'status' => 'completed',
-            'payment_date' => now(),
+            // 'payment_date' => now(),
         ]);
 
         Log::info('PayPal webhook: Payment updated to completed', [

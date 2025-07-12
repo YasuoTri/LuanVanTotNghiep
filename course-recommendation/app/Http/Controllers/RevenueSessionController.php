@@ -43,8 +43,6 @@ class RevenueSessionController extends Controller
                 'month' => $currentMonth,
                 'year' => $currentYear,
                 'total_revenue' => 0,
-                'admin_share' => 0,
-                'instructor_share' => 0,
                 'status' => 'open',
             ]);
 
@@ -92,14 +90,12 @@ class RevenueSessionController extends Controller
             }
 
             // Tính phần chia
-            $adminShare = $totalRevenue * 0.3; // 30% cho admin
-            $instructorShare = $totalRevenue * 0.7; // 70% cho instructor
+            $adminShare = $totalRevenue * 0.1; // 30% cho admin
+            $instructorShare = $totalRevenue * 0.9; // 70% cho instructor
 
             // Cập nhật phiên
             $session->update([
                 'total_revenue' => $totalRevenue,
-                'admin_share' => $adminShare,
-                'instructor_share' => $instructorShare,
                 'status' => 'closed',
             ]);
 
@@ -227,13 +223,16 @@ public function checkRevenueDistributed($sessionId)
 public function getAllRevenueSessions()
 {
     $sessions = RevenueSession::all()->map(function ($session) {
+        $adminShare = $session->total_revenue * 0.10;
+        $instructorShare = $session->total_revenue * 0.90;
+
         return [
             'session_id' => $session->id,
             'month' => $session->month,
             'year' => $session->year,
             'total_revenue' => $session->total_revenue,
-            'admin_share' => $session->admin_share,
-            'instructor_share' => $session->instructor_share,
+            'admin_share' => round($adminShare, 2),
+            'instructor_share' => round($instructorShare, 2),
             'status' => $session->status,
             'need_distribution' => $session->status !== 'distributed',
             'created_at' => $session->created_at,
@@ -246,4 +245,5 @@ public function getAllRevenueSessions()
         'data' => $sessions
     ]);
 }
+
 }

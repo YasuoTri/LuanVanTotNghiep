@@ -437,7 +437,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'transaction_code' => 'TXN-' . Str::random(10),
                 'coupon_id' => rand(0, 1) ? $coupons[array_rand($coupons)] : null,
                 'status' => collect(['pending', 'completed', 'failed'])->random(),
-                'payment_date' => now()->subDays(rand(1, 30)),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -477,8 +476,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'month' => $month,
                 'year' => 2025,
                 'total_revenue' => rand(1000000, 10000000),
-                'admin_share' => rand(300000, 3000000),
-                'instructor_share' => rand(700000, 7000000),
                 'status' => collect(['open', 'closed', 'distributed'])->random(),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -501,11 +498,9 @@ class DatabaseSeederNewNewNew extends Seeder
                     'revenue_session_id' => $session->id,
                     'instructor_id' => $course->instructor_id,
                     'course_id' => $course->id,
-                    'revenue_amount' => rand(100000, 1000000),
                     'instructor_share' => rand(70000, 700000),
                     'status' => collect(['pending', 'completed', 'failed'])->random(),
                     'transaction_code' => 'TXN-DIST' . Str::random(10),
-                    'distributed_at' => now()->subDays(rand(1, 10)),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

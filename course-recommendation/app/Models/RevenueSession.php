@@ -16,8 +16,6 @@ class RevenueSession extends Model
         'month',
         'year',
         'total_revenue',
-        'admin_share',
-        'instructor_share',
         'status',
     ];
 

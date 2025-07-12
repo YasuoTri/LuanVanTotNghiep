@@ -66,11 +66,11 @@ class RevenueDistributePaypal extends Controller
             $adminShare = $totalRevenue * 0.1; // 30% cho admin
             $instructorShare = $totalRevenue * 0.9; // 70% cho instructor
 
-            Log::info("💰 Starting revenue distribution for session {$sessionId}", [
-                'total_revenue' => number_format($totalRevenue, 2) . ' VND',
-                'admin_share' => number_format($adminShare, 2) . ' VND',
-                'instructor_share' => number_format($instructorShare, 2) . ' VND'
-            ]);
+            // Log::info("💰 Starting revenue distribution for session {$sessionId}", [
+            //     'total_revenue' => number_format($totalRevenue, 2) . ' VND',
+            //     'admin_share' => number_format($adminShare, 2) . ' VND',
+            //     'instructor_share' => number_format($instructorShare, 2) . ' VND'
+            // ]);
 
             // Cập nhật phiên
             // $session->update([
@@ -124,10 +124,8 @@ class RevenueDistributePaypal extends Controller
                     'revenue_session_id' => $session->id,
                     'instructor_id' => $instructor->id,
                     'course_id' => $revenue->course_id,
-                    'revenue_amount' => $revenue->total_amount,
                     'instructor_share' => $instructorAmount,
                     'status' => 'pending',
-                    'distributed_at' => now(),
                 ]);
 
                 $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $instructorAmount, $revenueDistribution);
@@ -406,8 +404,6 @@ class RevenueDistributePaypal extends Controller
                 'month' => $month,
                 'status' => 'open',
                 'total_revenue' => 0,
-                'admin_share' => 0,
-                'instructor_share' => 0,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -478,8 +474,8 @@ class RevenueDistributePaypal extends Controller
                 'processing_sessions' => RevenueSession::where('status', 'processing')->count(),
                 'partially_distributed_sessions' => RevenueSession::where('status', 'partially_distributed')->count(),
                 'total_revenue' => RevenueSession::sum('total_revenue'),
-                'total_admin_share' => RevenueSession::sum('admin_share'),
-                'total_instructor_share' => RevenueSession::sum('instructor_share'),
+                // 'total_admin_share' => RevenueSession::sum('admin_share'),
+                // 'total_instructor_share' => RevenueSession::sum('instructor_share'),
                 'current_month_session' => RevenueSession::where('year', now()->year)
                     ->where('month', now()->month)
                     ->first(),

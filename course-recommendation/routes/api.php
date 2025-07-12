@@ -27,6 +27,7 @@ use App\Http\Controllers\LessonProgressController;
 use App\Http\Controllers\QuestionChoiceController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RevenueDistribute;
 use App\Http\Controllers\RevenueDistributePaypal;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SearchController;
@@ -213,6 +214,8 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/course/{courseId}/comment-statistics', [ReviewController::class, 'commentStatistics']);
     Route::apiResource('/instructor/coupons', CouponController::class);
     Route::post('/instructor/createCoupon', [CouponController::class, 'createCoupon']);
+    Route::post('/instructor/courses/refundFromInstructor', [CourseController::class, 'refundCourseFromInstructor']);
+    Route::get('/instructor/courses/revenuDistributeSearch', [RevenueDistribute::class, 'getInstructorRevenueDistributions']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {
@@ -276,7 +279,6 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     // Manage Violating Content (Flag/Remove Forum Posts)
     Route::put('/admin/forum-posts/{id}/flag', [ForumPostController::class, 'flag'])->name('forumPosts.flag');
     Route::delete('/admin/forum-posts/{id}/remove', [ForumPostController::class, 'remove'])->name('forumPosts.remove');
-
     // Manage Users
     Route::get('/admin/users/trashed', [UserController::class, 'trashed'])->name('users.trashed');
     Route::get('/admin/users', [UserController::class, 'index'])->name('users.index');
@@ -286,7 +288,6 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     Route::delete('/admin/users/{id}/force', [UserController::class, 'forceDelete']);
     Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::put('/admin/users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
-
     //Analytics
     Route::get('/admin/analytics/courses', [AnalyticsController::class, 'adminCourseAnalytics'])
         ->name('analytics.courses');
@@ -403,6 +404,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function (
     //hoàn tiền refund trừ tiền cho merchant
     Route::post('/admin/process_ban/courses/{id}/ban-and-refund', [CourseController::class, 'banAndRefundCourse']);
     Route::post('/admin/courses/{id}/ban', [CourseController::class, 'banCourse']);
+    Route::post('/admin/courses/{id}/unban', [CourseController::class, 'unbanCourse']);
     Route::post('/admin/courses/{id}/refund', [CourseController::class, 'refundCourse']);
 
 });

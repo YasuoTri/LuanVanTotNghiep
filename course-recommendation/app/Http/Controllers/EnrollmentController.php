@@ -166,7 +166,7 @@ class EnrollmentController extends Controller
                 'amount' => $renewalFee,
                 'method' => $request->validated()['payment_method'],
                 'coupon_id' => null, // Optionally allow coupons in the future
-                'payment_date' => null,
+                // 'payment_date' => null,
             ];
 
             // Initiate payment using PaymentController::store
@@ -193,7 +193,7 @@ class EnrollmentController extends Controller
             // Simulate VNPay payment success (since VNPay is not fully implemented)
             $payment->status = 'completed';
             $payment->transaction_code = 'VNPAY_' . time();
-            $payment->payment_date = Carbon::now();
+            // $payment->payment_date = Carbon::now();
             $payment->save();
 
             // Update expires_at

@@ -192,7 +192,7 @@ public function show($id): JsonResponse
         //     $query->select('id', 'user_id', 'course_id', 'title', 'flagged', 'created_at');
         // },
         'payments' => function ($query) {
-            $query->select('id', 'user_id', 'course_id', 'amount', 'status', 'payment_date');
+            $query->select('id', 'user_id', 'course_id', 'amount', 'status', 'created_at');
         },
         'lessonProgress' => function ($query) {
             $query->select('id', 'user_id', 'lesson_id', 'status', 'completed_at');
@@ -246,7 +246,9 @@ public function show($id): JsonResponse
             ->where('status', 'completed')
             ->sum('instructor_share');
     }
-
+    $user->payments->each(function ($payment) {
+        $payment->payment_date = $payment->created_at->format('Y-m-d H:i:s');
+    });
     // Analytics calculations
     $analytics = [
         'total_courses_enrolled' => $user->enrollments->count(),

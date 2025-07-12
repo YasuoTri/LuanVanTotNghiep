@@ -213,17 +213,15 @@ class DistributeRevenueJob implements ShouldQueue
         $adminShare = $totalRevenue * 0.3;
         $instructorShare = $totalRevenue * 0.7;
 
-        Log::info("💵 Revenue breakdown for session {$session->id}:", [
-            'total' => number_format($totalRevenue, 2) . ' VND',
-            'admin_share' => number_format($adminShare, 2) . ' VND',
-            'instructor_share' => number_format($instructorShare, 2) . ' VND'
-        ]);
+        // Log::info("💵 Revenue breakdown for session {$session->id}:", [
+        //     'total' => number_format($totalRevenue, 2) . ' VND',
+        //     'admin_share' => number_format($adminShare, 2) . ' VND',
+        //     'instructor_share' => number_format($instructorShare, 2) . ' VND'
+        // ]);
 
         // Cập nhật RevenueSession
         $session->update([
             'total_revenue' => $totalRevenue,
-            'admin_share' => $adminShare,
-            'instructor_share' => $instructorShare,
             'status' => 'distributed',
         ]);
 
@@ -262,10 +260,8 @@ class DistributeRevenueJob implements ShouldQueue
                     'revenue_session_id' => $session->id,
                     'instructor_id' => $instructor->id,
                     'course_id' => $revenue->course_id,
-                    'revenue_amount' => $revenue->total_amount,
                     'instructor_share' => $instructorAmount,
                     'status' => 'pending',
-                    'distributed_at' => now(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

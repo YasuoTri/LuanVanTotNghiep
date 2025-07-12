@@ -147,6 +147,10 @@ public function getSubcategories()
         if (!$category) {
             return response()->json(['message' => 'Category not found'], 404);
         }
+        $courseCount = $category->courses()->count();
+        if ($courseCount > 0) {
+            return response()->json(['error' => '❌ Category has courses, cannot be deleted.'], 422);
+        }
         $category->delete();
         return response()->json(['message' => 'Category deleted successfully']);
     }

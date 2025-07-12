@@ -17,7 +17,6 @@ class StorePaymentRequest extends FormRequest
             'amount' => 'required|numeric|min:0',
             'method' => 'required|in:momo,zalopay,bank_transfer,paypal,vnpay',
             'coupon_id' => 'nullable|exists:coupons,id',
-            'payment_date' => 'nullable|date',
         ];
     }
 }

@@ -49,7 +49,7 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->seedCertificateRules();
         $this->seedCoupons();
         $this->seedPayments();
-        $this->seedAuditLogs();
+        // $this->seedAuditLogs();
         $this->seedRevenueSessions();
         $this->seedRevenueDistributions();
   
@@ -227,70 +227,141 @@ class DatabaseSeederNewNewNew extends Seeder
     $this->command->info('Categories seeded successfully!');
 }
 
+    // private function seedCourses()
+    // {
+    //     $this->command->info('Seeding courses from CSV...');
+
+    //     $instructors = Instructors::all()->pluck('id')->toArray();
+    //     $csvFile = public_path('udemy_coursesReal.csv');
+    //     if (!File::exists($csvFile)) {
+    //         $this->command->error('CSV file not found!');
+    //         return;
+    //     }
+
+    //     $file = fopen($csvFile, 'r');
+    //     $header = fgetcsv($file);
+    //     $skippedCourses = 0;
+
+    //     while (($row = fgetcsv($file)) !== false) {
+    //         $data = array_combine($header, $row);
+
+    //         if (Course::where('course_name', $data['course_title'])->exists()) {
+    //             $this->command->warn("Skipping course '{$data['course_title']}' due to duplicate course_name.");
+    //             $skippedCourses++;
+    //             continue;
+    //         }
+
+    //         $level = match ($data['level']) {
+    //             'All Levels', 'Beginner Level' => 'Beginner',
+    //             'Intermediate Level' => 'Intermediate',
+    //             'Expert Level', 'Advanced Level' => 'Advanced',
+    //             default => null,
+    //         };
+
+    //         $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) * 23000 : 0; // Convert USD to VND
+    //         $instructorId = $instructors[array_rand($instructors)];
+
+    //         $course = Course::create([
+    //             'instructor_id' => $instructorId,
+    //             'course_name' => $data['course_title'],
+    //             'difficulty_level' => $level,
+    //             'course_rating' => 0,
+    //             'course_url' => $data['url'],
+    //             'image' => "https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg",
+    //             'course_description' => "Learn {$data['subject']} with practical examples and hands-on projects.",
+    //             'price' => $price,
+    //             'skills' => $data['subject'],
+    //             'status' => collect(['pending', 'approved', 'draft'])->random(),
+    //             'is_certificate_enabled' => rand(0, 1),
+    //             'created_at' => $data['published_timestamp'],
+    //             'updated_at' => $data['published_timestamp'],
+    //         ]);
+
+    //         $category = Category::where('name', $data['subject'])->first();
+    //         if ($category) {
+    //             CourseCategory::create([
+    //                 'course_id' => $course->id,
+    //                 'category_id' => $category->id,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ]);
+    //         }
+    //     }
+
+    //     fclose($file);
+    //     $this->command->info("Courses seeded successfully from CSV! Skipped $skippedCourses duplicate courses.");
+    // }
     private function seedCourses()
-    {
-        $this->command->info('Seeding courses from CSV...');
+{
+    $this->command->info('Seeding courses from CSV...');
 
-        $instructors = Instructors::all()->pluck('id')->toArray();
-        $csvFile = public_path('udemy_coursesReal.csv');
-        if (!File::exists($csvFile)) {
-            $this->command->error('CSV file not found!');
-            return;
-        }
-
-        $file = fopen($csvFile, 'r');
-        $header = fgetcsv($file);
-        $skippedCourses = 0;
-
-        while (($row = fgetcsv($file)) !== false) {
-            $data = array_combine($header, $row);
-
-            if (Course::where('course_name', $data['course_title'])->exists()) {
-                $this->command->warn("Skipping course '{$data['course_title']}' due to duplicate course_name.");
-                $skippedCourses++;
-                continue;
-            }
-
-            $level = match ($data['level']) {
-                'All Levels', 'Beginner Level' => 'Beginner',
-                'Intermediate Level' => 'Intermediate',
-                'Expert Level', 'Advanced Level' => 'Advanced',
-                default => null,
-            };
-
-            $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) * 23000 : 0; // Convert USD to VND
-            $instructorId = $instructors[array_rand($instructors)];
-
-            $course = Course::create([
-                'instructor_id' => $instructorId,
-                'course_name' => $data['course_title'],
-                'difficulty_level' => $level,
-                'course_rating' => 0,
-                'course_url' => $data['url'],
-                'image' => "https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg",
-                'course_description' => "Learn {$data['subject']} with practical examples and hands-on projects.",
-                'price' => $price,
-                'skills' => $data['subject'],
-                'status' => collect(['pending', 'approved', 'draft'])->random(),
-                'is_certificate_enabled' => rand(0, 1),
-                'created_at' => $data['published_timestamp'],
-                'updated_at' => $data['published_timestamp'],
-            ]);
-
-            $category = Category::where('name', $data['subject'])->first();
-            if ($category) {
-                CourseCategory::create([
-                    'course_id' => $course->id,
-                    'category_id' => $category->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        fclose($file);
-        $this->command->info("Courses seeded successfully from CSV! Skipped $skippedCourses duplicate courses.");
+    $instructors = Instructors::all()->pluck('id')->toArray();
+    $csvFile = public_path('udemy_coursesReal.csv');
+    if (!File::exists($csvFile)) {
+        $this->command->error('CSV file not found!');
+        return;
     }
+
+    $file = fopen($csvFile, 'r');
+    $header = fgetcsv($file);
+    $skippedCourses = 0;
+    $courseCount = 0;
+
+    while (($row = fgetcsv($file)) !== false) {
+        $data = array_combine($header, $row);
+
+        if (Course::where('course_name', $data['course_title'])->exists()) {
+            $this->command->warn("Skipping course '{$data['course_title']}' due to duplicate course_name.");
+            $skippedCourses++;
+            continue;
+        }
+
+        $level = match ($data['level']) {
+            'All Levels', 'Beginner Level' => 'Beginner',
+            'Intermediate Level' => 'Intermediate',
+            'Expert Level', 'Advanced Level' => 'Advanced',
+            default => null,
+        };
+
+        $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) * 23000 : 0;
+        $instructorId = $instructors[array_rand($instructors)];
+
+        // Xác định status
+        $status = $courseCount < 200 ? 'approved' : collect(['pending', 'approved', 'draft'])->random();
+
+        $course = Course::create([
+            'instructor_id' => $instructorId,
+            'course_name' => $data['course_title'],
+            'difficulty_level' => $level,
+            'course_rating' => 0,
+            'course_url' => $data['url'],
+            'image' => "https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg",
+            'course_description' => "Learn {$data['subject']} with practical examples and hands-on projects.",
+            'price' => $price,
+            'skills' => $data['subject'],
+            'status' => $status,
+            'is_certificate_enabled' => rand(0, 1),
+            'created_at' => $data['published_timestamp'],
+            'updated_at' => $data['published_timestamp'],
+        ]);
+
+        $courseCount++;
+
+        $category = Category::where('name', $data['subject'])->first();
+        if ($category) {
+            CourseCategory::create([
+                'course_id' => $course->id,
+                'category_id' => $category->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    fclose($file);
+    $this->command->info("Courses seeded successfully from CSV! Skipped $skippedCourses duplicate courses.");
+}
+
 
     private function seedStudentCategories()
     {

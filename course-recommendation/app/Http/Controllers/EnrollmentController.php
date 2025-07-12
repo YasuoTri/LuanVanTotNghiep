@@ -331,7 +331,7 @@ class EnrollmentController extends Controller
 
     $enrollments = Enrollment::where('user_id', $user->id)
         ->whereHas('course', function ($query) {
-            $query->whereIn('status', ['approved', 'available', 'unavailable']);
+            $query->whereIn('status', ['approved', 'unavailable']);
         })
         ->with(['course', 'course.reports' => function($query) use ($user) {
             $query->where('user_id', $user->id); // chỉ lấy report của user này

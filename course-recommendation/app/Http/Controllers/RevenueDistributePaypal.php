@@ -217,7 +217,7 @@ class RevenueDistributePaypal extends Controller
         }
 
         $payments = Payment::where('revenue_session_id', $session->id)
-            ->whereIn('status', ['completed', 'refunded'])
+            ->whereIn('status', ['completed'])
             ->get();
 
         if ($payments->isEmpty()) {

@@ -274,12 +274,12 @@ class PaymentController extends Controller
             'revenue_session_id' => $revenueSession->id,
         ]);
         
-        AuditLog::create([
-            'payment_id' => $payment->id,
-            'action' => 'created',
-            'details' => 'Init payment',
-            'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
-        ]);
+        // AuditLog::create([
+        //     'payment_id' => $payment->id,
+        //     'action' => 'created',
+        //     'details' => 'Init payment',
+        //     'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
+        // ]);
 
         // Update coupon
         if ($coupon) {
@@ -472,12 +472,12 @@ try{
             //     $adminAccount->increment('balance', $payment->amount);
             // }
             // Cập nhật lịch sử thanh toán
-            AuditLog::create([
-                'payment_id' => $payment->id,
-                'action' => 'payment_completed',
-                'details' => 'Payment completed successfully',
-                'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
-            ]);
+            // AuditLog::create([
+            //     'payment_id' => $payment->id,
+            //     'action' => 'payment_completed',
+            //     'details' => 'Payment completed successfully',
+            //     'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
+            // ]);
         }
 
         DB::commit();
@@ -726,12 +726,12 @@ public function handlePayPalSuccess(Request $request)
             }
 
             // Log audit
-            AuditLog::create([
-                'payment_id' => $payment->id,
-                'action' => 'payment_completed',
-                'details' => 'PayPal payment completed - Money received in PayPal business account',
-                'user_id' => $payment->user_id,
-            ]);
+            // AuditLog::create([
+            //     'payment_id' => $payment->id,
+            //     'action' => 'payment_completed',
+            //     'details' => 'PayPal payment completed - Money received in PayPal business account',
+            //     'user_id' => $payment->user_id,
+            // ]);
 
             DB::commit();
 
@@ -780,12 +780,12 @@ public function handlePayPalCancel(Request $request)
             if ($payment) {
                 $payment->update(['status' => 'failed']);
                 
-                AuditLog::create([
-                    'payment_id' => $payment->id,
-                    'action' => 'payment_cancelled',
-                    'details' => 'PayPal payment cancelled by user',
-                    'user_id' => $payment->user_id,
-                ]);
+                // AuditLog::create([
+                //     'payment_id' => $payment->id,
+                //     'action' => 'payment_cancelled',
+                //     'details' => 'PayPal payment cancelled by user',
+                //     'user_id' => $payment->user_id,
+                // ]);
             }
         }
 
@@ -910,12 +910,12 @@ private function handlePaymentCaptureDenied(array $data)
         if ($payment) {
             $payment->update(['status' => 'failed']);
             
-            AuditLog::create([
-                'payment_id' => $payment->id,
-                'action' => 'payment_denied',
-                'details' => 'PayPal payment capture denied',
-                'user_id' => $payment->user_id,
-            ]);
+            // AuditLog::create([
+            //     'payment_id' => $payment->id,
+            //     'action' => 'payment_denied',
+            //     'details' => 'PayPal payment capture denied',
+            //     'user_id' => $payment->user_id,
+            // ]);
         }
 
     } catch (\Exception $e) {

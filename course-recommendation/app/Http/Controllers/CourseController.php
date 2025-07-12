@@ -392,13 +392,18 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                     'message' => 'Instructor profile not found. Please complete your instructor profile.',
                 ], 200);
             }
-
+            if($user->instructor->email_paypal==null){
+                return response()->json([
+                    'message' => 'Please complete your instructor profile. you need to add your paypal email.',
+                ], 200);
+            }
             // Check if user is not an instructor
             if ($user->role !== 'instructor') {
                 return response()->json([
                     'message' => 'Only users with instructor role can create courses.'
                 ], 403);
             }
+
             $validated = $request->validated();
             
             // Kiểm tra category_ids

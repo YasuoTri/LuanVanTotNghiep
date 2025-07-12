@@ -25,180 +25,328 @@ class RevenueDistributePaypal extends Controller
         $this->paypalService = new PayPalService();
     }
 
+    // public function distributeRevenue($sessionId): JsonResponse
+    // {
+    //     DB::beginTransaction();
+    //     try {
+    //         $session = RevenueSession::where('id', $sessionId)
+    //             ->where('status', 'open')
+    //             ->firstOrFail();
+
+    //         // Kiểm tra xem đã đến cuối tháng chưa
+    //         $sessionDate = Carbon::create($session->year, $session->month, 1);
+    //         // if (!$sessionDate->endOfMonth()->isPast()) {
+    //         //     return response()->json([
+    //         //         'success' => false,
+    //         //         'message' => 'Cannot distribute revenue until the end of the month'
+    //         //     ], 400);
+    //         // }
+
+    //         // Test PayPal connection trước
+    //         if (!$this->paypalService->testConnection()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'PayPal connection failed. Cannot proceed with revenue distribution.'
+    //             ], 500);
+    //         }
+
+    //         // Tính tổng doanh thu từ payments
+    //         $totalRevenue = Payment::where('revenue_session_id', $session->id)
+    //             ->where('status', 'completed')
+    //             ->sum('amount');
+
+    //         if ($totalRevenue <= 0) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'No revenue to distribute'
+    //             ], 400);
+    //         }
+
+    //         // Tính phần chia
+    //         $adminShare = $totalRevenue * 0.1; 
+    //         $instructorShare = $totalRevenue * 0.9; 
+
+    //         // Log::info("💰 Starting revenue distribution for session {$sessionId}", [
+    //         //     'total_revenue' => number_format($totalRevenue, 2) . ' VND',
+    //         //     'admin_share' => number_format($adminShare, 2) . ' VND',
+    //         //     'instructor_share' => number_format($instructorShare, 2) . ' VND'
+    //         // ]);
+
+    //         // Cập nhật phiên
+    //         // $session->update([
+    //         //     'total_revenue' => $totalRevenue,
+    //         //     'admin_share' => $adminShare,
+    //         //     'instructor_share' => $instructorShare,
+    //         //     'status' => 'processing', // Đang xử lý
+    //         // ]);
+
+    //         // Phân chia doanh thu cho từng instructor
+    //         // $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
+    //         //     ->where('status', 'completed')
+    //         //     ->groupBy('course_id')
+    //         //     ->selectRaw('course_id, SUM(amount) as total_amount')
+    //         //     ->get();
+            
+    //         $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
+    //         ->whereIn('status', ['completed', 'refunded']) // tính luôn refund
+    //         ->groupBy('course_id')
+    //         ->selectRaw('course_id, SUM(
+    //             CASE
+    //                 WHEN status = "completed" THEN amount
+    //                 WHEN status = "refunded" THEN -amount
+    //                 ELSE 0
+    //             END
+    //         ) as total_amount')
+    //         ->get();
+
+    //         $distributionResults = [];
+    //         $successCount = 0;
+    //         $failCount = 0;
+
+    //         foreach ($instructorsRevenue as $revenue) {
+    //             $course = Course::with('instructors.user')->find($revenue->course_id);
+                
+    //             if (!$course) {
+    //                 Log::warning("⚠️ Course not found: {$revenue->course_id}");
+    //                 continue;
+    //             }
+    //              Log::warning("⚠️ course: {$course}");
+    //             $instructor = $course->instructors;
+                
+    //             if (!$instructor) {
+    //                 Log::warning("⚠️ No instructors found for course: {$course->title}");
+    //                 continue;
+    //             }
+
+    //             // Tính tiền cho instructor
+    //             $instructorAmount = ($revenue->total_amount * 0.7); // Chỉ có 1 instructor
+
+    //             $revenueDistribution = RevenueDistribution::create([
+    //                 'revenue_session_id' => $session->id,
+    //                 'instructor_id' => $instructor->id,
+    //                 'course_id' => $revenue->course_id,
+    //                 'instructor_share' => $instructorAmount,
+    //                 'status' => 'pending',
+    //             ]);
+
+    //             $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $instructorAmount, $revenueDistribution);
+
+    //             $distributionResults[] = [
+    //                 'instructor_id' => $instructor->id,
+    //                 'instructor_name' => $instructor->name,
+    //                 'course_title' => $course->title,
+    //                 'amount_vnd' => $instructorAmount,
+    //                 'amount_usd' => $instructorAmount ,
+    //                 'paypal_email' => $instructor->user->email ?? null,
+    //                 'success' => $payoutResult['success'],
+    //                 'message' => $payoutResult['message'],
+    //                 'batch_id' => $payoutResult['batch_id'] ?? null
+    //             ];
+
+    //             if ($payoutResult['success']) {
+    //                 $successCount++;
+    //             } else {
+    //                 $failCount++;
+    //             }
+    //         }
+
+    //         // Gửi tiền cho Admin
+    //         $adminPayoutResult = $this->sendPayPalPayoutToAdmin($adminShare, $session);
+
+    //         // Cập nhật trạng thái session
+    //         $finalStatus = ($failCount === 0) ? 'distributed' : 'partially_distributed';
+    //         $session->update(['status' => $finalStatus]);
+
+    //         DB::commit();
+
+    //         Log::info("✅ Revenue distribution completed for session {$sessionId}", [
+    //             'success_count' => $successCount,
+    //             'fail_count' => $failCount,
+    //             'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Revenue distribution completed',
+    //             'data' => [
+    //                 'session' => $session->fresh(),
+    //                 'distribution_summary' => [
+    //                     'total_instructors' => $successCount + $failCount,
+    //                     'successful_payouts' => $successCount,
+    //                     'failed_payouts' => $failCount,
+    //                     'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
+    //                 ],
+    //                 'distribution_details' => $distributionResults,
+    //                 'admin_payout' => [
+    //                     'amount_usd' =>$adminShare +'USD',
+    //                     'success' => $adminPayoutResult['success'],
+    //                     'message' => $adminPayoutResult['message']
+    //                 ]
+    //             ]
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('💥 Revenue distribution failed', [
+    //             'session_id' => $sessionId,
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to distribute revenue',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
     public function distributeRevenue($sessionId): JsonResponse
-    {
-        DB::beginTransaction();
-        try {
-            $session = RevenueSession::where('id', $sessionId)
-                ->where('status', 'open')
-                ->firstOrFail();
+{
+    DB::beginTransaction();
 
-            // Kiểm tra xem đã đến cuối tháng chưa
-            $sessionDate = Carbon::create($session->year, $session->month, 1);
-            // if (!$sessionDate->endOfMonth()->isPast()) {
-            //     return response()->json([
-            //         'success' => false,
-            //         'message' => 'Cannot distribute revenue until the end of the month'
-            //     ], 400);
-            // }
+    try {
+        $session = RevenueSession::where('id', $sessionId)
+            ->where('status', 'open')
+            ->firstOrFail();
 
-            // Test PayPal connection trước
-            if (!$this->paypalService->testConnection()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PayPal connection failed. Cannot proceed with revenue distribution.'
-                ], 500);
-            }
-
-            // Tính tổng doanh thu từ payments
-            $totalRevenue = Payment::where('revenue_session_id', $session->id)
-                ->where('status', 'completed')
-                ->sum('amount');
-
-            if ($totalRevenue <= 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No revenue to distribute'
-                ], 400);
-            }
-
-            // Tính phần chia
-            $adminShare = $totalRevenue * 0.1; // 30% cho admin
-            $instructorShare = $totalRevenue * 0.9; // 70% cho instructor
-
-            // Log::info("💰 Starting revenue distribution for session {$sessionId}", [
-            //     'total_revenue' => number_format($totalRevenue, 2) . ' VND',
-            //     'admin_share' => number_format($adminShare, 2) . ' VND',
-            //     'instructor_share' => number_format($instructorShare, 2) . ' VND'
-            // ]);
-
-            // Cập nhật phiên
-            // $session->update([
-            //     'total_revenue' => $totalRevenue,
-            //     'admin_share' => $adminShare,
-            //     'instructor_share' => $instructorShare,
-            //     'status' => 'processing', // Đang xử lý
-            // ]);
-
-            // Phân chia doanh thu cho từng instructor
-            // $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
-            //     ->where('status', 'completed')
-            //     ->groupBy('course_id')
-            //     ->selectRaw('course_id, SUM(amount) as total_amount')
-            //     ->get();
-            $instructorsRevenue = Payment::where('revenue_session_id', $session->id)
-            ->whereIn('status', ['completed', 'refunded']) // tính luôn refund
-            ->groupBy('course_id')
-            ->selectRaw('course_id, SUM(
-                CASE
-                    WHEN status = "completed" THEN amount
-                    WHEN status = "refunded" THEN -amount
-                    ELSE 0
-                END
-            ) as total_amount')
-            ->get();
-
-            $distributionResults = [];
-            $successCount = 0;
-            $failCount = 0;
-
-            foreach ($instructorsRevenue as $revenue) {
-                $course = Course::with('instructors.user')->find($revenue->course_id);
-                
-                if (!$course) {
-                    Log::warning("⚠️ Course not found: {$revenue->course_id}");
-                    continue;
-                }
-                 Log::warning("⚠️ course: {$course}");
-                $instructor = $course->instructors;
-                
-                if (!$instructor) {
-                    Log::warning("⚠️ No instructors found for course: {$course->title}");
-                    continue;
-                }
-
-                // Tính tiền cho instructor
-                $instructorAmount = ($revenue->total_amount * 0.7); // Chỉ có 1 instructor
-
-                $revenueDistribution = RevenueDistribution::create([
-                    'revenue_session_id' => $session->id,
-                    'instructor_id' => $instructor->id,
-                    'course_id' => $revenue->course_id,
-                    'instructor_share' => $instructorAmount,
-                    'status' => 'pending',
-                ]);
-
-                $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $instructorAmount, $revenueDistribution);
-
-                $distributionResults[] = [
-                    'instructor_id' => $instructor->id,
-                    'instructor_name' => $instructor->name,
-                    'course_title' => $course->title,
-                    'amount_vnd' => $instructorAmount,
-                    'amount_usd' => $instructorAmount ,
-                    'paypal_email' => $instructor->user->email ?? null,
-                    'success' => $payoutResult['success'],
-                    'message' => $payoutResult['message'],
-                    'batch_id' => $payoutResult['batch_id'] ?? null
-                ];
-
-                if ($payoutResult['success']) {
-                    $successCount++;
-                } else {
-                    $failCount++;
-                }
-            }
-
-            // Gửi tiền cho Admin
-            $adminPayoutResult = $this->sendPayPalPayoutToAdmin($adminShare, $session);
-
-            // Cập nhật trạng thái session
-            $finalStatus = ($failCount === 0) ? 'distributed' : 'partially_distributed';
-            $session->update(['status' => $finalStatus]);
-
-            DB::commit();
-
-            Log::info("✅ Revenue distribution completed for session {$sessionId}", [
-                'success_count' => $successCount,
-                'fail_count' => $failCount,
-                'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Revenue distribution completed',
-                'data' => [
-                    'session' => $session->fresh(),
-                    'distribution_summary' => [
-                        'total_instructors' => $successCount + $failCount,
-                        'successful_payouts' => $successCount,
-                        'failed_payouts' => $failCount,
-                        'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
-                    ],
-                    'distribution_details' => $distributionResults,
-                    'admin_payout' => [
-                        'amount_usd' =>$adminShare +'USD',
-                        'success' => $adminPayoutResult['success'],
-                        'message' => $adminPayoutResult['message']
-                    ]
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('💥 Revenue distribution failed', [
-                'session_id' => $sessionId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+        if (!$this->paypalService->testConnection()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to distribute revenue',
-                'error' => $e->getMessage()
+                'message' => 'PayPal connection failed. Cannot proceed with revenue distribution.'
             ], 500);
         }
+
+        $payments = Payment::where('revenue_session_id', $session->id)
+            ->whereIn('status', ['completed', 'refunded'])
+            ->get();
+
+        if ($payments->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No revenue to distribute'
+            ], 400);
+        }
+
+        $distributionByInstructor = [];
+        $totalAdminShare = 0;
+
+        foreach ($payments as $payment) {
+            $course = Course::with('instructors.user')->find($payment->course_id);
+            $instructor = $course?->instructors?->first();
+
+            if (!$instructor) {
+                Log::warning("⚠️ No instructor for course {$payment->course_id}");
+                continue;
+            }
+
+            $amount = $payment->status === 'refunded' ? -$payment->amount : $payment->amount;
+
+            // Theo chính sách Udemy
+            if ($payment->coupon_id !== null) {
+                $instructorShare = $amount * 0.97;
+                $adminShare = $amount * 0.03;
+            } else {
+                $instructorShare = $amount * 0.37;
+                $adminShare = $amount * 0.63;
+            }
+
+            $totalAdminShare += $adminShare;
+
+            if (!isset($distributionByInstructor[$instructor->id])) {
+                $distributionByInstructor[$instructor->id] = [
+                    'instructor' => $instructor,
+                    'amount' => 0,
+                    'courses' => []
+                ];
+            }
+
+            $distributionByInstructor[$instructor->id]['amount'] += $instructorShare;
+            $distributionByInstructor[$instructor->id]['courses'][] = [
+                'course_id' => $course->id,
+                'course_title' => $course->title,
+                'amount' => $instructorShare
+            ];
+        }
+
+        $successCount = 0;
+        $failCount = 0;
+        $distributionResults = [];
+
+        foreach ($distributionByInstructor as $instructorId => $info) {
+            $instructor = $info['instructor'];
+            $totalAmount = $info['amount'];
+            $revenueDistribution=new RevenueDistribution();
+            foreach ($info['courses'] as $courseInfo) {
+                $revenueDistribution=RevenueDistribution::create([
+                    'revenue_session_id' => $session->id,
+                    'instructor_id' => $instructorId,
+                    'course_id' => $courseInfo['course_id'],
+                    'instructor_share' => $courseInfo['amount'],
+                    'revenue_amount' => $courseInfo['amount'],
+                    'status' => 'pending',
+                ]);
+            }
+
+            $payoutResult = $this->sendPayPalPayoutToInstructor($instructor, $totalAmount,$revenueDistribution);
+
+            $distributionResults[] = [
+                'instructor_id' => $instructorId,
+                'instructor_name' => $instructor->user->fullname,
+                'amount_usd' => $totalAmount,
+                'paypal_email' => $instructor->email_paypal,
+                'success' => $payoutResult['success'],
+                'message' => $payoutResult['message'],
+                'batch_id' => $payoutResult['batch_id'] ?? null
+            ];
+
+            $payoutResult['success'] ? $successCount++ : $failCount++;
+        }
+
+        // Admin payout
+        $adminPayoutResult = $this->sendPayPalPayoutToAdmin($totalAdminShare, $session);
+
+        $session->update([
+            'status' => $failCount === 0 ? 'distributed' : 'partially_distributed'
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Revenue distribution completed',
+            'data' => [
+                'distribution_summary' => [
+                    'total_instructors' => $successCount + $failCount,
+                    'successful_payouts' => $successCount,
+                    'failed_payouts' => $failCount,
+                    'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
+                ],
+                'distribution_details' => $distributionResults,
+                'admin_payout' => [
+                    'amount_usd' => $totalAdminShare,
+                    'success' => $adminPayoutResult['success'],
+                    'message' => $adminPayoutResult['message']
+                ]
+            ]
+        ], 200);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        Log::error('💥 Revenue distribution failed', [
+            'session_id' => $sessionId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to distribute revenue',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * Gửi tiền PayPal cho instructor

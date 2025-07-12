@@ -210,8 +210,8 @@ class DistributeRevenueJob implements ShouldQueue
         }
 
         $totalRevenue = $payments->sum('amount');
-        $adminShare = $totalRevenue * 0.3;
-        $instructorShare = $totalRevenue * 0.7;
+        $adminShare = $totalRevenue * 0.1;
+        $instructorShare = $totalRevenue * 0.9;
 
         // Log::info("💵 Revenue breakdown for session {$session->id}:", [
         //     'total' => number_format($totalRevenue, 2) . ' VND',

@@ -11,7 +11,7 @@ class Course extends Model
     use HasFactory, SoftDeletes;
     protected $table = 'courses';
     protected $primaryKey = 'id';
-    protected $fillable = ['id','instructor_id',
+    protected $fillable = ['instructor_id',
         'course_name', 'difficulty_level', 'course_rating',
         'course_url','image', 'price','skills','course_description','status','is_certificate_enabled'
     ];
@@ -27,14 +27,14 @@ class Course extends Model
         $this->attributes['course_name'] = $value;
         $this->attributes['course_url'] = Str::slug($value);
     }
-    public function origin()
-    {
-        return $this->belongsTo(Course::class, 'origin_id');
-    }
-    public function derivedCourses()
-    {
-        return $this->hasMany(Course::class, 'origin_id');
-    }
+    // public function origin()
+    // {
+    //     return $this->belongsTo(Course::class, 'origin_id');
+    // }
+    // public function derivedCourses()
+    // {
+    //     return $this->hasMany(Course::class, 'origin_id');
+    // }
         // Accessor for full URL
     public function getFullCourseUrlAttribute()
     {

@@ -28,33 +28,7 @@ return new class extends Migration
             $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
         });
 
-        // Kiểm tra xem trigger đã tồn tại chưa trước khi tạo
-        $triggerExists = DB::select("
-            SELECT TRIGGER_NAME
-            FROM information_schema.TRIGGERS
-            WHERE TRIGGER_NAME = 'update_course_rating'
-            AND EVENT_OBJECT_TABLE = 'reviews'
-        ");
-
-        if (empty($triggerExists)) {
-            DB::unprepared('
-                DELIMITER $$
-                CREATE TRIGGER update_course_rating
-                AFTER INSERT ON reviews
-                FOR EACH ROW
-                BEGIN
-                    UPDATE courses
-                    SET course_rating = (
-                        SELECT AVG(rating)
-                        FROM reviews
-                        WHERE course_id = NEW.course_id
-                        AND deleted_at IS NULL
-                    )
-                    WHERE id = NEW.course_id;
-                END$$
-                DELIMITER ;
-            ');
-        }
+     
     }
 
     /**
@@ -64,9 +38,6 @@ return new class extends Migration
      */
     public function down()
     {
-        // Xóa trigger nếu tồn tại
-        DB::unprepared('DROP TRIGGER IF EXISTS update_course_rating');
-
         // Xóa bảng reviews
         Schema::dropIfExists('reviews');
     }

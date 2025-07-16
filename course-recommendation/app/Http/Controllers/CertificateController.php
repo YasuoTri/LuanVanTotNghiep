@@ -479,7 +479,7 @@ public function destroy($id): JsonResponse
             'enrollment_id' => $enrollment->id,
         ],
         [
-            'instructor_id' => Course::find($courseId)->instructor_id,
+            // 'instructor_id' => Course::find($courseId)->instructor_id,
             'certificate_code' => strtoupper(Str::random(12)),
             'download_url' => $uploadResult['secure_url'] ?? null,
         ]

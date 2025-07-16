@@ -208,17 +208,69 @@ class AuthController extends Controller
     //         'error' => 'The provided credentials do not match our records.',
     //     ], 401);
     // }
+    // public function login(Request $request)
+    // {
+    //     // Validate input
+    //     $credentials = $request->validate([
+    //         'email' => 'required|email',
+    //         'password' => 'required',
+    //     ]);
+
+    //     try {
+    //         // Attempt authentication
+    //         if (!Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+    //             return response()->json([
+    //                 'error' => 'The provided credentials do not match our records.',
+    //             ], 401);
+    //         }
+    //         $user = Auth::user();
+    //         // Generate JWT token
+    //     try {
+    //         $token = JWTAuth::fromUser($user);
+    //     } catch (\Exception $e) {
+    //         dd('JWT ERROR', $e->getMessage(), $user);
+    //     }
+    //     $token = JWTAuth::fromUser($user); 
+
+    //         // Create JWT cookie
+    //         $cookie = cookie(
+    //             'jwt_token',
+    //             $token,
+    //             60, // 60 minutes
+    //             '/',
+    //             null,
+    //             true, // secure
+    //             true, // httpOnly
+    //             false,
+    //             'Strict'
+    //         );
+
+    //         return response()->json([
+    //             'message' => 'Login successful',
+    //             'token' => $token,
+    //             'user' => $user,
+    //         ])->withCookie($cookie);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error in login: ' . $e->getMessage());
+    //         return response()->json([
+    //             'error' => 'An error occurred during login. Please try again.',
+    //         ], 500);
+    //     }
+    // }
     public function login(Request $request)
     {
         // Validate input
         $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'required|string', // Accept either email or username
+            'password' => 'required|string',
         ]);
 
         try {
+            // Determine if the login input is an email or username
+            $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
             // Attempt authentication
-            if (!Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
+            if (!Auth::attempt([$loginField => $credentials['email'], 'password' => $credentials['password']])) {
                 return response()->json([
                     'error' => 'The provided credentials do not match our records.',
                 ], 401);
@@ -226,16 +278,15 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-  
-
-
             // Generate JWT token
-        try {
-            $token = JWTAuth::fromUser($user);
-        } catch (\Exception $e) {
-            dd('JWT ERROR', $e->getMessage(), $user);
-        }
-        $token = JWTAuth::fromUser($user); 
+            try {
+                $token = JWTAuth::fromUser($user);
+            } catch (\Exception $e) {
+                Log::error('JWT Error: ' . $e->getMessage());
+                return response()->json([
+                    'error' => 'Could not create token. Please try again.',
+                ], 500);
+            }
 
             // Create JWT cookie
             $cookie = cookie(

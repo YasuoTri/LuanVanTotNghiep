@@ -32,14 +32,25 @@ class RevenueDistribution extends Model
         return $this->belongsTo(RevenueSession::class, 'revenue_session_id');
     }
 
-    /**
-     * Quan hệ: Một RevenueDistribution thuộc về một Instructor.
-     *
-     * @return BelongsTo
-     */
-    public function instructor(): BelongsTo
+    // /**
+    //  * Quan hệ: Một RevenueDistribution thuộc về một Instructor.
+    //  *
+    //  * @return BelongsTo
+    //  */
+    // public function instructor(): BelongsTo
+    // {
+    //     return $this->belongsTo(Instructors::class, 'instructor_id');
+    // }
+       public function instructor()
     {
-        return $this->belongsTo(Instructors::class, 'instructor_id');
+        return $this->hasOneThrough(
+            Instructors::class, // Model đích
+            Course::class,      // Model trung gian
+            'id',               // Khóa ngoại trên bảng trung gian (courses.id)
+            'id',               // Khóa chính trên bảng đích (instructors.id)
+            'course_id',        // Khóa ngoại trên bảng hiện tại (revenue_distributions.course_id)
+            'instructor_id'     // Khóa ngoại trên bảng trung gian (courses.instructor_id)
+        );
     }
 
     /**

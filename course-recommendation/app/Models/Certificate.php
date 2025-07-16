@@ -12,7 +12,6 @@ class Certificate extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = [
-        'instructor_id',
         'enrollment_id',
         'certificate_code',
         'issued_at',
@@ -64,8 +63,20 @@ class Certificate extends Model
     {
         return $this->belongsTo(Enrollment::class, 'enrollment_id');
     }
-    public function instructor()
+    // public function instructor()
+    // {
+    //     return $this->belongsTo(Instructors::class, 'instructor_id');
+    // }
+     public function instructor()
     {
-        return $this->belongsTo(Instructors::class, 'instructor_id');
+        return $this->hasOneThrough(
+            Instructors::class, // Model đích
+            Course::class, // Model trung gian
+            'id', // Khóa ngoại trên bảng trung gian (courses.id)
+            'id', // Khóa chính trên bảng đích (instructors.id)
+            'enrollment_id', // Khóa ngoại trên bảng hiện tại, thông qua enrollment đến course
+            'instructor_id' // Khóa ngoại trên bảng trung gian liên kết với bảng đích (courses.instructor_id)
+        )->join('enrollments', 'enrollments.course_id', '=', 'courses.id')
+         ->whereColumn('enrollments.id', '=', 'certificates.enrollment_id');
     }
 }

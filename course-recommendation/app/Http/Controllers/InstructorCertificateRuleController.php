@@ -29,7 +29,6 @@ public function store(Request $request)
     $rule = CertificateRule::updateOrCreate(
         ['course_id' => $request->course_id],
         [
-            'instructor_id' => $user->instructor->id,
             'lesson_completion_percent' => $request->lesson_completion_percent,
             'lesson_version_rule' => $request->lesson_version_rule,
             'quiz_min_score' => $request->quiz_min_score,

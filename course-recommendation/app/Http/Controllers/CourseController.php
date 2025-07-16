@@ -2040,4 +2040,43 @@ public function refundCourseFromInstructor(Request $request): JsonResponse
             ], 500);
         }
     }
+
+     public function getCoursesByInstructor(Request $request): JsonResponse
+    {
+        try {
+            $instructorId=Auth::user()->instructor->id;
+            // Query courses for the instructor, excluding banned status
+            $courses = Course::where('instructor_id',$instructorId )
+                ->where('status', '!=', 'banned')
+                ->select([
+                    'id',
+                    'course_name',
+                    'difficulty_level',
+                    'course_rating',
+                    'course_url',
+                    'image',
+                    'course_description',
+                    'price',
+                    'skills',
+                    'status',
+                    'is_certificate_enabled',
+                    'created_at',
+                    'updated_at'
+                ])
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $courses,
+                'message' => 'Courses retrieved successfully'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while retrieving courses',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

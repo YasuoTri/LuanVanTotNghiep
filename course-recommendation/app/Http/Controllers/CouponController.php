@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Coupon;
 use App\Models\Course;
 use App\Models\Payment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class CouponController extends Controller
 {
@@ -110,5 +112,53 @@ class CouponController extends Controller
 
     return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);
 }
+public function getCouponsByCourse(Request $request, $course_id)
+    {
+    $user = Auth::user();
+    $isCourseOwn=$user->instructor->courses->contains('id', $course_id);
+    if (!$isCourseOwn) {
+        return response()->json(['message' => 'You do not have permission to access this course.'], 403);
+    }
+        try {
+            // Get current date for checking coupon validity
+            $currentDate = Carbon::now();
 
+            // Query active coupons for the course
+            $coupons = Coupon::where('course_id', $course_id)
+                ->where('is_active', 1)
+                ->where(function ($query) use ($currentDate) {
+                    $query->whereNull('start_date')
+                        ->orWhere('start_date', '<=', $currentDate);
+                })
+                ->where(function ($query) use ($currentDate) {
+                    $query->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $currentDate);
+                })
+                ->where(function ($query) {
+                    $query->whereNull('usage_limit')
+                        ->orWhereRaw('used_count < usage_limit');
+                })
+                ->select([
+                    'id',
+                    'code',
+                    'discount_type',
+                    'discount_value',
+                    'min_order',
+                    'start_date',
+                    'end_date',
+                    'usage_limit',
+                    'used_count'
+                ])
+                ->paginate(10);
+
+            return response()->json($coupons, 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while retrieving coupons',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -77,6 +77,7 @@ class CouponController extends Controller
     // Kiểm tra course có thuộc instructor không
     $course = Course::where('id', $request->course_id)
         ->where('instructor_id', $user->instructor->id)
+        ->where('status','!=','banned')
         ->first();
 
     if (!$course) {

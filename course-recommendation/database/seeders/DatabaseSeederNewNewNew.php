@@ -422,9 +422,7 @@ class DatabaseSeederNewNewNew extends Seeder
             $course = Course::find($enrollment->course_id);
             if ($course->is_certificate_enabled) {
                 Certificate::create([
-                    'user_id' => $enrollment->user_id,
                     'instructor_id' => $course->instructor_id,
-                    'course_id' => $enrollment->course_id,
                     'enrollment_id' => $enrollment->id,
                     'certificate_code' => 'CERT-' . Str::random(10),
                     'issued_at' => now()->subDays(rand(1, 5)),
@@ -446,7 +444,6 @@ class DatabaseSeederNewNewNew extends Seeder
         foreach ($courses as $course) {
             CertificateRule::create([
                 'course_id' => $course->id,
-                'instructor_id' => $course->instructor_id,
                 'lesson_completion_percent' => rand(70, 100),
                 'lesson_version_rule' => collect(['latest', 'any'])->random(),
                 'quiz_min_score' => rand(60, 80),

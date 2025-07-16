@@ -224,7 +224,6 @@ public function getInstructorCourses(Request $request,$instructorId)
             'users.gender',
             'users.avatar',
             'users.role',
-            'users.status'
         )
         ->join('users', 'instructors.user_id', '=', 'users.id')
         ->where('instructors.id', $instructorId)
@@ -236,7 +235,7 @@ public function getInstructorCourses(Request $request,$instructorId)
                 'message' => 'Instructor not found.',
             ], 404);
         }
-
+        $instructor->status="active";
         // Lấy danh sách khóa học của instructor
         $courses = Course::select(
             'courses.id as course_id',

@@ -22,21 +22,21 @@ return new class extends Migration
             $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');
         });
 
-        // Tạo trigger
-        DB::unprepared('
-            CREATE TRIGGER update_course_rating
-            AFTER INSERT ON reviews
-            FOR EACH ROW
-            BEGIN
-                UPDATE courses
-                SET course_rating = (
-                    SELECT AVG(rating)
-                    FROM reviews
-                    WHERE course_id = NEW.course_id
-                )
-                WHERE id = NEW.course_id;
-            END
-        ');
+        // // Tạo trigger
+        // DB::unprepared('
+        //     CREATE TRIGGER update_course_rating
+        //     AFTER INSERT ON reviews
+        //     FOR EACH ROW
+        //     BEGIN
+        //         UPDATE courses
+        //         SET course_rating = (
+        //             SELECT AVG(rating)
+        //             FROM reviews
+        //             WHERE course_id = NEW.course_id
+        //         )
+        //         WHERE id = NEW.course_id;
+        //     END
+        // ');
     }
 
     public function down()

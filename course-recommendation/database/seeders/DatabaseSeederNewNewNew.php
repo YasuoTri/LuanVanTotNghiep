@@ -35,27 +35,27 @@ class DatabaseSeederNewNewNew extends Seeder
 {
     public function run(): void
     {
-        // $this->seedUsers();
-        // // $this->seedAdmins();
-        // $this->seedInstructors();
-        // $this->seedStudents();
-        // $this->seedCategories();
-        // $this->seedCourses();
-        // $this->seedStudentCategories();
-        // $this->seedLessons();
-        // $this->seedLessonProgress();
-        // $this->seedEnrollments();
-        // $this->seedCertificates();
-        // $this->seedCertificateRules();
-        // $this->seedCoupons();
-        // $this->seedPayments();
-        // // $this->seedAuditLogs();
-        // $this->seedRevenueSessions();
-        // $this->seedRevenueDistributions();
+        $this->seedUsers();
+        // $this->seedAdmins();
+        $this->seedInstructors();
+        $this->seedStudents();
+        $this->seedCategories();
+        $this->seedCourses();
+        $this->seedStudentCategories();
+        $this->seedLessons();
+        $this->seedLessonProgress();
+        $this->seedEnrollments();
+        $this->seedCertificates();
+        $this->seedCertificateRules();
+        $this->seedCoupons();
+        $this->seedPayments();
+        // $this->seedAuditLogs();
+        $this->seedRevenueSessions();
+        $this->seedRevenueDistributions();
   
-        // $this->seedQuizzes();
-        // $this->seedQuestions();
-        // $this->seedQuestionChoices();
+        $this->seedQuizzes();
+        $this->seedQuestions();
+        $this->seedQuestionChoices();
         $this->seedReviews();
         $this->seedReports();
     }

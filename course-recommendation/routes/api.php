@@ -136,6 +136,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(function () {
     // View Lesson Content (Preview Own Courses)
     Route::get('/instructor/courses/{course_id}/lessons', [LessonController::class, 'getCourseLessonsInstructor'])->name('lessons.getCourseLessonsInstructor');//xong
+    Route::get('/instructor/courses/{course_id}/trashed-lessons', [LessonController::class, 'getTrashedCourseLessonsInstructor'])->name('lessons.getTrashedCourseLessonsInstructor');
     Route::get('/instructor/courses/{course_id}/lessons/{lesson_id}', [LessonController::class, 'showForInstructor'])->name('lessons.showForInstructor');//xong
    
     Route::get('/instructor/allcourses', [CourseController::class, 'indexCourseInstructor']);//xong

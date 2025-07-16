@@ -14,7 +14,7 @@ class Enrollment extends Model
     public $timestamps = false;
     public $incrementing = true;
     protected $fillable = [
-        'user_id', 'course_id', 'enrolled_at', 'completed_at', 'status'
+        'user_id', 'course_id', 'enrolled_at', 'completed_at'
     ];
     protected $dates = ['deleted_at'];
     protected $casts = [
@@ -22,7 +22,6 @@ class Enrollment extends Model
         'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'status' => 'string',
     ];
 
     public function user()

@@ -1109,7 +1109,7 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
         // Nếu user là instructor của khóa học
         if ($isCourseOwner) {
             // Lấy tất cả bài học (bao gồm cả bài đã xóa mềm và is_visible = false)
-            $query->withTrashed();
+            // $query->withTrashed();
         } else {
             // Kiểm tra xem instructor có enrolled vào khóa học không
             $enrollment = Enrollment::where('user_id', $user->id)
@@ -1147,6 +1147,77 @@ public function getCourseLessonsInstructor(Request $request, $courseId): JsonRes
         ], 500);
     }
 }
+
+public function getTrashedCourseLessonsInstructor(Request $request, $courseId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Check if user is an instructor
+            if (!$user || $user->role !== 'instructor') {
+                return response()->json([
+                    'message' => 'Unauthorized. Only instructors can access this endpoint.'
+                ], 403);
+            }
+
+            // Check if instructor profile exists
+            $instructor = Instructors::where('user_id', $user->id)->first();
+            if (!$instructor) {
+                return response()->json([
+                    'message' => 'Instructor profile not found.'
+                ], 404);
+            }
+
+            // Check if course exists
+            $course = Course::findOrFail($courseId);
+
+            // Verify that the user is the instructor who owns the course
+            if ($course->instructor_id !== $instructor->id) {
+                return response()->json([
+                    'message' => 'Unauthorized. You are not the instructor of this course.'
+                ], 403);
+            }
+
+            // Build query for trashed lessons
+            $query = Lesson::onlyTrashed() // Only retrieve soft-deleted lessons
+                ->where('course_id', $courseId)
+                ->select(
+                    'id',
+                    'origin_id',
+                    'version',
+                    'course_id',
+                    'title',
+                    'video_url',
+                    'duration',
+                    'is_preview',
+                    'sort_order',
+                    'is_visible',
+                    'created_at',
+                    'updated_at',
+                    'deleted_at'
+                );
+
+            // Sort by sort_order ascending and version descending
+            $query->orderBy('sort_order', 'asc')
+                  ->orderBy('version', 'desc');
+
+            // Apply pagination
+            $lessons = $query->paginate(10);
+
+            return response()->json($lessons);
+        } catch (\Exception $e) {
+            Log::error('Get trashed course lessons for instructor error:', [
+                'course_id' => $courseId,
+                'user_id' => Auth::id(),
+                'message' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'An error occurred while retrieving the trashed lessons.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function search(Request $request)
     {

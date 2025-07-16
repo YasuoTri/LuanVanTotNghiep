@@ -14,11 +14,10 @@ class UpdateCertificateRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'sometimes|exists:users,id',
-            'course_id' => 'sometimes|exists:courses,id',
             'enrollment_id' => 'sometimes|exists:enrollments,id',
+            'instructor_id' => 'nullable|exists:instructors,id',
             'certificate_code' => 'sometimes|string|max:50|unique:certificates,certificate_code,' . $this->id,
-            'certificate_file' => 'sometimes|file|mimetypes:application/pdf|max:10240', // PDF tối đa 10MB
+            'download_url'=> 'nullable|string',
             'issued_at' => 'nullable|date',
         ];
     }

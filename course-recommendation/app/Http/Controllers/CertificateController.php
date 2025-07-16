@@ -415,9 +415,13 @@ public function destroy($id): JsonResponse
         ], 400);
     }
 
-    $existingCertificate = Certificate::where('user_id', $userId)
-        ->where('course_id', $courseId)
-        ->first();
+    $existingCertificate = Certificate::where('enrollment_id', function ($query) use ($userId, $courseId) {
+        $query->select('id')
+            ->from('enrollments')
+            ->where('user_id', $userId)
+            ->where('course_id', $courseId)
+            ->first();
+    })->first();
 
     if ($existingCertificate) {
         return response()->json([
@@ -457,13 +461,24 @@ public function destroy($id): JsonResponse
     $uploadResult = $cloudinaryService->upload($uploadedFile, 'certificates');
 
     // 5. Tạo chứng chỉ nếu chưa có
+    // $certificate = Certificate::firstOrCreate(
+    //     [
+    //         'user_id' => $userId,
+    //         'course_id' => $courseId,
+    //     ],
+    //     [
+    //         'enrollment_id' => $enrollment->id,
+    //         'instructor_id' => Course::find($courseId)->instructor_id,
+    //         'certificate_code' => strtoupper(Str::random(12)),
+    //         'download_url' => $uploadResult['secure_url'] ?? null,
+    //     ]
+    // );
+    $enrollment = Enrollment::where('user_id', $userId)->where('course_id', $courseId)->firstOrFail();
     $certificate = Certificate::firstOrCreate(
         [
-            'user_id' => $userId,
-            'course_id' => $courseId,
+            'enrollment_id' => $enrollment->id,
         ],
         [
-            'enrollment_id' => $enrollment->id,
             'instructor_id' => Course::find($courseId)->instructor_id,
             'certificate_code' => strtoupper(Str::random(12)),
             'download_url' => $uploadResult['secure_url'] ?? null,

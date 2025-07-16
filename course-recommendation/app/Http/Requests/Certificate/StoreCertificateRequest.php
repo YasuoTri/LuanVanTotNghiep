@@ -14,11 +14,10 @@ class StoreCertificateRequest extends FormRequest
     public function rules()
     {
         return [
-            'user_id' => 'required|exists:users,id',
-            'course_id' => 'required|exists:courses,id',
             'enrollment_id' => 'required|exists:enrollments,id',
+            'instructor_id' => 'nullable|exists:instructors,id',
             'certificate_code' => 'required|string|max:50|unique:certificates,certificate_code',
-            'certificate_file' => 'required|file|mimetypes:application/pdf|max:10240', // PDF tối đa 10MB
+            'download_url'=> 'nullable|string',
             'issued_at' => 'nullable|date',
         ];
     }

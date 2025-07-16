@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Quiz\StoreQuizRequest;
 use App\Http\Requests\Quiz\UpdateQuizRequest;
+use App\Models\CertificateRule;
 use App\Models\Course;
 use App\Models\Quiz;
 use Illuminate\Http\JsonResponse;
@@ -683,17 +684,27 @@ public function saveDraftAnswers(Request $request, $quiz_id): JsonResponse
 
     // Save draft answers
     foreach ($validated['answers'] as $answer) {
-        UserAnswer::updateOrCreate(
+        // UserAnswer::updateOrCreate(
+        //     [
+        //         'user_id' => $user->id,
+        //         'quiz_result_id' => $quizResult->id,
+        //         'question_id' => $answer['question_id'],
+        //     ],
+        //     [
+        //         'choice_id' => $answer['choice_id'] ?? null,
+        //         'answer_text' => $answer['answer_text'] ?? null,
+        //         'is_correct' => null,
+        //         'points_earned' => null,
+        //     ]
+        // );
+            UserAnswer::updateOrCreate(
             [
-                'user_id' => $user->id,
                 'quiz_result_id' => $quizResult->id,
                 'question_id' => $answer['question_id'],
             ],
             [
                 'choice_id' => $answer['choice_id'] ?? null,
-                'answer_text' => $answer['answer_text'] ?? null,
                 'is_correct' => null,
-                'points_earned' => null,
             ]
         );
     }
@@ -1383,7 +1394,6 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
                 // Lưu câu trả lời của người dùng
                 foreach (collect($answers[$question->id]) as $choiceId) {
                     UserAnswer::create([
-                        'user_id' => $user->id,
                         'quiz_result_id' => $quizResult->id,
                         'question_id' => $question->id,
                         'choice_id' => $choiceId,
@@ -1850,7 +1860,6 @@ private function buildQuizSummary(int $totalQuestions, int $score, float $percen
             }
 
             UserAnswer::create([
-                'user_id' => $user->id,
                 'quiz_result_id' => $quizResult->id,
                 'question_id' => $answer['question_id'],
                 'choice_id' => $answer['choice_id'] ?? null,
@@ -2332,7 +2341,7 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
             ->get(['id', 'origin_id', 'version', 'title', 'max_attempts', 'time_limit', 'is_visible', 'created_at', 'updated_at']);
 
         // 👉 Truy xuất quiz_min_score nếu có từ bảng certificate_rules
-        $certificateRule = \App\Models\CertificateRule::where('course_id', $course->id)->first();
+        $certificateRule = CertificateRule::where('course_id', $course->id)->first();
         $quizMinScore = $certificateRule ? $certificateRule->quiz_min_score : 70;
 
         $results = $quizzes->map(function ($quiz) use ($user, $quizMinScore) {
@@ -2494,7 +2503,7 @@ public function showAnalyticOfQuiz($quizId)
             $incorrectAnswers = $totalAnswers - $correctAnswers;
 
             $choiceStats = $question->choices->map(function ($choice) use ($question, $totalAnswers) {
-                $count = \App\Models\UserAnswer::where('question_id', $question->id)
+                $count = UserAnswer::where('question_id', $question->id)
                     ->where('choice_id', $choice->id)
                     ->count();
 

@@ -57,9 +57,20 @@ public function categories()
         return $this->hasMany(Enrollment::class, 'course_id');
     }
 
+    // public function certificates()
+    // {
+    //     return $this->hasMany(Certificate::class, 'course_id');
+    // }
     public function certificates()
     {
-        return $this->hasMany(Certificate::class, 'course_id');
+        return $this->hasManyThrough(
+            Certificate::class,
+            Enrollment::class,
+            'course_id', // Khóa ngoại trong bảng enrollments
+            'enrollment_id', // Khóa ngoại trong bảng certificates
+            'id', // Khóa chính của Course
+            'id' // Khóa chính của Enrollment
+        );
     }
 
     public function forumPosts()

@@ -155,5 +155,5 @@ public function getSubcategories()
         return response()->json(['message' => 'Category deleted successfully']);
     }
     
-    //
+
 }

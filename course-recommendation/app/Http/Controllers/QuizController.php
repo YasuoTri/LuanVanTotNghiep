@@ -1235,6 +1235,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
 //         ]
 //     ], 201);
 // }
+
 public function submitQuiz(Request $request, int $quizId): JsonResponse
 {
     try {

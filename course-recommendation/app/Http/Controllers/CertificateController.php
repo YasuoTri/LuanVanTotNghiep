@@ -6,6 +6,7 @@ use App\Http\Requests\Certificate\StoreCertificateRequest;
 use App\Http\Requests\Certificate\UpdateCertificateRequest;
 use App\Mail\CertificateIssuedMail;
 use App\Models\Certificate;
+use App\Services\CertificateEligibilityChecker;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Models\CertificateRule;
@@ -28,7 +29,9 @@ use Cloudinary\Cloudinary as CloudinaryCloudinary;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Facades\Image;
 
 class CertificateController extends Controller
 {
@@ -288,215 +291,6 @@ public function destroy($id): JsonResponse
 //         'certificate_url' => $certificate->download_url
 //     ]);
 // }
-
-    public function issueCertificate($courseId, $userId)
-{
-    $rule = CertificateRule::where('course_id', $courseId)->first();
-    if ($rule) {
-        $lessonPercentRequired = $rule->lesson_completion_percent;
-        $lessonVersionRule = $rule->lesson_version_rule;
-        $quizMinScore = $rule->quiz_min_score;
-        $quizVersionRule = $rule->quiz_version_rule;
-    } else {
-        $lessonPercentRequired = 100;
-        $lessonVersionRule = 'latest';
-        $quizMinScore = 70;
-        $quizVersionRule = 'latest';
-    }
-    // 1. Lấy tất cả lesson gốc trong course
-    $lessonGroups = Lesson::where('course_id', $courseId)
-    ->selectRaw('DISTINCT COALESCE(origin_id, id) as origin_id')
-    ->pluck('origin_id');
-
-
-    $missingLessons = [];
-    $totalLessons = count($lessonGroups);
-    $completedLessons = 0;
-
-    foreach ($lessonGroups as $originId) {
-    $lessonQuery = Lesson::where(function ($q) use ($originId) {
-        $q->where('origin_id', $originId)
-          ->orWhere('id', $originId);
-    });
-
-    if ($lessonVersionRule === 'latest') {
-        $lessonQuery->orderByDesc('version')->limit(1);
-    }
-
-    $lessons = $lessonQuery->get();
-
-    $isCompleted = LessonProgress::where('user_id', $userId)
-        ->whereIn('lesson_id', $lessons->pluck('id'))
-        ->where('status', 'completed')
-        ->exists();
-
-    if ($isCompleted) {
-        $completedLessons++;
-    } else {
-        $missingLessons[] = [
-            'lesson_group' => $originId,
-            'message' => 'Learner has not completed the lesson group.'
-        ];
-    }
-}
-    $lessonPercent = $totalLessons > 0 ? round($completedLessons * 100 / $totalLessons, 2) : 0;
-
-    if ($lessonPercent < $lessonPercentRequired) {
-        return response()->json([
-            'eligible' => false,
-            'missing_lessons' => $missingLessons,
-            'missing_quizzes' => [],
-            'message' => "You havent completed at least {$lessonPercentRequired}% lesson."
-        ], 400);
-    }
-
-    // 2. Lấy tất cả quiz gốc trong course
-    $lessonIds = Lesson::where('course_id', $courseId)->pluck('id');
-
-    $quizGroups = Quiz::whereIn('lesson_id', $lessonIds)
-        ->selectRaw('DISTINCT COALESCE(origin_id, id) as origin_id')
-        ->pluck('origin_id');
-
-    $missingQuizzes = [];
-
-    foreach ($quizGroups as $originId) {
-    $quizQuery = Quiz::where(function ($q) use ($originId) {
-        $q->where('origin_id', $originId)
-          ->orWhere('id', $originId);
-    });
-
-    if ($quizVersionRule === 'latest') {
-        $quizQuery->orderByDesc('version')->limit(1);
-    }
-
-    $quizzes = $quizQuery->get();
-
-    $hasPassed = QuizResult::whereIn('quiz_id', $quizzes->pluck('id'))
-        ->where('user_id', $userId)
-        ->where('score', '>=', $quizMinScore)
-        ->exists();
-
-        if (!$hasPassed) {
-            $missingQuizzes[] = [
-                'quiz_group' => $originId,
-                'message' => "Learner havent completed the quiz with at least {$quizMinScore}."
-            ];
-        }
-    }
-
-
-    if (!empty($missingQuizzes)) {
-        return response()->json([
-            'eligible' => false,
-            'missing_lessons' => [],
-            'missing_quizzes' => $missingQuizzes,
-            'message' => 'He has not completed the condition to issue the certificate.'
-        ], 400);
-    }
-
-    // 3. Trả về nếu còn thiếu
-    if (!empty($missingLessons) || !empty($missingQuizzes)) {
-        return response()->json([
-            'eligible' => false,
-            'missing_lessons' => $missingLessons,
-            'missing_quizzes' => $missingQuizzes,
-            'message' => 'He has not completed the condition to issue the certificate.'
-        ], 400);
-    }
-
-    // 4. Kiểm tra enrollment
-    $enrollment = Enrollment::where('user_id', $userId)
-        ->where('course_id', $courseId)
-        ->first();
-
-    if (!$enrollment) {
-        return response()->json([
-            'eligible' => false,
-            'message' => 'You have not registered for this course.'
-        ], 400);
-    }
-
-    $existingCertificate = Certificate::where('enrollment_id', function ($query) use ($userId, $courseId) {
-        $query->select('id')
-            ->from('enrollments')
-            ->where('user_id', $userId)
-            ->where('course_id', $courseId)
-            ->first();
-    })->first();
-
-    if ($existingCertificate) {
-        return response()->json([
-            'eligible' => true,
-            'message' => 'You already have a certificate for this course.',
-            'certificate_url' => $existingCertificate->download_url
-        ]);
-    }
-    $course = Course::findOrFail($courseId);
-    $user = User::findOrFail($userId);
-    $instructor = $course->instructor;
-    $instructor_fullname=User::findOrFail($course->instructor->user_id);
-    $pdf = Pdf::loadView('certificate', [
-    'student_name' => $user->fullname,
-    'course_name' => $course->course_name,
-    'instructor_name' => $instructor_fullname ?? 'N/A',
-    'instructor' => $instructor ?? 'N/A',
-    'issued_at' => now()->format('d/m/Y'),
-    'signature_url' => $instructor->signature_url ?? public_path('signatures/default.png')
-]);
-
-    // 2. Lưu file tạm
-     $pdfPath = storage_path("app/certificates/certificate_{$userId}_{$courseId}.pdf");
-
-    $uploadedFile = new UploadedFile(
-        $pdfPath,
-        basename($pdfPath),
-        'application/pdf',
-        null,
-        true
-    );
-
-    $pdf->save($pdfPath);
-    $cloudinaryService=new CloudinaryCloudinary();
-    // 3. Upload lên Cloudinary
-    $cloudinaryService = new CloudinaryService($cloudinaryService);
-    $uploadResult = $cloudinaryService->upload($uploadedFile, 'certificates');
-
-    // 5. Tạo chứng chỉ nếu chưa có
-    // $certificate = Certificate::firstOrCreate(
-    //     [
-    //         'user_id' => $userId,
-    //         'course_id' => $courseId,
-    //     ],
-    //     [
-    //         'enrollment_id' => $enrollment->id,
-    //         'instructor_id' => Course::find($courseId)->instructor_id,
-    //         'certificate_code' => strtoupper(Str::random(12)),
-    //         'download_url' => $uploadResult['secure_url'] ?? null,
-    //     ]
-    // );
-    $enrollment = Enrollment::where('user_id', $userId)->where('course_id', $courseId)->firstOrFail();
-    $certificate = Certificate::firstOrCreate(
-        [
-            'enrollment_id' => $enrollment->id,
-        ],
-        [
-            // 'instructor_id' => Course::find($courseId)->instructor_id,
-            'certificate_code' => strtoupper(Str::random(12)),
-            'download_url' => $uploadResult['secure_url'] ?? null,
-        ]
-    );
-    Mail::to($certificate->user->email)
-     ->send(new CertificateIssuedMail($certificate));
-     // 6. Xoá file tạm
-    if (file_exists($pdfPath)) {
-        unlink($pdfPath);
-    }
-    return response()->json([
-        'eligible' => true,
-        'message' => 'Certificate issued successfully.',
-        'certificate_url' => $certificate->download_url
-    ]);
-}
 public function instructorIssue(Request $request)
 {
     $request->validate([
@@ -630,128 +424,278 @@ public function instructorIssue(Request $request)
 //             ], 500);
 //         }
 //     }
-public function getCourseProgress(Request $request, int $courseId): JsonResponse
+ 
+public function issueCertificate(int $courseId, int $userId): JsonResponse
 {
+    DB::beginTransaction();
     try {
-        // 1. Lấy course
-        $course = Course::findOrFail($courseId);
-
-        // 2. Lấy enrollments kèm user
-        $enrollments = Enrollment::where('course_id', $courseId)
-            ->with('user')
-            ->get();
-
-        if ($enrollments->isEmpty()) {
+        // 1. Check enrollment
+        $enrollment = Enrollment::where('user_id', $userId)
+            ->where('course_id', $courseId)
+            ->first();
+        if (!$enrollment) {
             return response()->json([
-                'message' => 'Don’t have any users enrolled in this course',
-                'data' => []
+                'eligible' => false,
+                'message' => "User ID {$userId} is not enrolled in course ID {$courseId}."
+            ], 400);
+        }
+
+        // 2. Check eligibility
+        $checker = new CertificateEligibilityChecker($courseId, $userId);
+        $result = $checker->check();
+
+        if (!$result['eligible']) {
+            return response()->json([
+                'eligible' => false,
+                'missing_lessons' => $result['missingLessons'],
+                'missing_quizzes' => $result['missingQuizzes'],
+                'message' => 'You have not met the requirements to issue the certificate.'
+            ], 400);
+        }
+
+        // 3. Check existing certificate
+        $certificate = Certificate::where('enrollment_id', $enrollment->id)->first();
+        if ($certificate && $certificate->download_url) {
+            DB::commit();
+            return response()->json([
+                'eligible' => true,
+                'message' => 'Certificate already issued for this course.',
+                'certificate_url' => $certificate->download_url
             ], 200);
         }
 
-        // 3. Lesson & quiz chỉ visible
-        $visibleLessonIds = Lesson::where('course_id', $courseId)
-            ->where('is_visible', true)
-            ->pluck('id');
-        $totalLessons = $visibleLessonIds->count();
+        // 4. Get user and course details
+        $user = User::findOrFail($userId);
+        $course = Course::findOrFail($courseId);
 
-        $visibleQuizIds = Quiz::whereIn('lesson_id', $visibleLessonIds)
-            ->where('is_visible', true)
-            ->pluck('id');
-        $quizzes = Quiz::whereIn('id', $visibleQuizIds)
-            ->get()
-            ->keyBy('id');
+        // // 5. Generate certificate image
+        // $certificateCode = strtoupper(Str::random(12));
+        // $fileName = "certificate_{$userId}_{$courseId}_{$certificateCode}.png";
 
-        // 4. Quy tắc cấp certificate
-        $certificateRule = CertificateRule::where('course_id', $courseId)->first();
+        // // Check template existence
+        // $templatePath = public_path('templates/certificate_template.png');
+        // Log::info('Checking template path: ' . $templatePath);
+        // if (!file_exists($templatePath)) {
+        //     throw new \Exception('Certificate template not found at: ' . $templatePath);
+        // }
 
-        $results = [];
-        foreach ($enrollments as $enrollment) {
-            $user = $enrollment->user;
+        // // Check font existence
+        // $fontPath = public_path('fonts/arial.ttf');
+        // Log::info('Checking font path: ' . $fontPath);
+        // if (!file_exists($fontPath)) {
+        //     throw new \Exception('Font file not found at: ' . $fontPath);
+        // }
 
-            // 5. Tính lesson completion
-            $completedLessons = LessonProgress::where('user_id', $user->id)
-                ->whereIn('lesson_id', $visibleLessonIds)
-                ->where('status', 'completed')
-                ->count();
-            $lessonCompletionPercent = $totalLessons > 0
-                ? round(($completedLessons / $totalLessons) * 100, 2)
-                : 0;
+        // // Load template and add text
+        // Log::info('Creating image with Intervention\Image');
+     
+        // $image =Image::make($templatePath);
+        // // Add dynamic text (e.g., user name, course name, date)
+        // $image->text($user->name, 300, 400, function ($font) use ($fontPath) {
+        //     $font->file($fontPath);
+        //     $font->size(40);
+        //     $font->color('#000000');
+        //     $font->align('center');
+        //     $font->valign('middle');
+        // });
 
-            // 6. Lấy tất cả quizResult của user cho các quiz visible
-            $allQuizResults = QuizResult::where('user_id', $user->id)
-                ->whereIn('quiz_id', $visibleQuizIds)
-                ->get();
+        // $image->text($course->title, 300, 500, function ($font) use ($fontPath) {
+        //     $font->file($fontPath);
+        //     $font->size(30);
+        //     $font->color('#000000');
+        //     $font->align('center');
+        //     $font->valign('middle');
+        // });
 
-            // 7. Xác định quiz nào đã pass ít nhất 1 lần
-            $passedQuizIds = $allQuizResults
-                ->filter(fn($qr) => 
-                    $certificateRule
-                    && $qr->score >= $certificateRule->quiz_min_score
-                )
-                ->pluck('quiz_id')
-                ->unique();
+        // $image->text(now()->format('d/m/Y'), 300, 600, function ($font) use ($fontPath) {
+        //     $font->file($fontPath);
+        //     $font->size(20);
+        //     $font->color('#000000');
+        //     $font->align('center');
+        //     $font->valign('middle');
+        // });
 
-            // 8. Chuẩn bị kết quả chi tiết cho từng quiz
-            $quizResults = collect($visibleQuizIds)->map(function($quizId) use ($quizzes, $allQuizResults, $passedQuizIds) {
-                $latestAttempt = $allQuizResults
-                    ->where('quiz_id', $quizId)
-                    ->sortByDesc('completed_at')
-                    ->first();
+        // // Save image to temporary file
+        // $tempPath = sys_get_temp_dir() . '/' . $fileName;
+        // Log::info('Saving temporary image to: ' . $tempPath);
+        // $image->save($tempPath);
 
-                return [
-                    'quiz_id'      => $quizId,
-                    'quiz_title'   => $quizzes[$quizId]->title,
-                    'score'        => $latestAttempt?->score,
-                    'is_passed'    => $passedQuizIds->contains($quizId),
-                    'completed_at' => $latestAttempt?->completed_at?->toISOString(),
-                ];
-            })->toArray();
+        // // Convert to UploadedFile
+        // $uploadedFile = new UploadedFile(
+        //     $tempPath,
+        //     $fileName,
+        //     'image/png',
+        //     null,
+        //     true
+        // );
 
-            // 9. Tính eligibility
-            $isEligibleForCertificate = false;
-            if ($certificateRule) {
-                $meetsLessonRequirement = $lessonCompletionPercent >= $certificateRule->lesson_completion_percent;
-                $allQuizzesPassed = collect($visibleQuizIds)
-                    ->every(fn($id) => $passedQuizIds->contains($id));
+        // // 6. Upload to Cloudinary
+        // Log::info('Uploading to Cloudinary');
+        // $downloadUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'certificates');
 
-                $isEligibleForCertificate = $meetsLessonRequirement && $allQuizzesPassed;
+        // // Delete temporary file
+        // Log::info('Deleting temporary file: ' . $tempPath);
+        // unlink($tempPath);
+
+        // 7. Create or update certificate
+        $certificate = Certificate::firstOrCreate(
+            ['enrollment_id' => $enrollment->id],
+            [
+                'certificate_code' => $certificateCode??random_int(100000, 999999),
+                'download_url' => $downloadUrl??"",
+                'created_at' => now()
+            ]
+        );
+
+        // 8. Send email
+        try {
+            if ($user->email) {
+                Log::info('Sending certificate email to: ' . $user->email);
+                Mail::to($user->email)->send(new CertificateIssuedMail($certificate));
+            } else {
+                Log::warning("No email provided for user ID {$userId}. Certificate email not sent.");
             }
-
-            $results[] = [
-                'user_id'                     => $user->id,
-                'username'                    => $user->username,
-                'email'                       => $user->email,
-                'lesson_completion_percent'   => $lessonCompletionPercent,
-                'total_lessons'               => $totalLessons,
-                'completed_lessons'           => $completedLessons,
-                'quizzes'                     => $quizResults,
-                'is_eligible_for_certificate' => $isEligibleForCertificate,
-            ];
+        } catch (Exception $e) {
+            Log::error('Failed to send certificate email:', [
+                'user_id' => $userId,
+                'course_id' => $courseId,
+                'error' => $e->getMessage(),
+            ]);
         }
 
+        DB::commit();
         return response()->json([
-            'message' => 'Course progress retrieved successfully',
-            'data' => [
-                'course_id'   => $course->id,
-                'course_name' => $course->course_name,
-                'users'       => $results,
-            ]
+            'eligible' => true,
+            'message' => 'Certificate issued successfully.',
+            'certificate_url' => $certificate->download_url
         ], 200);
 
     } catch (ModelNotFoundException $e) {
-        return response()->json(['message' => 'Course not found'], 404);
+        DB::rollBack();
+        Log::error('Model not found: ' . $e->getMessage());
+        return response()->json(['message' => 'Course or user not found'], 404);
 
     } catch (Exception $e) {
-        Log::error('Get course progress error:', [
+        DB::rollBack();
+        Log::error('Issue certificate error:', [
             'course_id' => $courseId,
-            'message'   => $e->getMessage(),
+            'user_id' => $userId,
+            'message' => $e->getMessage(),
         ]);
         return response()->json([
-            'message' => 'An error occurred while retrieving course progress',
-            'error'   => $e->getMessage(),
+            'message' => 'An error occurred while issuing the certificate.',
+            'error' => $e->getMessage(),
         ], 500);
     }
 }
 
+public function getCourseProgress(Request $request, int $courseId): JsonResponse
+    {
+        try {
+            // 1. Fetch course
+            $course = Course::findOrFail($courseId);
+
+            // 2. Fetch enrollments with user
+            $enrollments = Enrollment::where('course_id', $courseId)
+                ->with('user')
+                ->get();
+
+            if ($enrollments->isEmpty()) {
+                return response()->json([
+                    'message' => 'No users enrolled in this course',
+                    'data' => []
+                ], 200);
+            }
+
+            // 3. Fetch visible lessons and quizzes
+            $visibleLessonIds = Lesson::where('course_id', $courseId)
+                ->where('is_visible', true)
+                ->pluck('id');
+            $totalLessons = $visibleLessonIds->count();
+
+            $visibleQuizzes = Quiz::whereIn('lesson_id', $visibleLessonIds)
+                ->where('is_visible', true)
+                ->get()
+                ->keyBy('id');
+            $visibleQuizIds = $visibleQuizzes->keys();
+
+            $results = [];
+            foreach ($enrollments as $enrollment) {
+                $user = $enrollment->user;
+
+                // 4. Calculate lesson completion
+                $completedLessons = LessonProgress::where('user_id', $user->id)
+                    ->whereIn('lesson_id', $visibleLessonIds)
+                    ->where('status', 'completed')
+                    ->count();
+                $lessonCompletionPercent = $totalLessons > 0
+                    ? round(($completedLessons / $totalLessons) * 100, 2)
+                    : 0;
+
+                // 5. Fetch quiz results
+                $allQuizResults = QuizResult::where('user_id', $user->id)
+                    ->whereIn('quiz_id', $visibleQuizIds)
+                    ->get();
+
+                // 6. Use CertificateEligibilityChecker for eligibility
+                $checker = new CertificateEligibilityChecker($courseId, $user->id);
+                $eligibility = $checker->check();
+
+                // 7. Prepare quiz results (include all visible quizzes)
+                $quizResults = $visibleQuizzes->map(function($quiz) use ($allQuizResults, $eligibility) {
+                    $latestAttempt = $allQuizResults
+                        ->where('quiz_id', $quiz->id)
+                        ->sortByDesc('completed_at')
+                        ->first();
+
+                    return [
+                        'quiz_id'      => $quiz->id,
+                        'quiz_title'   => $quiz->title,
+                        'score'        => $latestAttempt?->score,
+                        'is_passed'    => $eligibility['missingQuizzes']->doesntContain($quiz->origin_id ?? $quiz->id),
+                        'completed_at' => $latestAttempt?->completed_at?->toISOString(),
+                        'origin_id'    => $quiz->origin_id ?? $quiz->id,
+                        'version'      => $quiz->version,
+                    ];
+                })->values()->toArray();
+
+                $results[] = [
+                    'user_id'                     => $user->id,
+                    'username'                    => $user->username,
+                    'email'                       => $user->email,
+                    'lesson_completion_percent'   => $lessonCompletionPercent,
+                    'total_lessons'               => $totalLessons,
+                    'completed_lessons'           => $completedLessons,
+                    'quizzes'                     => $quizResults,
+                    'is_eligible_for_certificate' => $eligibility['eligible'],
+                    'missing_lessons'             => $eligibility['missingLessons']->toArray(),
+                    'missing_quizzes'             => $eligibility['missingQuizzes']->toArray(),
+                    'rules'                       => $eligibility['rule'],
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Course progress retrieved successfully',
+                'data' => [
+                    'course_id'   => $course->id,
+                    'course_name' => $course->course_name,
+                    'users'       => $results,
+                ]
+            ], 200);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Course not found'], 404);
+
+        } catch (Exception $e) {
+            Log::error('Get course progress error:', [
+                'course_id' => $courseId,
+                'message'   => $e->getMessage(),
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while retrieving course progress',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
 
 }

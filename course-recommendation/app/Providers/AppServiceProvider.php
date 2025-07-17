@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Course::observe(CourseObserver::class);
-         Configuration::instance([
+        Configuration::instance([
         'cloud' => [
             'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
             'api_key'    => env('CLOUDINARY_API_KEY'),

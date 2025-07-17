@@ -301,7 +301,7 @@
                     📄 Tải chứng chỉ
                 </a>
 
-                <p>Cảm ơn bạn đã học cùng chúng tôi tại nền tảng Share.</p>
+                <p>Cảm ơn bạn đã học cùng chúng tôi tại nền tảng Learn Smart.</p>
             </div>
         </div>
 

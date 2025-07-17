@@ -437,15 +437,28 @@ public function instructorViewReportsAll()
         return response()->json(['message' => 'Unauthorized'], 403);
     }
 
-    $reports = Report::with(['user','user.instructor','user.student','course'])
+    // ID của bản ghi Instructor profile
+    $instructorId = $user->instructor->id;
+
+    // Chỉ lấy report của các course do instructor này sở hữu
+    $reports = Report::with([
+            'user',
+            'user.instructor',
+            'user.student',
+            'course'
+        ])
+        ->whereHas('course', function ($q) use ($instructorId) {
+            $q->where('instructor_id', $instructorId);
+        })
         ->orderBy('created_at', 'desc')
         ->get();
 
     return response()->json([
         'message' => 'Reports retrieved',
         'reports' => $reports
-    ]);
+    ], 200);
 }
+
 
 public function instructorViewReports($courseId)
 {

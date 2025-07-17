@@ -323,7 +323,7 @@ class DatabaseSeederNewNewNew extends Seeder
             default => null,
         };
 
-        $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) * 23000 : 0;
+        $price = $data['is_paid'] === 'True' ? floatval(str_replace('$', '', $data['price'])) : 0;
         $instructorId = $instructors[array_rand($instructors)];
 
         // Xác định status

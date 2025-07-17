@@ -928,5 +928,16 @@ private function handlePaymentCaptureDenied(array $data)
         ]);
     }
 }
+  public function showSuccess()
+    {
+        return view('payment.success');
+    }
 
+    /**
+     * Trang hiển thị khi thanh toán thất bại
+     */
+    public function showFailure()
+    {
+        return view('payment.failed');
+    }
 }

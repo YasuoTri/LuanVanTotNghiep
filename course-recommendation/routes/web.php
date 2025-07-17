@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Laravel\Socialite\Facades\Socialite;
@@ -31,3 +32,9 @@ Route::get('/test-socialite', function() {
         ]);
     }
 });
+
+Route::get('/payment/success', [PaymentController::class, 'showSuccess'])
+     ->name('payment.success');
+
+Route::get('/payment/failed', [PaymentController::class, 'showFailure'])
+     ->name('payment.failed');

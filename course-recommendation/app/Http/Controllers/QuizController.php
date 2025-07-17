@@ -935,6 +935,7 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
         'message' => 'Start Quiz successfully',
         'data' => [
             'quiz_result_id' => $quizResult->id,
+            'enrollment_id' => $enrollment->id,
             'course_id' => $quiz->lesson->course_id,
             'started_at' => $quizResult->started_at,
             'time_limit' => $quiz->time_limit,

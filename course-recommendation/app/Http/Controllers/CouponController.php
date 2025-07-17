@@ -67,6 +67,7 @@ class CouponController extends Controller
     
     public function createCoupon(Request $request)
 {
+    try{
     $user = Auth::user();
 
     // Kiểm tra quyền
@@ -112,6 +113,9 @@ class CouponController extends Controller
     ]);
 
     return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);
+}catch (\Exception $e) {
+    return response()->json(['message' => 'Error:'.$e], 500);
+};
 }
 public function getCouponsByCourse(Request $request, $course_id)
     {
@@ -123,7 +127,6 @@ public function getCouponsByCourse(Request $request, $course_id)
         try {
             // Get current date for checking coupon validity
             $currentDate = Carbon::now();
-
             // Query active coupons for the course
             $coupons = Coupon::where('course_id', $course_id)
                 ->where('is_active', 1)

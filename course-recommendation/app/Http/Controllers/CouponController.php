@@ -147,7 +147,8 @@ public function getCouponsByCourse(Request $request, $course_id)
                     'start_date',
                     'end_date',
                     'usage_limit',
-                    'used_count'
+                    'used_count',
+                    'is_active'
                 ])
                 ->paginate(10);
 

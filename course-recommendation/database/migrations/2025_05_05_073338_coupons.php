@@ -32,7 +32,7 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->integer('usage_limit')->nullable()->comment('Số lần dùng tối đa');
             $table->integer('used_count')->default(0);
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
         });
     }

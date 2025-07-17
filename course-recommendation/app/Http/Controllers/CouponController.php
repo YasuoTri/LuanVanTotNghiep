@@ -40,9 +40,6 @@ class CouponController extends Controller
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
-        if($coupon->is_active == 1){
-            return response()->json(['message' => 'Coupon is active,Cant update'], 400);
-        }
         $payment=Payment::where('coupon_id', $id)->get();
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);

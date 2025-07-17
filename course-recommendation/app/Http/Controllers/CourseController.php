@@ -580,12 +580,13 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             if ($hasEnrollment) {
                 return response()->json(['message' => 'Cannot update course. There are students enrolled in this course.'], 403);
             }
-            if ($course->status != 'pending') {
-                return response()->json(['message' => 'Cannot update course,its status must be draft or pending is ok'], 403);
+                // Thay thế hai if cũ bằng 1 if duy nhất:
+            if ($course->status !== 'pending' && $course->status !== 'draft') {
+                return response()->json([
+                    'message' => 'Cannot update course, its status must be draft or pending'
+                ], 403);
             }
-            if ($course->status != 'draft') {
-                return response()->json(['message' => 'Cannot update course,its status must be draft or pending is ok'], 403);
-            }
+
             $validated = $request->validated();
             if(isset($validated['course_name'])){
                 $validated['course_url'] = Str::slug($validated['course_name']);

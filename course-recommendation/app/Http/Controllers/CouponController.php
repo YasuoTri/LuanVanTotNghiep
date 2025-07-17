@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class CouponController extends Controller
 {
@@ -64,7 +65,7 @@ class CouponController extends Controller
     
     public function createCoupon(Request $request)
 {
-    try{
+try{
     $user = Auth::user();
 
     // Kiểm tra quyền
@@ -81,6 +82,18 @@ class CouponController extends Controller
     if (!$course) {
         return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
     }
+       $request->validate([
+        'code'           => [
+            'required', 'string', 'max:20',
+            // unique trong bảng coupons với điều kiện course_id = $course->id
+            Rule::unique('coupons')->where(fn($q) => $q->where('course_id', $course->id))
+        ],
+        'discount_type'  => ['required', Rule::in(['percent','fixed'])],
+        'discount_value' => ['required','integer','min:0'],
+        'start_date'     => ['required','date'],
+        'end_date'       => ['required','date','after_or_equal:start_date'],
+        'usage_limit'    => ['nullable','integer','min:1'],
+    ]);
      // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
     $startDate = $request->start_date;
     $endDate = $request->end_date;

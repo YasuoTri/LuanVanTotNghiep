@@ -194,7 +194,7 @@ class PaymentController extends Controller
     if ($paymentData['method'] == 'vnpay') {
         $finalAmount = round($paymentData['amount'] * $vndRate);
     } else {
-        $finalAmount = $paymentData['amount'];
+        $finalAmount =round($paymentData['amount'], 2);
     }
     $coupon = null;
     if (!empty($paymentData['code'])) {
@@ -225,13 +225,15 @@ class PaymentController extends Controller
             $finalAmount = 0;
         }
     }
-
+    if ($paymentData['method'] !== 'vnpay') {
+            $finalAmount = round($finalAmount, 2);
+    }
     // Get or create revenue session for current month
     $currentMonth = now()->month;
     $currentYear = now()->year;
     $revenueSession = RevenueSession::firstOrCreate(
         ['month' => $currentMonth, 'year' => $currentYear],
-        ['total_revenue' => 0, 'admin_share' => 0, 'instructor_share' => 0, 'status' => 'open']
+        ['total_revenue' => 0, 'status' => 'open']
     );
 
     // Select payment gateway

@@ -528,13 +528,18 @@ public function instructorIssue(Request $request)
                 ], 200);
             }
 
-            // Lấy danh sách lesson của khóa học
-            $totalLessons = Lesson::where('course_id', $courseId)
-            ->where('is_visible', true)
-            ->count();
+            $visibleLessonIds = Lesson::where('course_id', $courseId)
+                ->where('is_visible', true)
+                ->pluck('id');
 
-            // Lấy danh sách quiz của khóa học
-            $quizzes = Quiz::whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
+            $totalLessons = $visibleLessonIds->count();
+
+            // 4. Lấy các quiz visible (liên quan tới các visible lessons)
+            $visibleQuizIds = Quiz::whereIn('lesson_id', $visibleLessonIds)
+                ->where('is_visible', true)
+                ->pluck('id');
+
+            $quizzes = Quiz::whereIn('id', $visibleQuizIds)
                 ->get()
                 ->keyBy('id');
 

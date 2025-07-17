@@ -529,7 +529,9 @@ public function instructorIssue(Request $request)
             }
 
             // Lấy danh sách lesson của khóa học
-            $totalLessons = Lesson::where('course_id', $courseId)->count();
+            $totalLessons = Lesson::where('course_id', $courseId)
+            ->where('is_visible', true)
+            ->count();
 
             // Lấy danh sách quiz của khóa học
             $quizzes = Quiz::whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
@@ -546,6 +548,7 @@ public function instructorIssue(Request $request)
                 // Tính phần trăm hoàn thành lesson
                 $completedLessons = LessonProgress::where('user_id', $user->id)
                     ->whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
+                    ->where('is_visible',true)
                     ->where('status', 'completed')
                     ->count();
 

@@ -126,7 +126,6 @@ public function getCouponsByCourse(Request $request, $course_id)
             $currentDate = Carbon::now();
             // Query active coupons for the course
             $coupons = Coupon::where('course_id', $course_id)
-                ->where('is_active', 1)
                 ->where(function ($query) use ($currentDate) {
                     $query->whereNull('start_date')
                         ->orWhere('start_date', '<=', $currentDate);

@@ -20,6 +20,7 @@ use App\Models\Question;
 use App\Models\QuestionChoice;
 use App\Models\Quiz;
 use App\Models\Student;
+use App\Models\User;
 use App\Services\PayPalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -1989,7 +1990,7 @@ public function refundCourseFromInstructor(Request $request): JsonResponse
 
         // Lấy email PayPal của instructor và email của học viên
         $instructorEmail = $instructor->email_paypal;
-        $user = \App\Models\User::find($payment->user_id);
+        $user = User::find($payment->user_id);
         if (!$instructorEmail || !$user->email) {
             return response()->json([
                 'message' => 'Missing PayPal email for instructor or email for user.'

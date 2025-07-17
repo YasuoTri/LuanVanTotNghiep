@@ -548,7 +548,6 @@ public function instructorIssue(Request $request)
                 // Tính phần trăm hoàn thành lesson
                 $completedLessons = LessonProgress::where('user_id', $user->id)
                     ->whereIn('lesson_id', Lesson::where('course_id', $courseId)->pluck('id'))
-                    ->where('is_visible',true)
                     ->where('status', 'completed')
                     ->count();
 

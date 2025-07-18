@@ -680,7 +680,8 @@ public function handlePayPalSuccess(Request $request)
 
         if (!$token || !$payerId) {
             Log::error('PayPal Success: Missing parameters', $request->all());
-            return redirect()->away('http://localhost:4200/payment/failed');
+            // return redirect()->away('http://localhost:4200/payment/failed');
+            return view('payment.failed');
         }
 
         // Tìm payment record
@@ -688,7 +689,8 @@ public function handlePayPalSuccess(Request $request)
 
         if (!$payment) {
             Log::error('PayPal Success: Payment not found', ['token' => $token]);
-            return redirect()->away('http://localhost:4200/payment/failed');
+            // return redirect()->away('http://localhost:4200/payment/failed');
+             return view('payment.failed');
         }
 
         // Execute PayPal payment
@@ -698,7 +700,8 @@ public function handlePayPalSuccess(Request $request)
         if (!$result['success']) {
             $payment->update(['status' => 'failed']);
             Log::error('PayPal Execute Failed', ['result' => $result, 'payment_id' => $payment->id]);
-            return redirect()->away('http://localhost:4200/payment/failed');
+            // return redirect()->away('http://localhost:4200/payment/failed');
+            return view('payment.failed');
         }
 
         DB::beginTransaction();
@@ -744,7 +747,8 @@ public function handlePayPalSuccess(Request $request)
                 'transaction_code' => $payment->transaction_code
             ]);
 
-            return redirect()->away('http://localhost:4200/my-course');
+            // return redirect()->away('http://localhost:4200/my-course');
+            return view('payment.success');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -752,7 +756,8 @@ public function handlePayPalSuccess(Request $request)
                 'error' => $e->getMessage(),
                 'payment_id' => $payment->id
             ]);
-            return redirect()->away('http://localhost:4200/payment/failed');
+            // return redirect()->away('http://localhost:4200/payment/failed');
+                 return view('payment.failed');
         }
 
     } catch (\Exception $e) {
@@ -760,7 +765,8 @@ public function handlePayPalSuccess(Request $request)
             'error' => $e->getMessage(),
             'request' => $request->all()
         ]);
-        return redirect()->away('http://localhost:4200/payment/failed');
+        // return redirect()->away('http://localhost:4200/payment/failed');
+             return view('payment.failed');
     }
 }
 /**

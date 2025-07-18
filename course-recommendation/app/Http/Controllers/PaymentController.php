@@ -796,14 +796,16 @@ public function handlePayPalCancel(Request $request)
             }
         }
 
-        return redirect()->away('http://localhost:4200/payment/cancelled');
+        // return redirect()->away('http://localhost:4200/payment/cancelled');
+          return view('payment.failed');
 
     } catch (\Exception $e) {
         Log::error('PayPal cancel handler error', [
             'error' => $e->getMessage(),
             'request' => $request->all()
         ]);
-        return redirect()->away('http://localhost:4200/payment/failed');
+        // return redirect()->away('http://localhost:4200/payment/failed');
+          return view('payment.failed');
     }
 }
 

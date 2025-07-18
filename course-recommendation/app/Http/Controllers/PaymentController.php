@@ -488,7 +488,12 @@ try{
             'status' => $status,
             'txnRef' => $txnRef
         ]);
-          return view('payment.success');
+        
+        if ($status === 'completed') 
+             return view('payment.success');
+        else 
+            return view('payment.failed');
+
     }catch (\Exception $e) {
         DB::rollBack();
         Log::error('VNPay callback processing failed', [
@@ -496,7 +501,7 @@ try{
             'txnRef' => $txnRef
         ]);
         // return response()->json(['message' => 'Failed to process callback'], 500);
-           return view('payment.failed');
+        return view('payment.failed');
 
     }
 }

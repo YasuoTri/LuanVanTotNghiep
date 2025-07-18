@@ -117,14 +117,14 @@ namespace App\Http\Controllers;
            if ($secureHash === $vnp_SecureHash) {
                if ($request->vnp_ResponseCode == '00') {
                    // Thanh toán thành công
-                   return view('payment_success', compact('inputData'));
+                    return view('payment.success');
                } else {
                    // Thanh toán không thành công
-                   return view('payment_failed');
+                       return view('payment.failed');
                }
            } else {
                // Dữ liệu không hợp lệ
-               return view('payment_failed');
+                   return view('payment.failed');
            }
        }
    }

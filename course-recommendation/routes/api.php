@@ -219,6 +219,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::post('/instructor/courses/refundFromInstructor', [CourseController::class, 'refundCourseFromInstructor']);
     Route::get('/instructor/courses/revenuDistributeSearch', [RevenueDistribute::class, 'getInstructorRevenueDistributions']);
     Route::get('/instructor/courses/instructorExcepBan', [CourseController::class, 'getCoursesByInstructor']);
+    Route::post('/instructor/generate-certificate', [CertificateController::class, 'generateAndUpload']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {

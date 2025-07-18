@@ -25,13 +25,18 @@ use Illuminate\Support\Facades\Storage;
 use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Http\JsonResponse;
 use App\Services\CloudinaryService;
+use Carbon\Carbon;
 use Cloudinary\Cloudinary as CloudinaryCloudinary;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Gd\Encoders\JpegEncoder;
+use Intervention\Image\Drivers\Gd\Encoders\PngEncoder;
 use Intervention\Image\Facades\Image;
+use Intervention\Image\ImageManager;
 
 class CertificateController extends Controller
 {
@@ -467,82 +472,18 @@ public function issueCertificate(int $courseId, int $userId): JsonResponse
         // 4. Get user and course details
         $user = User::findOrFail($userId);
         $course = Course::findOrFail($courseId);
-
-        // // 5. Generate certificate image
-        // $certificateCode = strtoupper(Str::random(12));
-        // $fileName = "certificate_{$userId}_{$courseId}_{$certificateCode}.png";
-
-        // // Check template existence
-        // $templatePath = public_path('templates/certificate_template.png');
-        // Log::info('Checking template path: ' . $templatePath);
-        // if (!file_exists($templatePath)) {
-        //     throw new \Exception('Certificate template not found at: ' . $templatePath);
-        // }
-
-        // // Check font existence
-        // $fontPath = public_path('fonts/arial.ttf');
-        // Log::info('Checking font path: ' . $fontPath);
-        // if (!file_exists($fontPath)) {
-        //     throw new \Exception('Font file not found at: ' . $fontPath);
-        // }
-
-        // // Load template and add text
-        // Log::info('Creating image with Intervention\Image');
-     
-        // $image =Image::make($templatePath);
-        // // Add dynamic text (e.g., user name, course name, date)
-        // $image->text($user->name, 300, 400, function ($font) use ($fontPath) {
-        //     $font->file($fontPath);
-        //     $font->size(40);
-        //     $font->color('#000000');
-        //     $font->align('center');
-        //     $font->valign('middle');
-        // });
-
-        // $image->text($course->title, 300, 500, function ($font) use ($fontPath) {
-        //     $font->file($fontPath);
-        //     $font->size(30);
-        //     $font->color('#000000');
-        //     $font->align('center');
-        //     $font->valign('middle');
-        // });
-
-        // $image->text(now()->format('d/m/Y'), 300, 600, function ($font) use ($fontPath) {
-        //     $font->file($fontPath);
-        //     $font->size(20);
-        //     $font->color('#000000');
-        //     $font->align('center');
-        //     $font->valign('middle');
-        // });
-
-        // // Save image to temporary file
-        // $tempPath = sys_get_temp_dir() . '/' . $fileName;
-        // Log::info('Saving temporary image to: ' . $tempPath);
-        // $image->save($tempPath);
-
-        // // Convert to UploadedFile
-        // $uploadedFile = new UploadedFile(
-        //     $tempPath,
-        //     $fileName,
-        //     'image/png',
-        //     null,
-        //     true
-        // );
-
-        // // 6. Upload to Cloudinary
-        // Log::info('Uploading to Cloudinary');
-        // $downloadUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'certificates');
-
-        // // Delete temporary file
-        // Log::info('Deleting temporary file: ' . $tempPath);
-        // unlink($tempPath);
-
+        $userIssue=Auth::user();
+        $ImageCertificate=$this->generateAndUpload($course->id, $user->id,$userIssue->id);
+        $certificateUrl = $ImageCertificate->getData()->certificate_url ?? null;
+        if (!$certificateUrl) {
+            throw new Exception('Failed to generate certificate URL');
+        }
         // 7. Create or update certificate
         $certificate = Certificate::firstOrCreate(
             ['enrollment_id' => $enrollment->id],
             [
                 'certificate_code' => $certificateCode??random_int(100000, 999999),
-                'download_url' =>"https://res.cloudinary.com/dj11e209p/image/upload/v1752800825/Pngtree_certificate_graduation_template_design_with_6540052_jmjung.png",
+                'download_url' =>$certificateUrl??"https://res.cloudinary.com/dj11e209p/image/upload/v1752800825/Pngtree_certificate_graduation_template_design_with_6540052_jmjung.png",
                 'created_at' => now()
             ]
         );
@@ -698,4 +639,159 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
         }
     }
 
+
+    public function generateAndUpload($courseId, $userId, $userIdIssued)
+    {
+        try {
+            $course = Course::findOrFail($courseId);
+            $user = User::findOrFail($userId);
+            $userIssued = User::findOrFail($userIdIssued);
+
+            // Initialize Intervention Image with GD driver
+            $manager = new ImageManager(new Driver());
+
+            // Load the certificate template
+            $templatePath = public_path('templates/certificate-template.png');
+            if (!file_exists($templatePath)) {
+                Log::error('Certificate template not found', ['path' => $templatePath]);
+                return response()->json(['error' => 'Certificate template not found'], 404);
+            }
+
+            // Create the certificate image
+            $image = $manager->read($templatePath);
+
+            // Debug: Get image dimensions
+            $width = $image->width();
+            $height = $image->height();
+            Log::info('Template dimensions', ['width' => $width, 'height' => $height]);
+
+            // Define text positions and styles with right offset
+            $padding = 50;
+            $textYStart = $height / 2 - 100;
+            $rightOffset = 100; // Shift text 100 pixels to the right from center
+
+            // Title: Certificate of Completion
+            $image->text(
+                'Certificate of Completion',
+                $width / 2 + $rightOffset,
+                $textYStart,
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    if (!file_exists($fontPath)) {
+                        Log::error('Font file not found', ['path' => $fontPath]);
+                        throw new \Exception('Font file not found');
+                    }
+                    $font->file($fontPath);
+                    $font->size(60);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Course Name
+            $image->text(
+                $course->course_name,
+                $width / 2 + $rightOffset,
+                $textYStart + 80,
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    $font->file($fontPath);
+                    $font->size(40);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Student Name
+            $image->text(
+                'Awarded to: ' . $user->fullname,
+                $width / 2 + $rightOffset,
+                $textYStart + 140,
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    $font->file($fontPath);
+                    $font->size(36);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Completion Date
+            $image->text(
+                'Date of Completion: ' . Carbon::now()->format('F d, Y'),
+                $width / 2 + $rightOffset,
+                $textYStart + 200,
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    $font->file($fontPath);
+                    $font->size(32);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Certified By
+            $image->text(
+                'Certified by: ' . $userIssued->fullname . ' Learnsmart Platform',
+                $width / 2 + $rightOffset,
+                $textYStart + 260,
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    $font->file($fontPath);
+                    $font->size(28);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Encode the image as PNG
+            $encodedImage = $image->encode(new PngEncoder());
+
+            // Save the image temporarily for debugging
+            $tempPath = 'temp/certificate-' . time() . '.png';
+            Storage::disk('public')->put($tempPath, $encodedImage);
+
+            // Get the full path to the temporary file
+            $fullTempPath = storage_path('app/public/' . $tempPath);
+
+            // Create an UploadedFile instance for CloudinaryService
+            $uploadedFile = new UploadedFile(
+                $fullTempPath,
+                basename($fullTempPath),
+                'image/png',
+                null,
+                true
+            );
+
+            // Upload to Cloudinary using CloudinaryService
+            $certificateUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'certificates');
+
+            // Delete the temporary file
+            Storage::disk('public')->delete($tempPath);
+
+            return response()->json([
+                'message' => 'Certificate generated and uploaded successfully',
+                'certificate_url' => $certificateUrl,
+            ], 201);
+
+        } catch (\Exception $e) {
+            // Delete the temporary file if it exists
+            if (isset($tempPath) && Storage::disk('public')->exists($tempPath)) {
+                Storage::disk('public')->delete($tempPath);
+            }
+
+            Log::error('Certificate generation failed', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'error' => 'Failed to generate or upload certificate',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

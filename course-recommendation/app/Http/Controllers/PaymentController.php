@@ -488,7 +488,7 @@ try{
             'status' => $status,
             'txnRef' => $txnRef
         ]);
-        return redirect()->away('http://localhost:4200');
+          return view('payment.success');
     }catch (\Exception $e) {
         DB::rollBack();
         Log::error('VNPay callback processing failed', [
@@ -496,7 +496,7 @@ try{
             'txnRef' => $txnRef
         ]);
         // return response()->json(['message' => 'Failed to process callback'], 500);
-       return redirect()->away('http://localhost:4200');
+           return view('payment.failed');
 
     }
 }

@@ -292,9 +292,9 @@
             <div class="decoration leaf-2"></div>
 
             <div class="content">
-                <div class="course-title">{{ $course->title }}</div>
+                <div class="course-title">{{ $course->course_name }}</div>
 
-                <p>Bạn đã được cấp chứng chỉ cho khóa học <strong>{{ $course->title }}</strong>.</p>
+                <p>Bạn đã được cấp chứng chỉ cho khóa học <strong>{{ $course->course_name }}</strong>.</p>
                 <p>Bạn có thể tải chứng chỉ của mình tại đường dẫn bên dưới:</p>
 
                 <a href="{{ $downloadUrl }}" target="_blank" class="download-btn">

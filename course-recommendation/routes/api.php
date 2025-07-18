@@ -41,7 +41,9 @@ use App\Http\Controllers\ZaloPayController;
 use App\Services\PaymentGateways\PaymentGateway;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use App\Http\Controllers\CsvFilterController;
 
+Route::get('/filter-csv', [CsvFilterController::class, 'filterEnglishCourses']);
 // Existing General Routes
 Route::post('/recommend', [RecommendationController::class, 'recommend']);
 Route::get('/select-role', [AuthController::class, 'showRoleSelection'])->name('select-role');

@@ -339,10 +339,8 @@ public function confirmFix(Report $report)
                 'message' => 'Report not found or cannot be canceled'
             ], 404);
         }
-
         // soft delete
         $report->delete();
-
         return response()->json([
             'message' => 'Report has been canceled successfully.'
         ]);

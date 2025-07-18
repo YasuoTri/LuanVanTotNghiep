@@ -273,18 +273,7 @@ course_id,course_title,url,is_paid,price,num_subscribers,num_reviews,num_lecture
 943426,Learn How to Play CashFlow Game,learn-how-to-play-cashflow-game,True,35,1459,11,26,Beginner Level,1.0,2016-10-17T21:16:49Z,Business Finance
 46927,Basics of Business Finance,basics-of-business-finance,True,30,4855,64,24,Beginner Level,4.0,2013-03-22T17:42:18Z,Business Finance
 567070,Accounting Made Easy 2,accounting-made-easy-2,True,50,4034,8,40,Intermediate Level,3.0,2015-09-16T18:57:23Z,Business Finance
-867440,"Bitcoin: el futuro del dinero, hoy",bitcoin-el-futuro-del-dinero-hoy,True,200,57,22,19,Intermediate Level,3.0,2016-06-06T00:06:37Z,Business Finance
-501996,Aprende a invertir practicando,aprende-a-invertir-practicando,True,35,26,9,42,All Levels,2.0,2015-05-28T18:12:44Z,Business Finance
-1103590,Trading con retrocesos de Fibonacci,trading-con-retrocesos-de-fibonacci,True,25,14,4,15,All Levels,2.5,2017-02-07T15:34:03Z,Business Finance
-1172370,Mit Finanzwissen zu besserem Unternehmertum,mit-finanzwissen-zu-besserem-unternehmertum,True,50,49,3,23,Beginner Level,3.0,2017-05-10T15:10:34Z,Business Finance
-673702,Como hacer empresa en 10 sesiones prácticas,finanzas-para-principiantes,True,20,11,2,10,Intermediate Level,0.5,2015-11-19T18:20:45Z,Business Finance
-821108,المحاسبة للإداريين و غير المحاسبين,accounting-for-non-accountants-trendcast,True,20,9,3,17,Beginner Level,0.7166666666666667,2016-04-23T22:57:42Z,Business Finance
-863998,株式投資で本当のファンダメンタル分析ができるようになる,jun-sakai-trading-course3,True,20,91,7,30,All Levels,2.0,2016-06-21T17:59:58Z,Business Finance
-822926,Curso de Trading práctico basado en casos reales,trading-practico,True,20,44,6,55,All Levels,10.0,2016-08-29T16:36:38Z,Business Finance
-666254,Curso Avanzado de Trading,curso-avanzado-de-trading,True,125,106,11,100,All Levels,20.5,2015-11-28T06:25:44Z,Business Finance
-421546,สอนเทรดไบนารี่ อ๊อฟชั่นอย่างง่าย,binary-options-for-thai,False,0,2079,258,25,All Levels,2.0,2015-02-15T12:17:56Z,Business Finance
 518886,MQL4 Tutorial Golden Goose,mql4-tutorial-golden-goose-trading-tutorial,True,20,135,5,12,Beginner Level,1.5,2015-06-07T19:32:46Z,Business Finance
-868128,Análise de Concessão de Crédito,estacio-analise-de-concessao-de-credito,True,20,31,11,20,All Levels,10.5,2016-06-29T20:21:24Z,Business Finance
 986034,Technical Analysis Using Elliott Wave Theory,technical-analysis-using-elliott-wave-theory,True,60,217,7,16,All Levels,1.0,2016-11-01T19:30:11Z,Business Finance
 42642,The Basics Of Volume Analysis,volume-analysis-basis,True,60,611,57,13,All Levels,1.5,2013-02-24T13:23:14Z,Business Finance
 471428,Crash Course on Cost of Capital and Capital Structuring,crash-course-on-cost-of-capital-and-capital-structuring,False,0,5007,41,19,All Levels,3.0,2015-04-13T17:52:57Z,Business Finance
@@ -2479,7 +2468,6 @@ course_id,course_title,url,is_paid,price,num_subscribers,num_reviews,num_lecture
 218596,Aprende a tocar la trompeta,aprende-a-tocar-la-trompeta-desde-cero,True,50,6,2,30,All Levels,3.0,2014-05-19T16:44:04Z,Musical Instruments
 513528,Curso de guitarra para principiantes.,curso-de-guitarra-para-principiantes2,True,20,4,0,7,Beginner Level,1.0,2015-06-11T15:55:19Z,Musical Instruments
 211026,Aprende a tocar Jazz y Ritmos Latinos en la guitarra,aprende-a-tocar-jazz-y-ritmos-latinos-en-la-guitarra,True,50,6,0,17,All Levels,3.0,2014-05-07T22:15:04Z,Musical Instruments
-847808,こどもギターレッスン　リトルギタリストⅢ（完結編）,takalittle3,True,20,3,0,36,Beginner Level,1.0,2016-10-03T16:42:12Z,Musical Instruments
 218856,Aprende a tocar la flauta dulce de forma sencilla y gradual,aprende-a-tocar-la-flauta-dulce-curso-en-video,True,50,5,0,23,All Levels,3.0,2014-05-19T16:49:04Z,Musical Instruments
 214218,"Aprende a tocar jazz, salsa y blues en el piano",aprende-a-tocar-jazz-salsa-y-blues-en-el-piano,True,20,5,0,23,All Levels,3.0,2014-05-19T15:55:12Z,Musical Instruments
 28295,Learn Web Designing & HTML5CSS3 Essentials in 4-Hours,build-beautiful-html5-website,True,75,43285,525,24,All Levels,4.0,2013-01-03T00:55:31Z,Web Development

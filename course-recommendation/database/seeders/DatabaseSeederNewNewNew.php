@@ -186,7 +186,7 @@ class DatabaseSeederNewNewNew extends Seeder
     $this->command->info('Seeding categories...');
 
     // Đường dẫn đến file CSV
-    $csvFile = public_path('udemy_coursesReal.csv');
+    $csvFile = public_path('english_courses.csv');
     if (!File::exists($csvFile)) {
         $this->command->error('CSV file not found for categories seeding!');
         return;
@@ -232,7 +232,7 @@ class DatabaseSeederNewNewNew extends Seeder
     //     $this->command->info('Seeding courses from CSV...');
 
     //     $instructors = Instructors::all()->pluck('id')->toArray();
-    //     $csvFile = public_path('udemy_coursesReal.csv');
+    //     $csvFile = public_path('english_courses.csv');
     //     if (!File::exists($csvFile)) {
     //         $this->command->error('CSV file not found!');
     //         return;
@@ -296,7 +296,7 @@ class DatabaseSeederNewNewNew extends Seeder
     $this->command->info('Seeding courses from CSV...');
 
     $instructors = Instructors::all()->pluck('id')->toArray();
-    $csvFile = public_path('udemy_coursesReal.csv');
+    $csvFile = public_path('english_courses.csv');
     if (!File::exists($csvFile)) {
         $this->command->error('CSV file not found!');
         return;

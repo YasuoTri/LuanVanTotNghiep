@@ -640,6 +640,160 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
     }
 
 
+    // public function generateAndUpload($courseId, $userId, $userIdIssued)
+    // {
+    //     try {
+    //         $course = Course::findOrFail($courseId);
+    //         $user = User::findOrFail($userId);
+    //         $userIssued = User::findOrFail($userIdIssued);
+
+    //         // Initialize Intervention Image with GD driver
+    //         $manager = new ImageManager(new Driver());
+
+    //         // Load the certificate template
+    //         $templatePath = public_path('templates/certificate-template.png');
+    //         if (!file_exists($templatePath)) {
+    //             Log::error('Certificate template not found', ['path' => $templatePath]);
+    //             return response()->json(['error' => 'Certificate template not found'], 404);
+    //         }
+
+    //         // Create the certificate image
+    //         $image = $manager->read($templatePath);
+
+    //         // Debug: Get image dimensions
+    //         $width = $image->width();
+    //         $height = $image->height();
+    //         Log::info('Template dimensions', ['width' => $width, 'height' => $height]);
+
+    //         // Define text positions and styles with right offset
+    //         $padding = 50;
+    //         $textYStart = $height / 2 - 100;
+    //         $rightOffset = 100; // Shift text 100 pixels to the right from center
+
+    //         // Title: Certificate of Completion
+    //         $image->text(
+    //             'Certificate of Completion',
+    //             $width / 2 + $rightOffset,
+    //             $textYStart,
+    //             function ($font) {
+    //                 $fontPath = public_path('fonts/arial.ttf');
+    //                 if (!file_exists($fontPath)) {
+    //                     Log::error('Font file not found', ['path' => $fontPath]);
+    //                     throw new \Exception('Font file not found');
+    //                 }
+    //                 $font->file($fontPath);
+    //                 $font->size(60);
+    //                 $font->color('#000000');
+    //                 $font->align('center');
+    //                 $font->valign('top');
+    //             }
+    //         );
+
+    //         // Course Name
+    //         $image->text(
+    //             $course->course_name,
+    //             $width / 2 + $rightOffset,
+    //             $textYStart + 80,
+    //             function ($font) {
+    //                 $fontPath = public_path('fonts/arial.ttf');
+    //                 $font->file($fontPath);
+    //                 $font->size(40);
+    //                 $font->color('#000000');
+    //                 $font->align('center');
+    //                 $font->valign('top');
+    //             }
+    //         );
+
+    //         // Student Name
+    //         $image->text(
+    //             'Awarded to: ' . $user->fullname,
+    //             $width / 2 + $rightOffset,
+    //             $textYStart + 140,
+    //             function ($font) {
+    //                 $fontPath = public_path('fonts/arial.ttf');
+    //                 $font->file($fontPath);
+    //                 $font->size(36);
+    //                 $font->color('#000000');
+    //                 $font->align('center');
+    //                 $font->valign('top');
+    //             }
+    //         );
+
+    //         // Completion Date
+    //         $image->text(
+    //             'Date of Completion: ' . Carbon::now()->format('F d, Y'),
+    //             $width / 2 + $rightOffset,
+    //             $textYStart + 200,
+    //             function ($font) {
+    //                 $fontPath = public_path('fonts/arial.ttf');
+    //                 $font->file($fontPath);
+    //                 $font->size(32);
+    //                 $font->color('#000000');
+    //                 $font->align('center');
+    //                 $font->valign('top');
+    //             }
+    //         );
+
+    //         // Certified By
+    //         $image->text(
+    //             'Certified by: ' . $userIssued->fullname . ' Learnsmart Platform',
+    //             $width / 2 + $rightOffset,
+    //             $textYStart + 260,
+    //             function ($font) {
+    //                 $fontPath = public_path('fonts/arial.ttf');
+    //                 $font->file($fontPath);
+    //                 $font->size(28);
+    //                 $font->color('#000000');
+    //                 $font->align('center');
+    //                 $font->valign('top');
+    //             }
+    //         );
+
+    //         // Encode the image as PNG
+    //         $encodedImage = $image->encode(new PngEncoder());
+
+    //         // Save the image temporarily for debugging
+    //         $tempPath = 'temp/certificate-' . time() . '.png';
+    //         Storage::disk('public')->put($tempPath, $encodedImage);
+
+    //         // Get the full path to the temporary file
+    //         $fullTempPath = storage_path('app/public/' . $tempPath);
+
+    //         // Create an UploadedFile instance for CloudinaryService
+    //         $uploadedFile = new UploadedFile(
+    //             $fullTempPath,
+    //             basename($fullTempPath),
+    //             'image/png',
+    //             null,
+    //             true
+    //         );
+
+    //         // Upload to Cloudinary using CloudinaryService
+    //         $certificateUrl = $this->cloudinaryService->uploadImage($uploadedFile, 'certificates');
+
+    //         // Delete the temporary file
+    //         Storage::disk('public')->delete($tempPath);
+
+    //         return response()->json([
+    //             'message' => 'Certificate generated and uploaded successfully',
+    //             'certificate_url' => $certificateUrl,
+    //         ], 201);
+
+    //     } catch (\Exception $e) {
+    //         // Delete the temporary file if it exists
+    //         if (isset($tempPath) && Storage::disk('public')->exists($tempPath)) {
+    //             Storage::disk('public')->delete($tempPath);
+    //         }
+
+    //         Log::error('Certificate generation failed', [
+    //             'error' => $e->getMessage(),
+    //         ]);
+    //         return response()->json([
+    //             'error' => 'Failed to generate or upload certificate',
+    //             'details' => $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
     public function generateAndUpload($courseId, $userId, $userIdIssued)
     {
         try {
@@ -736,13 +890,57 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
 
             // Certified By
             $image->text(
-                'Certified by: ' . $userIssued->fullname . ' Learnsmart Platform',
+                'Certified by: ' . $userIssued->fullname . ' - Learnsmart Platform',
                 $width / 2 + $rightOffset,
                 $textYStart + 260,
                 function ($font) {
                     $fontPath = public_path('fonts/arial.ttf');
                     $font->file($fontPath);
                     $font->size(28);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Instructor Signature Label
+            $signatureRightOffset = 180; // Increase offset to shift signature further right
+            $image->text(
+                'Instructor Signature:',
+                $width / 2 + $signatureRightOffset,
+                $textYStart + 340, // Slightly above the signature
+                function ($font) {
+                    $fontPath = public_path('fonts/arial.ttf');
+                    if (!file_exists($fontPath)) {
+                        Log::error('Font file not found', ['path' => $fontPath]);
+                        throw new \Exception('Font file not found');
+                    }
+                    $font->file($fontPath);
+                    $font->size(24);
+                    $font->color('#000000');
+                    $font->align('center');
+                    $font->valign('top');
+                }
+            );
+
+            // Instructor Signature
+            $signatureFontPath = public_path('fonts/DancingScript-Regular.ttf');
+            $fallbackFontPath = public_path('fonts/arial.ttf');
+            $fontPath = file_exists($signatureFontPath) ? $signatureFontPath : $fallbackFontPath;
+
+            if (!file_exists($fontPath)) {
+                Log::warning('Neither signature nor fallback font found, using default system font', ['signature_path' => $signatureFontPath, 'fallback_path' => $fallbackFontPath]);
+            } else {
+                Log::info('Using font for signature', ['font_path' => $fontPath]);
+            }
+
+            $image->text(
+                $userIssued->fullname, // Use instructor's full name as signature
+                $width / 2 + $signatureRightOffset,
+                $textYStart + 370, // Position below "Instructor Signature"
+                function ($font) use ($fontPath) {
+                    $font->file($fontPath);
+                    $font->size(40); // Larger size for signature effect
                     $font->color('#000000');
                     $font->align('center');
                     $font->valign('top');
@@ -774,9 +972,21 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
             // Delete the temporary file
             Storage::disk('public')->delete($tempPath);
 
+            // Save certificate to database
+            $enrollment = \App\Models\Enrollment::where('user_id', $userId)
+                ->where('course_id', $courseId)
+                ->firstOrFail();
+            $certificate = new \App\Models\Certificate();
+            $certificate->enrollment_id = $enrollment->id;
+            $certificate->certificate_code = 'CERT-' . strtoupper(uniqid());
+            $certificate->download_url = $certificateUrl;
+            $certificate->issued_at = Carbon::now();
+            $certificate->save();
+
             return response()->json([
                 'message' => 'Certificate generated and uploaded successfully',
                 'certificate_url' => $certificateUrl,
+                'certificate_code' => $certificate->certificate_code,
             ], 201);
 
         } catch (\Exception $e) {
@@ -787,6 +997,9 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
 
             Log::error('Certificate generation failed', [
                 'error' => $e->getMessage(),
+                'course_id' => $courseId,
+                'user_id' => $userId,
+                'user_id_issued' => $userIdIssued,
             ]);
             return response()->json([
                 'error' => 'Failed to generate or upload certificate',

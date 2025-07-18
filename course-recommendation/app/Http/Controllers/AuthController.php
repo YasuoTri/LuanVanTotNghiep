@@ -1148,7 +1148,7 @@ public function changePassword(Request $request)
     // kiểm tra mật khẩu cũ
     if (!Hash::check($request->old_password, $user->password)) {
         return response()->json([
-            'message' => 'Mật khẩu cũ không chính xác.'
+            'message' => 'The old password is incorrect.'
         ], 400);
     }
 
@@ -1157,7 +1157,7 @@ public function changePassword(Request $request)
     $user->save();
 
     return response()->json([
-        'message' => 'Đổi mật khẩu thành công.'
+        'message' => 'Password changed successfully.'
     ]);
 }
 

@@ -34,8 +34,12 @@ class Enrollment extends Model
         return $this->belongsTo(Course::class, 'course_id');
     }
 
+    // public function certificate()
+    // {
+    //     return $this->hasOne(Certificate::class, 'enrollment_id');
+    // }
     public function certificate()
-    {
-        return $this->hasOne(Certificate::class, 'enrollment_id');
-    }
+{
+    return $this->hasMany(Certificate::class, 'enrollment_id');
+}
 }

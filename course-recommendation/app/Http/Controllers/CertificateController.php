@@ -530,116 +530,246 @@ public function issueCertificate(int $courseId, int $userId): JsonResponse
     }
 }
 
-public function getCourseProgress(Request $request, int $courseId): JsonResponse
-    {
-        try {
-            // 1. Fetch course
-            $course = Course::findOrFail($courseId);
+// public function getCourseProgress(Request $request, int $courseId): JsonResponse
+//     {
+//         try {
+//             // 1. Fetch course
+//             $course = Course::findOrFail($courseId);
 
-            // 2. Fetch enrollments with user
-            $enrollments = Enrollment::where('course_id', $courseId)
-                ->with('user')
+//             // 2. Fetch enrollments with user
+//             $enrollments = Enrollment::where('course_id', $courseId)
+//                 ->with('user')
+//                 ->get();
+
+//             if ($enrollments->isEmpty()) {
+//                 return response()->json([
+//                     'message' => 'No users enrolled in this course',
+//                     'data' => []
+//                 ], 200);
+//             }
+
+//             // 3. Fetch visible lessons and quizzes
+//             $visibleLessonIds = Lesson::where('course_id', $courseId)
+//                 ->where('is_visible', true)
+//                 ->pluck('id');
+//             $totalLessons = $visibleLessonIds->count();
+
+//             $visibleQuizzes = Quiz::whereIn('lesson_id', $visibleLessonIds)
+//                 ->where('is_visible', true)
+//                 ->get()
+//                 ->keyBy('id');
+//             $visibleQuizIds = $visibleQuizzes->keys();
+
+//             $results = [];
+//             foreach ($enrollments as $enrollment) {
+//                 $user = $enrollment->user;
+
+//                 // 4. Calculate lesson completion
+//                 $completedLessons = LessonProgress::where('user_id', $user->id)
+//                     ->whereIn('lesson_id', $visibleLessonIds)
+//                     ->where('status', 'completed')
+//                     ->count();
+//                 $lessonCompletionPercent = $totalLessons > 0
+//                     ? round(($completedLessons / $totalLessons) * 100, 2)
+//                     : 0;
+
+//                 // 5. Fetch quiz results
+//                 $allQuizResults = QuizResult::where('user_id', $user->id)
+//                     ->whereIn('quiz_id', $visibleQuizIds)
+//                     ->get();
+
+//                 // 6. Use CertificateEligibilityChecker for eligibility
+//                 $checker = new CertificateEligibilityChecker($courseId, $user->id);
+//                 $eligibility = $checker->check();
+
+//                 // 7. Prepare quiz results (include all visible quizzes)
+//                 $quizResults = $visibleQuizzes->map(function($quiz) use ($allQuizResults, $eligibility) {
+//                     $latestAttempt = $allQuizResults
+//                         ->where('quiz_id', $quiz->id)
+//                         ->sortByDesc('completed_at')
+//                         ->first();
+
+//                     return [
+//                         'quiz_id'      => $quiz->id,
+//                         'quiz_title'   => $quiz->title,
+//                         'score'        => $latestAttempt?->score,
+//                         'is_passed'    => $eligibility['missingQuizzes']->doesntContain($quiz->origin_id ?? $quiz->id),
+//                         'completed_at' => $latestAttempt?->completed_at?->toISOString(),
+//                         'origin_id'    => $quiz->origin_id ?? $quiz->id,
+//                         'version'      => $quiz->version,
+//                     ];
+//                 })->values()->toArray();
+
+//                 $results[] = [
+//                     'user_id'                     => $user->id,
+//                     'username'                    => $user->username,
+//                     'email'                       => $user->email,
+//                     'lesson_completion_percent'   => $lessonCompletionPercent,
+//                     'total_lessons'               => $totalLessons,
+//                     'completed_lessons'           => $completedLessons,
+//                     'quizzes'                     => $quizResults,
+//                     'is_eligible_for_certificate' => $eligibility['eligible'],
+//                     'missing_lessons'             => $eligibility['missingLessons']->toArray(),
+//                     'missing_quizzes'             => $eligibility['missingQuizzes']->toArray(),
+//                     'rules'                       => $eligibility['rule'],
+//                 ];
+//             }
+
+//             return response()->json([
+//                 'message' => 'Course progress retrieved successfully',
+//                 'data' => [
+//                     'course_id'   => $course->id,
+//                     'course_name' => $course->course_name,
+//                     'users'       => $results,
+//                 ]
+//             ], 200);
+
+//         } catch (ModelNotFoundException $e) {
+//             return response()->json(['message' => 'Course not found'], 404);
+
+//         } catch (Exception $e) {
+//             Log::error('Get course progress error:', [
+//                 'course_id' => $courseId,
+//                 'message'   => $e->getMessage(),
+//             ]);
+//             return response()->json([
+//                 'message' => 'An error occurred while retrieving course progress',
+//                 'error'   => $e->getMessage(),
+//             ], 500);
+//         }
+//     }
+
+public function getCourseProgress(Request $request, int $courseId): JsonResponse
+{
+    try {
+        // 1. Fetch course
+        $course = Course::findOrFail($courseId);
+
+        // 2. Fetch enrollments with user and certificates
+        $enrollments = Enrollment::where('course_id', $courseId)
+            ->with(['user', 'certificate'])
+            ->get();
+
+        if ($enrollments->isEmpty()) {
+            return response()->json([
+                'message' => 'No users enrolled in this course',
+                'data' => []
+            ], 200);
+        }
+
+        // 3. Fetch visible lessons and quizzes
+        $visibleLessonIds = Lesson::where('course_id', $courseId)
+            ->where('is_visible', true)
+            ->pluck('id');
+        $totalLessons = $visibleLessonIds->count();
+
+        $visibleQuizzes = Quiz::whereIn('lesson_id', $visibleLessonIds)
+            ->where('is_visible', true)
+            ->get()
+            ->keyBy('id');
+        $visibleQuizIds = $visibleQuizzes->keys();
+
+        $results = [];
+        foreach ($enrollments as $enrollment) {
+            $user = $enrollment->user;
+
+            // 4. Calculate lesson completion
+            $completedLessons = LessonProgress::where('user_id', $user->id)
+                ->whereIn('lesson_id', $visibleLessonIds)
+                ->where('status', 'completed')
+                ->count();
+            $lessonCompletionPercent = $totalLessons > 0
+                ? round(($completedLessons / $totalLessons) * 100, 2)
+                : 0;
+
+            // 5. Fetch quiz results
+            $allQuizResults = QuizResult::where('user_id', $user->id)
+                ->whereIn('quiz_id', $visibleQuizIds)
                 ->get();
 
-            if ($enrollments->isEmpty()) {
-                return response()->json([
-                    'message' => 'No users enrolled in this course',
-                    'data' => []
-                ], 200);
-            }
+            // 6. Use CertificateEligibilityChecker for eligibility
+            $checker = new CertificateEligibilityChecker($courseId, $user->id);
+            $eligibility = $checker->check();
 
-            // 3. Fetch visible lessons and quizzes
-            $visibleLessonIds = Lesson::where('course_id', $courseId)
-                ->where('is_visible', true)
-                ->pluck('id');
-            $totalLessons = $visibleLessonIds->count();
+            // 7. Prepare quiz results (include all visible quizzes)
+            $quizResults = $visibleQuizzes->map(function($quiz) use ($allQuizResults, $eligibility) {
+                $latestAttempt = $allQuizResults
+                    ->where('quiz_id', $quiz->id)
+                    ->sortByDesc('completed_at')
+                    ->first();
 
-            $visibleQuizzes = Quiz::whereIn('lesson_id', $visibleLessonIds)
-                ->where('is_visible', true)
-                ->get()
-                ->keyBy('id');
-            $visibleQuizIds = $visibleQuizzes->keys();
-
-            $results = [];
-            foreach ($enrollments as $enrollment) {
-                $user = $enrollment->user;
-
-                // 4. Calculate lesson completion
-                $completedLessons = LessonProgress::where('user_id', $user->id)
-                    ->whereIn('lesson_id', $visibleLessonIds)
-                    ->where('status', 'completed')
-                    ->count();
-                $lessonCompletionPercent = $totalLessons > 0
-                    ? round(($completedLessons / $totalLessons) * 100, 2)
-                    : 0;
-
-                // 5. Fetch quiz results
-                $allQuizResults = QuizResult::where('user_id', $user->id)
-                    ->whereIn('quiz_id', $visibleQuizIds)
-                    ->get();
-
-                // 6. Use CertificateEligibilityChecker for eligibility
-                $checker = new CertificateEligibilityChecker($courseId, $user->id);
-                $eligibility = $checker->check();
-
-                // 7. Prepare quiz results (include all visible quizzes)
-                $quizResults = $visibleQuizzes->map(function($quiz) use ($allQuizResults, $eligibility) {
-                    $latestAttempt = $allQuizResults
-                        ->where('quiz_id', $quiz->id)
-                        ->sortByDesc('completed_at')
-                        ->first();
-
-                    return [
-                        'quiz_id'      => $quiz->id,
-                        'quiz_title'   => $quiz->title,
-                        'score'        => $latestAttempt?->score,
-                        'is_passed'    => $eligibility['missingQuizzes']->doesntContain($quiz->origin_id ?? $quiz->id),
-                        'completed_at' => $latestAttempt?->completed_at?->toISOString(),
-                        'origin_id'    => $quiz->origin_id ?? $quiz->id,
-                        'version'      => $quiz->version,
-                    ];
-                })->values()->toArray();
-
-                $results[] = [
-                    'user_id'                     => $user->id,
-                    'username'                    => $user->username,
-                    'email'                       => $user->email,
-                    'lesson_completion_percent'   => $lessonCompletionPercent,
-                    'total_lessons'               => $totalLessons,
-                    'completed_lessons'           => $completedLessons,
-                    'quizzes'                     => $quizResults,
-                    'is_eligible_for_certificate' => $eligibility['eligible'],
-                    'missing_lessons'             => $eligibility['missingLessons']->toArray(),
-                    'missing_quizzes'             => $eligibility['missingQuizzes']->toArray(),
-                    'rules'                       => $eligibility['rule'],
+                return [
+                    'quiz_id'      => $quiz->id,
+                    'quiz_title'   => $quiz->title,
+                    'score'        => $latestAttempt?->score,
+                    'is_passed'    => $eligibility['missingQuizzes']->doesntContain($quiz->origin_id ?? $quiz->id),
+                    'completed_at' => $latestAttempt?->completed_at?->toISOString(),
+                    'origin_id'    => $quiz->origin_id ?? $quiz->id,
+                    'version'      => $quiz->version,
                 ];
-            }
+            })->values()->toArray();
 
-            return response()->json([
-                'message' => 'Course progress retrieved successfully',
-                'data' => [
-                    'course_id'   => $course->id,
-                    'course_name' => $course->course_name,
-                    'users'       => $results,
-                ]
-            ], 200);
+            // 8. Count completed quizzes (where is_passed is true)
+            $completedQuizzes = collect($quizResults)->where('is_passed', true)->count();
 
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Course not found'], 404);
+            // 9. Check if user has a certificate for this enrollment
+            $hasCertificate = $enrollment->certificate->isNotEmpty();
 
-        } catch (Exception $e) {
-            Log::error('Get course progress error:', [
-                'course_id' => $courseId,
-                'message'   => $e->getMessage(),
-            ]);
-            return response()->json([
-                'message' => 'An error occurred while retrieving course progress',
-                'error'   => $e->getMessage(),
-            ], 500);
+            $results[] = [
+                'user_id'                     => $user->id,
+                'username'                    => $user->username,
+                'email'                       => $user->email,
+                'lesson_completion_percent'   => $lessonCompletionPercent,
+                'total_lessons'               => $totalLessons,
+                'completed_lessons'           => $completedLessons,
+                'quizzes'                     => $quizResults,
+                'completed_quizzes'           => $completedQuizzes,
+                'total_quizzes'               => $visibleQuizzes->count(),
+                'is_eligible_for_certificate' => $eligibility['eligible'],
+                'has_certificate'             => $hasCertificate,
+                'missing_lessons'             => $eligibility['missingLessons']->toArray(),
+                'missing_quizzes'             => $eligibility['missingQuizzes']->toArray(),
+                'rules'                       => $eligibility['rule'],
+            ];
         }
+
+        // 10. Sort results: Prioritize by has_certificate, lesson_completion_percent, then completed_quizzes
+        usort($results, function ($a, $b) {
+            // Prioritize users without certificates (has_certificate = false)
+            if ($a['has_certificate'] !== $b['has_certificate']) {
+                return $a['has_certificate'] ? 1 : -1;
+            }
+            // If has_certificate is the same, sort by lesson_completion_percent in descending order
+            if ($a['lesson_completion_percent'] !== $b['lesson_completion_percent']) {
+                return $b['lesson_completion_percent'] <=> $a['lesson_completion_percent'];
+            }
+            // If lesson_completion_percent is equal, sort by completed_quizzes in descending order
+            return $b['completed_quizzes'] <=> $a['completed_quizzes'];
+        });
+
+        return response()->json([
+            'message' => 'Course progress retrieved successfully',
+            'data' => [
+                'course_id'   => $course->id,
+                'course_name' => $course->course_name,
+                'users'       => $results,
+            ]
+        ], 200);
+
+    } catch (ModelNotFoundException $e) {
+        return response()->json(['message' => 'Course not found'], 404);
+
+    } catch (Exception $e) {
+        Log::error('Get course progress error:', [
+            'course_id' => $courseId,
+            'message'   => $e->getMessage(),
+        ]);
+        return response()->json([
+            'message' => 'An error occurred while retrieving course progress',
+            'error'   => $e->getMessage(),
+        ], 500);
     }
-
-
+}
     // public function generateAndUpload($courseId, $userId, $userIdIssued)
     // {
     //     try {

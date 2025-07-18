@@ -25,6 +25,7 @@ class ExportController extends Controller
         ->join('course_category', 'courses.id', '=', 'course_category.course_id')
         ->join('categories', 'course_category.category_id', '=', 'categories.id')
         ->select('courses.course_name as title', 'courses.difficulty_level as level', 'categories.name as category')
+        ->where('courses.status', '=', 'approved')
         ->get();
 
     foreach ($courses as $course) {

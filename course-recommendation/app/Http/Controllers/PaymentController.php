@@ -175,7 +175,7 @@ class PaymentController extends Controller
             return response()->json(['message' => "Missing required field: {$field}"], 400);
         }
     }
-     $apiUrl = "https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD";
+    $apiUrl = "https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD";
 
     $response = Http::get($apiUrl);
      if ($response->failed()) {
@@ -267,7 +267,7 @@ class PaymentController extends Controller
         $payment = Payment::create([
             'user_id' => $userId,
             'course_id' => $courseId,
-            'amount' => $paymentData['amount'],
+            'amount' => $finalAmount,
             'method' => $paymentData['method'],
             'transaction_code' => $result['transaction_code'],
             'coupon_id' => $paymentData['coupon_id'] ?? null,
@@ -724,8 +724,6 @@ public function handlePayPalSuccess(Request $request)
             $revenueSession = RevenueSession::find($payment->revenue_session_id);
             if ($revenueSession) {
                 $revenueSession->increment('total_revenue', $payment->amount);
-                $revenueSession->increment('admin_share', $payment->amount * 0.3);
-                $revenueSession->increment('instructor_share', $payment->amount * 0.7);
             }
 
             // Log audit

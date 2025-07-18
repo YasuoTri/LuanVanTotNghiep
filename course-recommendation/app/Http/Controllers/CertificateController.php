@@ -542,7 +542,7 @@ public function issueCertificate(int $courseId, int $userId): JsonResponse
             ['enrollment_id' => $enrollment->id],
             [
                 'certificate_code' => $certificateCode??random_int(100000, 999999),
-                'download_url' => $downloadUrl??"",
+                'download_url' =>"https://res.cloudinary.com/dj11e209p/image/upload/v1752800825/Pngtree_certificate_graduation_template_design_with_6540052_jmjung.png",
                 'created_at' => now()
             ]
         );

@@ -332,7 +332,6 @@ public function confirmFix(Report $report)
 
         $report = Report::where('id', $reportId)
             ->where('user_id', $userId)
-            ->where('status', 'pending')
             ->first();
 
         if (!$report) {

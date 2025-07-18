@@ -14,7 +14,7 @@ from datetime import datetime
 import networkx as nx
 from collections import Counter
 from surprise.model_selection import GridSearchCV
-
+import random
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -254,8 +254,10 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
                 'course_id': str(course_row['course_id']),
                 'course_title': str(course_row['course_title']),
                 'url': str(course_row['url']),
+                'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
                 'is_paid': bool(course_row['is_paid']),
                 'price': str(course_row['price']),
+                'course_rating': random.randint(1, 5),
                 'num_subscribers': int(course_row['num_subscribers']),
                 'num_reviews': int(course_row['num_reviews']),
                 'num_lectures': int(course_row['num_lectures']),
@@ -307,6 +309,8 @@ def get_popular_courses(courses_list, num_recommendations=5):
                 'course_id': str(row['course_id']),
                 'course_title': str(row['course_title']),
                 'url': str(row['url']),
+                 'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+               
                 'is_paid': bool(row['is_paid']),
                 'price': str(row['price']),
                 'num_subscribers': int(row['num_subscribers']),
@@ -381,8 +385,11 @@ def recommend_collaborative(user_id, data_file='Data/udemy_courses.csv', num_rec
                 'course_id': str(course_row['course_id']),
                 'course_title': str(course_row['course_title']),
                 'url': str(course_row['url']),
+                 'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+               
                 'is_paid': bool(course_row['is_paid']),
                 'price': str(course_row['price']),
+                'course_rating': random.randint(1, 5),
                 'num_subscribers': int(course_row['num_subscribers']),
                 'num_reviews': int(course_row['num_reviews']),
                 'num_lectures': int(course_row['num_lectures']),
@@ -445,7 +452,9 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
             result.append({
                 'course_id': row['course_id'],
                 'course_title': row['course_title'],
-                'url': row['url'],
+                'url': str(row['url']),
+                 'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+                'course_rating': random.randint(1, 5),
                 'is_paid': row['is_paid'],
                 'price': row['price'],
                 'num_subscribers': row['num_subscribers'],

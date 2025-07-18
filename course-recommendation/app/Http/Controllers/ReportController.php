@@ -62,7 +62,6 @@ class ReportController extends Controller
         $courseId = $request->course_id;
          $existingReport = Report::where('user_id', $userId)
         ->where('course_id', $courseId)
-        ->where('status', 'pending')
         ->first();
 
         $course=Course::find($request->course_id);
@@ -92,7 +91,6 @@ class ReportController extends Controller
             'user_id' => $user->id,
             'course_id' => $request->course_id,
             'reason' => $request->reason,
-            'status' => 'pending',
         ]);
 
         return response()->json(['message' => 'Report submitted successfully']);

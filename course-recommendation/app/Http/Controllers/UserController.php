@@ -242,9 +242,10 @@ public function show($id): JsonResponse
     // Instructor revenue data if user is an instructor
     $instructorRevenue = null;
     if ($user->role === 'instructor') {
-        $instructorRevenue = RevenueDistribution::where('instructor_id', $user->instructor->id)
-            ->where('status', 'completed')
-            ->sum('instructor_share');
+        $instructorRevenue = RevenueDistribution::join('courses', 'revenue_distributions.course_id', '=', 'courses.id')
+            ->where('courses.instructor_id', $user->instructor->id)
+            ->where('revenue_distributions.status', 'completed')
+            ->sum('revenue_distributions.instructor_share');
     }
     $user->payments->each(function ($payment) {
         $payment->payment_date = $payment->created_at->format('Y-m-d H:i:s');

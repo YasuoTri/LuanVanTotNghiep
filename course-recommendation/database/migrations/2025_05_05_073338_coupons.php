@@ -24,7 +24,7 @@ return new class extends Migration
         // });
         Schema::create('coupons', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('code', 20)->unique()->comment('Mã giảm giá');
+            $table->string('code', 20)->comment('Mã giảm giá');
             $table->enum('discount_type', ['percent', 'fixed']);
             $table->integer('discount_value')->comment('10 = 10% hoặc 10.000đ');
             $table->integer('min_order')->nullable()->comment('Đơn tối thiểu');

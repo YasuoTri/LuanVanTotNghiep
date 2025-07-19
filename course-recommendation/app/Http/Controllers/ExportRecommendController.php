@@ -47,6 +47,7 @@ class ExportRecommendController extends Controller
                 'courses.created_at as published_timestamp',
                 'categories.name as subject'
             ])
+            ->where('courses.status', '=', 'approved')
             ->get();
 
         foreach ($courses as $course) {
@@ -107,7 +108,7 @@ class ExportRecommendController extends Controller
         )->post('http://127.0.0.1:9000/recommend/update-model');
 
         return response()->json([
-            'message' => '✔️ Đã xuất và gửi 2 CSV thành công.',
+            'message' => '✔️ Export and send to Python API successfully!',
             'python_response' => $response->json()
         ]);
     }

@@ -453,7 +453,7 @@ class LessonController extends Controller
                 try {
                     // Lưu lesson với is_visible = false
                     $data['course_id'] = $course_id;
-                    $data['is_visible'] = false;
+                    $data['is_visible'] = true;
                     $lesson = Lesson::create($data);
 
                     // Create lesson progress for all enrolled users
@@ -689,9 +689,9 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
 
         // Kiểm tra trạng thái course
         $course = Course::findOrFail($course_id);
-        if ($course->status === 'rejected') {
-            return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
-        }
+        // if ($course->status === 'rejected') {
+        //     return response()->json(['error' => 'Cannot update lesson for rejected course'], 403);
+        // }
 
         // Kiểm tra xem user hiện tại có phải là instructor của course này không
         if ($course->instructor_id !== $user->instructor->id) {

@@ -337,7 +337,7 @@ class DatabaseSeederNewNewNew extends Seeder
             'course_url' => $data['url'],
             'image' => "https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg",
             'course_description' => "Learn {$data['subject']} with practical examples and hands-on projects.",
-            'price' => $price,
+            'price' => rand(1, 200),
             'skills' => $data['subject'],
             'status' => $status,
             'is_certificate_enabled' => rand(0, 1),

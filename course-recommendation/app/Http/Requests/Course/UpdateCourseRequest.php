@@ -19,7 +19,7 @@ class UpdateCourseRequest extends FormRequest
             'course_rating' => 'nullable|numeric|min:0|max:5',
             'difficulty_level' => 'nullable|string|max:50',
             'course_description' => 'nullable|string',
-            'price' => 'nullable|integer|min:0',
+            'price' => 'nullable|numeric|min:0',
             'skills' => 'nullable|string',
             'tag' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',

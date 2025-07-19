@@ -7,6 +7,7 @@ use App\Models\RevenueSession;
 use App\Models\Payment;
 use App\Models\RevenueDistribution;
 use App\Models\Course;
+use App\Models\User;
 use App\Services\PayPalService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -200,13 +201,13 @@ class RevenueDistributePaypal extends Controller
     //         ], 500);
     //     }
     // }
+    
     public function distributeRevenue($sessionId): JsonResponse
 {
     DB::beginTransaction();
 
     try {
         $session = RevenueSession::where('id', $sessionId)
-            ->where('status', 'open')
             ->firstOrFail();
 
         if (!$this->paypalService->testConnection()) {
@@ -303,7 +304,7 @@ class RevenueDistributePaypal extends Controller
         }
 
         // Admin payout
-        $adminPayoutResult = $this->sendPayPalPayoutToAdmin($totalAdminShare, $session);
+        // $adminPayoutResult = $this->sendPayPalPayoutToAdmin(0, $session);
 
         $session->update([
             'status' => $failCount === 0 ? 'distributed' : 'closed',
@@ -319,13 +320,13 @@ class RevenueDistributePaypal extends Controller
                     'total_instructors' => $successCount + $failCount,
                     'successful_payouts' => $successCount,
                     'failed_payouts' => $failCount,
-                    'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
+                    // 'admin_payout' => $adminPayoutResult['success'] ? 'Success' : 'Failed'
                 ],
                 'distribution_details' => $distributionResults,
                 'admin_payout' => [
                     'amount_usd' => $totalAdminShare,
-                    'success' => $adminPayoutResult['success'],
-                    'message' => $adminPayoutResult['message']
+                    // 'success' => $adminPayoutResult['success'],
+                    // 'message' => $adminPayoutResult['message']
                 ]
             ]
         ], 200);
@@ -392,7 +393,7 @@ class RevenueDistributePaypal extends Controller
                 ];
             }
 
-            Log::info("💸 Sending PayPal payout to instructor {$instructor->id}: {$amount} VND = \${$amountUSD} USD");
+            Log::info("💸 Sending PayPal payout to instructor {$instructor->id}:\${$amountUSD} USD");
             
             // Gửi payout qua PayPal
             $response = $this->paypalService->sendPayout(
@@ -412,7 +413,8 @@ class RevenueDistributePaypal extends Controller
             Log::info("✅ PayPal payout SUCCESS for instructor {$instructor->id}: \${$amountUSD} to {$paypalEmail}");
             
             try {
-                Mail::to($instructor->email)->send(new PayoutCompletedMail($instructor, $amountUSD, $revenueDistribution));
+                $user=User::find($instructor->user_id);
+                Mail::to($user->email)->send(new PayoutCompletedMail($instructor, $amountUSD, $revenueDistribution));
                 Log::info("📧 Sent payout notification email to instructor {$instructor->id}");
             } catch (\Exception $mailEx) {
                 Log::warning("⚠️ Failed to send payout email to instructor {$instructor->id}: " . $mailEx->getMessage());
@@ -445,7 +447,7 @@ class RevenueDistributePaypal extends Controller
     private function sendPayPalPayoutToAdmin($adminShare, $session): array
     {
         try {
-            $adminEmail = "sb-tj2x544276417@business.example.com";
+            $adminEmail = "sb-hwwip44224479@business.example.com";
             
             if (!$adminEmail) {
                 Log::warning("⚠️ No admin PayPal email configured");

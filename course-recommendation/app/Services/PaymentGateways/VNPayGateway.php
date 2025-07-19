@@ -25,11 +25,11 @@ class VNPayGateway implements PaymentGateway
         ];
 
         // Kiểm tra cấu hình
-        foreach (['tmn_code', 'hash_secret', 'return_url'] as $key) {
-            if (empty($this->config[$key])) {
-                throw new \Exception("Missing VNPay configuration: {$key}");
-            }
-        }
+        // foreach (['tmn_code', 'hash_secret', 'return_url'] as $key) {
+        //     if (empty($this->config[$key])) {
+        //         throw new \Exception("Missing VNPay configuration: {$key}");
+        //     }
+        // }
 
         // Kiểm tra HTTPS trong production hoặc khi không phải localhost
         if (!app()->environment('local') && !str_starts_with($this->config['return_url'], 'https://')) {

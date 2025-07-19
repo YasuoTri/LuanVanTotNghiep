@@ -95,13 +95,6 @@ class PayPalService
                 ]
             ];
 
-            Log::info('🚀 Sending PayPal Payout', [
-                'recipient' => $recipientEmail,
-                'amount' => $amount,
-                'currency' => $currency,
-                'batch_id' => $batchId
-            ]);
-
             $response = Http::withToken($accessToken)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
@@ -116,7 +109,8 @@ class PayPalService
                     'batch_id' => $result['batch_header']['payout_batch_id'],
                     'status' => $result['batch_header']['batch_status'],
                     'recipient' => $recipientEmail,
-                    'amount' => $amount
+                    'amount' => $amount,
+                    'full'=> $result
                 ]);
 
                 // Trả về object giống như SDK

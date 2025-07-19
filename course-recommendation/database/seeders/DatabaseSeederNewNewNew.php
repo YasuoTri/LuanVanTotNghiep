@@ -50,8 +50,8 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->seedCoupons();
         $this->seedPayments();
         // $this->seedAuditLogs();
-        $this->seedRevenueSessions();
-        $this->seedRevenueDistributions();
+        // $this->seedRevenueSessions();
+        // $this->seedRevenueDistributions();
   
         $this->seedQuizzes();
         $this->seedQuestions();
@@ -152,7 +152,7 @@ class DatabaseSeederNewNewNew extends Seeder
                 'user_id' => $instructorUser->id,
                 'bio' => "Expert in " . collect(['programming', 'web development', 'data science', 'AI', 'machine learning'])->random() . " with {$index} years of experience.",
                 'organization' => $organizations[array_rand($organizations)],
-                'email_paypal' => "paypal{$index}@example.com",
+                'email_paypal' => 'sb-iqclf44276453@personal.example.com',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

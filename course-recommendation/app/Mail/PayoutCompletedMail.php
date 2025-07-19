@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -16,10 +17,13 @@ class PayoutCompletedMail extends Mailable
     public $instructor;
     public $amountUSD;
     public $revenueDistribution;
+    public $user;
 
     public function __construct($instructor, $amountUSD, $revenueDistribution)
     {
         $this->instructor = $instructor;
+        $tempuser=User::find($instructor->user_id);
+        $this->user=$tempuser;
         $this->amountUSD = $amountUSD;
         $this->revenueDistribution = $revenueDistribution;
     }

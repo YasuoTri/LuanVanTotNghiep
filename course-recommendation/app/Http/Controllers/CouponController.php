@@ -63,69 +63,87 @@ class CouponController extends Controller
         return response()->json(['message' => 'Coupon deleted successfully']);
     }
     
-    public function createCoupon(Request $request)
+   public function createCoupon(Request $request)
 {
-try{
-    $user = Auth::user();
+    try {
+        $user = Auth::user();
 
-    // Kiểm tra quyền
-    if (!$user->instructor) {
-        return response()->json(['message' => 'Only instructors can create coupons.'], 403);
+        // Kiểm tra quyền
+        if (!$user->instructor) {
+            return response()->json(['message' => 'Only instructors can create coupons.'], 403);
+        }
+
+        // Kiểm tra course có thuộc instructor không
+        $course = Course::where('id', $request->course_id)
+            ->where('instructor_id', $user->instructor->id)
+            ->where('status', '!=', 'banned')
+            ->first();
+
+        if (!$course) {
+            return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
+        }
+
+        // Validate request
+        $request->validate([
+            'code' => [
+                'required', 'string', 'max:20',
+                Rule::unique('coupons')->where(fn($q) => $q->where('course_id', $course->id))
+            ],
+            'discount_type' => ['required', Rule::in(['percent', 'fixed'])],
+            'discount_value' => [
+                'required',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request, $course) {
+                    $minDiscount = $course->price * 0.5; // 50% of course price
+                    
+                    if ($request->discount_type === 'fixed' && $value > $minDiscount) {
+                        $fail("Fixed discount can not be more than 50% of the course price ($minDiscount).");
+                    }
+                    
+                    if ($request->discount_type === 'percent' && $value > 50) {
+                        $fail("Percentage discount can not be more than 50%.");
+                    }
+                },
+            ],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'usage_limit' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+
+        $overlapCoupons = Coupon::where('course_id', $course->id)
+            ->where('is_active', 1)
+            ->where(function($query) use ($startDate, $endDate) {
+                $query->where(function($q) use ($startDate, $endDate) {
+                    $q->where('start_date', '<=', $endDate)
+                      ->where('end_date', '>=', $startDate);
+                });
+            })
+            ->count();
+
+        if ($overlapCoupons >= 3) {
+            return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
+        }
+
+        // Tạo coupon
+        $coupon = Coupon::create([
+            'code' => $request->code,
+            'discount_type' => $request->discount_type,
+            'discount_value' => $request->discount_value,
+            'course_id' => $course->id,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'usage_limit' => $request->usage_limit,
+        ]);
+
+        return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Error: ' . $e->getMessage()], 500);
     }
-
-    // Kiểm tra course có thuộc instructor không
-    $course = Course::where('id', $request->course_id)
-        ->where('instructor_id', $user->instructor->id)
-        ->where('status','!=','banned')
-        ->first();
-
-    if (!$course) {
-        return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
-    }
-       $request->validate([
-        'code'           => [
-            'required', 'string', 'max:20',
-            // unique trong bảng coupons với điều kiện course_id = $course->id
-            Rule::unique('coupons')->where(fn($q) => $q->where('course_id', $course->id))
-        ],
-        'discount_type'  => ['required', Rule::in(['percent','fixed'])],
-        'discount_value' => ['required','integer','min:0'],
-        'start_date'     => ['required','date'],
-        'end_date'       => ['required','date','after_or_equal:start_date'],
-        'usage_limit'    => ['nullable','integer','min:1'],
-    ]);
-     // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
-    $startDate = $request->start_date;
-    $endDate = $request->end_date;
-
-    $overlapCoupons = Coupon::where('course_id', $course->id)
-        ->where('is_active', 1)
-        ->where(function($query) use ($startDate, $endDate) {
-            $query->where(function($q) use ($startDate, $endDate) {
-                $q->where('start_date', '<=', $endDate)
-                  ->where('end_date', '>=', $startDate);
-            });
-        })
-        ->count();
-
-    if ($overlapCoupons >= 3) {
-        return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
-    }
-    // Tạo coupon
-    $coupon = Coupon::create([
-        'code' => $request->code,
-        'discount_type' => $request->discount_type,
-        'discount_value' => $request->discount_value,
-        'course_id' => $course->id,
-        'start_date' => $request->start_date,
-        'end_date' => $request->end_date,
-        'usage_limit' => $request->usage_limit,
-    ]);
-
-    return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);
-}catch (\Exception $e) {
-    return response()->json(['message' => 'Error:'.$e], 500);
-};
 }
 public function getCouponsByCourse(Request $request, $course_id)
     {
@@ -135,34 +153,8 @@ public function getCouponsByCourse(Request $request, $course_id)
         return response()->json(['message' => 'You do not have permission to access this course.'], 403);
     }
         try {
-            // Get current date for checking coupon validity
-            $currentDate = Carbon::now();
             // Query active coupons for the course
             $coupons = Coupon::where('course_id', $course_id)
-                ->where(function ($query) use ($currentDate) {
-                    $query->whereNull('start_date')
-                        ->orWhere('start_date', '<=', $currentDate);
-                })
-                ->where(function ($query) use ($currentDate) {
-                    $query->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $currentDate);
-                })
-                ->where(function ($query) {
-                    $query->whereNull('usage_limit')
-                        ->orWhereRaw('used_count < usage_limit');
-                })
-                ->select([
-                    'id',
-                    'code',
-                    'discount_type',
-                    'discount_value',
-                    'min_order',
-                    'start_date',
-                    'end_date',
-                    'usage_limit',
-                    'used_count',
-                    'is_active'
-                ])
                 ->paginate(10);
 
             return response()->json($coupons, 200);

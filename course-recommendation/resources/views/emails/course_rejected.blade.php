@@ -218,7 +218,7 @@
             <div class="warning-icon"></div>
 
             <div class="rejection-box">
-                <p>Course: <strong>{{ $courseName }}</strong> is rejected.</p>
+                <p>Course: <strong>{{ $course->course_name }}</strong> is rejected.</p>
             </div>
 
             <div class="reason-box">

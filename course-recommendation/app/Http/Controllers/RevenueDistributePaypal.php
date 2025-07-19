@@ -282,7 +282,7 @@ class RevenueDistributePaypal extends Controller
                     // 'instructor_id' => $instructorId,
                     'course_id' => $courseInfo['course_id'],
                     'instructor_share' => $courseInfo['amount'],
-                    'revenue_amount' => $courseInfo['amount'],
+                    // 'revenue_amount' => $courseInfo['amount'],
                     'status' => 'pending',
                 ]);
             }

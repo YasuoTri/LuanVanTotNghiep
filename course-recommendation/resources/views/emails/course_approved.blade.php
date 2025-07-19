@@ -197,14 +197,14 @@
         <div class="leaf-decoration leaf-2"></div>
 
         <div class="header">
-            <h2>Hello {{ $course->instructor->name }}</h2>
+            <h2>Hello {{ $course->instructors->user->fullname }}</h2>
         </div>
 
         <div class="content">
             <div class="checkmark"></div>
 
             <div class="highlight-box">
-                <p>Your course <strong>{{ $courseName }}</strong> has been approved by the admin and will soo
+                <p>Your course <strong>{{ $course->course_name }}</strong> has been approved by the admin and will soo
                     n be visible again to learners.</p>
             </div>
 

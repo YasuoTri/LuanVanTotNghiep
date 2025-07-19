@@ -1042,9 +1042,9 @@ public function approveCourse(Request $request, $id)
         'reviewed_at' => now(),
     ]);
      // Gửi mail instructor
-    $instructor = $course->instructor;
-    if ($instructor && $instructor->user) {
-        Mail::to($instructor->user->email)
+    $instructors = $course->instructors;
+    if ($instructors && $instructors->user) {
+        Mail::to($instructors->user->email)
             ->send(new CourseApprovedMail($course));
     }
     return response()->json(['message' => 'Course approved successfully']);

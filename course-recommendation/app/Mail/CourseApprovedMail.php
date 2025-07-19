@@ -20,7 +20,7 @@ class CourseApprovedMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Khóa học của bạn đã được phê duyệt')
+        return $this->subject('Your Course Has Been Approved')
             ->view('emails.course_approved')
             ->with([
                 'courseName' => $this->course->course_name,

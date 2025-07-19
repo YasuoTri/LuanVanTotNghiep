@@ -306,7 +306,7 @@ class RevenueDistributePaypal extends Controller
         $adminPayoutResult = $this->sendPayPalPayoutToAdmin($totalAdminShare, $session);
 
         $session->update([
-            'status' => $failCount === 0 ? 'distributed' : 'partially_distributed'
+            'status' => $failCount === 0 ? 'distributed' : 'closed',
         ]);
 
         DB::commit();

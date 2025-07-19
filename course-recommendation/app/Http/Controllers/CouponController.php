@@ -45,6 +45,23 @@ class CouponController extends Controller
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
         }
+          // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+
+        $overlapCoupons = Coupon::where('course_id', $coupon->course->id)
+            ->where('is_active', 1)
+            ->where(function($query) use ($startDate, $endDate) {
+                $query->where(function($q) use ($startDate, $endDate) {
+                    $q->where('start_date', '<=', $endDate)
+                      ->where('end_date', '>=', $startDate);
+                });
+            })
+            ->count();
+
+        if ($overlapCoupons >= 3) {
+            return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
+        }
         $coupon->fill($request->all());
         if (!$coupon->isDirty()) {
             return response()->json(['message' => 'No changes detected'], 200);
@@ -111,23 +128,7 @@ class CouponController extends Controller
             'usage_limit' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
-
-        $overlapCoupons = Coupon::where('course_id', $course->id)
-            ->where('is_active', 1)
-            ->where(function($query) use ($startDate, $endDate) {
-                $query->where(function($q) use ($startDate, $endDate) {
-                    $q->where('start_date', '<=', $endDate)
-                      ->where('end_date', '>=', $startDate);
-                });
-            })
-            ->count();
-
-        if ($overlapCoupons >= 3) {
-            return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
-        }
+      
 
         // Tạo coupon
         $coupon = Coupon::create([

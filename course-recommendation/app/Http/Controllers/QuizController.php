@@ -18,6 +18,8 @@ use App\Models\QuizResult;
 use App\Models\UserAnswer;
 use App\Models\QuestionChoice;
 use App\Models\Question;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -195,6 +197,10 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         $instructor = Instructors::where('user_id', $user->id)->first();
         if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        $isHaveQuizResult = QuizResult::where('quiz_id', $id)->exists();
+        if ($isHaveQuizResult) {
+            return response()->json(['message' => 'Quiz has been taken by students.Canot delete'], 400);
         }
         $quiz->delete();
         return response()->json(['message' => 'Quiz deleted successfully'], 200);
@@ -880,8 +886,12 @@ public function startQuiz(Request $request, $quiz_id): JsonResponse
     $attempts = QuizResult::where('user_id', $user->id)
         ->where('quiz_id', $quiz_id)
         ->count();
-
-    if ($attempts >= $quiz->max_attempts) {
+    if($quiz->max_attempts==null){
+        $quizCanDo=10000;
+    }else{
+        $quizCanDo=$quiz->max_attempts;
+    }
+    if ($attempts >= $quizCanDo) {
         return response()->json(['message' => 'Out of amount to take the quiz'], 403);
     }
 
@@ -1250,7 +1260,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
         }
 
         // Tìm QuizResult chưa hoàn thành
-        $quizResult = QuizResult::where('user_id', $user->id)
+        $quizResult = QuizResult::where('id',$request->quiz_result_id)->where('user_id', $user->id)
             ->where('quiz_id', $quizId)
             ->whereNull('completed_at')
             ->first();
@@ -1281,7 +1291,15 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
         if ($answersValidation !== true) {
             return $answersValidation;
         }
-
+        if (!is_null($quiz->time_limit) && $quizResult->started_at) {
+            $timeLimitMinutes = $quiz->time_limit;
+            $deadline = Carbon::parse($quizResult->started_at)->addMinutes($timeLimitMinutes);
+            if (now()->gt($deadline)) {
+                return response()->json([
+                    'message' => 'Quiz submission time has expired.'
+                ], 403);
+            }
+        }
         // Xử lý nộp bài
         return $this->processQuizSubmission($user, $quiz, $quizResult, $questions, $answers);
 
@@ -1383,7 +1401,11 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
         try {
             $correctCount = 0;
             $totalQuestions = $questions->count();
-            $passThreshold = 80; // Giả định
+            $passThreshold = (int) CertificateRule::where('course_id', $quiz->lesson->course_id)->value('quiz_min_score');
+            if($passThreshold == 0){
+                $passThreshold = 60;
+            }
+            Log::info('Pass threshold:', ['pass_threshold' => $passThreshold]);
             $results = [];
 
             foreach ($questions as $question) {
@@ -1415,8 +1437,9 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
             // Tính thời gian làm bài (phút)
             $timeTaken = $quizResult->started_at->diffInMinutes($quizResult->completed_at);
 
-            DB::commit();
-
+            DB::commit();   
+            $utcTime = Carbon::parse($quizResult->completed_at);
+            $vnTime = $utcTime->setTimezone('Asia/Ho_Chi_Minh');
             return response()->json([
                 'message' => 'Quiz submitted successfully',
                 'data' => [
@@ -1431,7 +1454,7 @@ public function submitQuiz(Request $request, int $quizId): JsonResponse
                         'pass_threshold' => $passThreshold,
                         'attempt_number' => $quizResult->attempt_number,
                         'time_taken' => $timeTaken,
-                        'completed_at' => now()->toISOString(),
+                        'completed_at' =>$vnTime->format('Y-m-d H:i:s'),
                     ],
                     'results' => $results,
                     'summary' => [

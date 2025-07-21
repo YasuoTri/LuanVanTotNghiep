@@ -368,7 +368,7 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->command->info('Seeding student categories...');
 
         $students = Student::all();
-        $categories = Category::whereNotNull('parent_id')->get()->pluck('id')->toArray();
+        $categories = Category::whereNull('parent_id')->get()->pluck('id')->toArray();
 
         foreach ($students as $student) {
             $numCategories = rand(1, 3);

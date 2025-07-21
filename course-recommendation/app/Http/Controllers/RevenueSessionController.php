@@ -223,7 +223,7 @@ public function checkRevenueDistributed($sessionId)
 public function getAllRevenueSessions()
 {
     $sessions = RevenueSession::all()->map(function ($session) {
-        $payments = \App\Models\Payment::where('revenue_session_id', $session->id)
+        $payments = Payment::where('revenue_session_id', $session->id)
             ->where('status', 'completed')
             ->get();
 

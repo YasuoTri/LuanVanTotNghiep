@@ -1292,7 +1292,7 @@ public function SearchCourse(Request $request){
             'course_url' => $course->course_url,
             'image' => $course->image,
             'category' => optional($course->categories->first())->name, // lấy category đầu tiên
-            'instructor_name' => optional($course->instructors)->name,
+            'instructor_name' => $course->instructors->user->fullname,
         ];
     });
     return response()->json($results);

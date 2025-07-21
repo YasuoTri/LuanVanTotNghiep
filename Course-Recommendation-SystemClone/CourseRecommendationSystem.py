@@ -137,6 +137,7 @@ def get_level_value(level):
 #     except Exception as e:
 #         logger.error(f"Error in recommendation: {str(e)}")
 #         return [{"error": f"Error: {str(e)}"}]
+
 def recommend_similar_courses(course_title, level=None, subject=None, data_file='Data/udemy_courses.csv', num_recommendations=20):
     """
     Recommend courses similar to the input course based on course_title, level, and subject.
@@ -225,12 +226,13 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
             ((level is not None) & (similarity_df['level'].str.lower() != level)) |
             ((subject is not None) & (similarity_df['subject'].str.lower() != subject))
         ]
-        candidates = candidates[similarity_df['similarity'] > 0]
+        candidates = candidates[similarity_df['similarity'] > 0.5]
         logger.info(f"Number of candidates after filtering: {len(candidates)}")
         
         if candidates.empty:
             logger.warning("No candidates found after filtering.")
-            return [{"warning": "No similar courses found due to filtering."}]
+            return []
+            # return [{"warning": "No similar courses found due to filtering."}]
         
         # Apply level filter
         candidates = candidates.copy()
@@ -240,7 +242,8 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
         
         if candidates.empty:
             logger.warning("No candidates found after level filtering.")
-            return [{"warning": "No courses found with level equal to or higher than the input course."}]
+            return []
+            # return [{"warning": "No courses found with level equal to or higher than the input course."}]
         
         # Sort by similarity and select top candidates
         top_candidates = candidates.sort_values(by='similarity', ascending=False).head(num_recommendations)
@@ -271,7 +274,7 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
     
     except Exception as e:
         logger.error(f"Error in recommendation: {str(e)}")
-        return [{"error": f"Error: {str(e)}"}]
+        return []
 
 def get_popular_courses(courses_list, num_recommendations=5):
     """
@@ -405,37 +408,47 @@ def recommend_collaborative(user_id, data_file='Data/udemy_courses.csv', num_rec
     except Exception as e:
         logger.error(f"Error in collaborative recommendation: {str(e)}")
         return [{"error": f"Error: {str(e)}"}]
+    
+import pandas as pd
+import random
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Nhớ import hàm recommend_similar_courses nếu dùng
+from CourseRecommendationSystem import recommend_similar_courses
 
 def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_file='Data/udemy_courses.csv', num_recommendations=30):
     try:
-        # Load data
-        ratings = pd.read_csv(ratings_file)
-        courses = pd.read_csv(courses_file)
+        # Load data với dtype nhất quán
+        ratings = pd.read_csv(ratings_file, dtype={'user_id': str, 'course_id': str})
+        courses = pd.read_csv(courses_file, dtype={'course_id': str})
 
-        # Create user-item matrix
+        # Tạo user-item matrix
         user_item_matrix = ratings.pivot_table(index='user_id', columns='course_id', values='rating').fillna(0)
 
-        # Check if user exists
-        if user_id not in user_item_matrix.index:
-            return [{"warning": f"User {user_id} not found in dataset."}]
+        # Kiểm tra user có tồn tại không
+        if str(user_id) not in user_item_matrix.index:
+            return []
+            # return [{"warning": f"User {user_id} not found in dataset."}]
 
-        # Compute cosine similarity
+        # Tính similarity giữa các user
         similarity = cosine_similarity(user_item_matrix)
         similarity_df = pd.DataFrame(similarity, index=user_item_matrix.index, columns=user_item_matrix.index)
 
-        # Get top similar users
-        # similar_users = similarity_df[user_id].sort_values(ascending=False)[1:6]  # exclude self
-        similar_users = similarity_df[user_id][similarity_df[user_id] > 0.3].sort_values(ascending=False)[1:6]
-        # Get courses those users rated highly (rating >= 3 or 4)
-        similar_user_ids = similar_users.index
+        # Lấy các user tương tự với ngưỡng > 0.3, loại bỏ chính mình
+        similar_users = similarity_df.loc[str(user_id)]
+        similar_users = similar_users[similar_users >= 0.5].sort_values(ascending=False)
+        similar_users = similar_users.drop(labels=str(user_id), errors='ignore')[:5]
+
+        # Lấy các đánh giá cao (rating >= 4) từ các user tương tự
+        similar_user_ids = similar_users.index.tolist()
         similar_ratings = ratings[ratings['user_id'].isin(similar_user_ids)]
         high_rated = similar_ratings[similar_ratings['rating'] >= 4]
 
-        # Remove courses the current user already rated
-        user_rated = ratings[ratings['user_id'] == user_id]['course_id'].tolist()
+        # Loại bỏ các khóa học user đã đánh giá
+        user_rated = ratings[ratings['user_id'] == str(user_id)]['course_id'].tolist()
         recommendable = high_rated[~high_rated['course_id'].isin(user_rated)]
 
-        # Get top courses
+        # Tính điểm trung bình và tần suất
         top_courses = (
             recommendable.groupby('course_id')
             .agg(score=('rating', 'mean'), count=('rating', 'count'))
@@ -444,7 +457,7 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
             .reset_index()
         )
 
-        # Merge with course details
+        # Merge với thông tin khóa học
         recommendations = pd.merge(top_courses, courses, on='course_id', how='left')
 
         result = []
@@ -453,8 +466,8 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
                 'course_id': row['course_id'],
                 'course_title': row['course_title'],
                 'url': str(row['url']),
-                 'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
-                'course_rating': random.randint(1, 5),
+                'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+                'course_rating': random.randint(1, 5),  # Hoặc thay bằng rating thực nếu có
                 'is_paid': row['is_paid'],
                 'price': row['price'],
                 'num_subscribers': row['num_subscribers'],
@@ -465,8 +478,10 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
                 'published_timestamp': row['published_timestamp'],
                 'subject': row['subject']
             })
+
+        # Nếu chưa đủ, dùng fallback bằng CBF
         if len(result) < num_recommendations:
-            user_highest = ratings[ratings['user_id'] == user_id].sort_values(by='rating', ascending=False).head(1)
+            user_highest = ratings[ratings['user_id'] == str(user_id)].sort_values(by='rating', ascending=False).head(1)
             if not user_highest.empty:
                 course_id = user_highest.iloc[0]['course_id']
                 course_row = courses[courses['course_id'] == course_id]
@@ -475,15 +490,19 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
                     cbf_recs = recommend_similar_courses(course_title)
                     existing_ids = set([c['course_id'] for c in result])
                     for cbf_course in cbf_recs:
+                        if 'course_id' not in cbf_course:
+                            continue
                         if cbf_course['course_id'] not in existing_ids:
                             result.append(cbf_course)
                             if len(result) >= num_recommendations:
                                 break
 
-        return result if result else [{"message": "No strong recommendations found."}]
+        # return result if result else [{"message": "No strong recommendations found."}]
+        return result if result else []
 
     except Exception as e:
-        return [{"error": str(e)}]
+        return []
+
 
 
 

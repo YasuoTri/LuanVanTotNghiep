@@ -1719,24 +1719,25 @@ public function getPopularCourses(Request $request)
 
     return response()->json($paginatedCourses);
 }
-
-  public function getPopularCoursesInRandomCategory(Request $request)
+public function getPopularCoursesInRandomCategory(Request $request)
 {
     $perPage = $request->query('per_page', 10);
-    $page = $request->query('page', 1);
 
-    // Lấy danh mục ngẫu nhiên
-    $category = Category::inRandomOrder()->first();
+    $user = Auth::user();
+    $student = Student::with('categories')->where('user_id', $user->id)->first();
 
-    if (!$category) {
+    if (!$student || $student->categories->isEmpty()) {
         return response()->json([
             'success' => false,
-            'message' => 'No category found'
+            'message' => 'Student does not have any categories assigned.'
         ], 404);
     }
 
-    // Lấy danh sách khóa học phổ biến trong danh mục
-    $courses = Course::with(['instructors', 'reviews', 'lessons'])
+    // Lấy ngẫu nhiên 1 category từ danh sách category của sinh viên
+    $category = $student->categories->random();
+
+    // Lấy danh sách khóa học phổ biến trong danh mục này (phân trang SQL)
+    $courses = Course::with(['instructors.user', 'reviews', 'lessons', 'categories'])
         ->whereHas('categories', function ($query) use ($category) {
             $query->where('categories.id', $category->id);
         })
@@ -1746,58 +1747,53 @@ public function getPopularCourses(Request $request)
         ->where('status', 'approved')
         ->has('lessons', '>', 1)
         ->orderByDesc('enrollments_count')
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->map(function ($course) {
-            return [
-                'id' => $course->id,
-                'course_name' => $course->course_name,
-                'difficulty_level' => $course->difficulty_level,
-                'course_rating' => $course->course_rating,
-                'course_url' => $course->course_url,
-                'image' => $course->image,
-                'course_description' => $course->course_description,
-                'is_certificate_enabled' => $course->is_certificate_enabled,
-                'price' => $course->price,
-                'skills' => $course->skills,
-                'status' => $course->status,
-                'instructor' => $course->instructors,
-                'category'=> $course->categories,
-                'user' => $course->instructors->user,
-                'total_lessons' => $course->lessons->count(),
-                'total_time' => $course->lessons->sum('duration'),
-                'number_of_ratings' => $course->reviews->count(),
-                'enrollments_count' => $course->enrollments_count,
-                'created_at' => $course->created_at,
-                'updated_at' => $course->updated_at,
-            ];
-        });
+        ->orderByDesc('created_at')
+        ->paginate($perPage);
 
-    // Phân trang thủ công
-    $paginatedCourses = new \Illuminate\Pagination\LengthAwarePaginator(
-        $courses->forPage($page, $perPage),
-        $courses->count(),
-        $perPage,
-        $page,
-        ['path' => request()->url(), 'query' => request()->query()]
-    );
- return response()->json([
-    'success' => true,
-    'message' => 'Popular courses in category "' . $category->name . '"',
-    'category' => [
-        'id' => $category->id,
-        'name' => $category->name
-    ],
-    'data' => $paginatedCourses->items(), // dữ liệu course thuần
-    'meta' => [
-        'current_page' => $paginatedCourses->currentPage(),
-        'last_page' => $paginatedCourses->lastPage(),
-        'per_page' => $paginatedCourses->perPage(),
-        'total' => $paginatedCourses->total(),
-    ]
-]);
+    // Map lại dữ liệu từng khóa học
+    $courses->getCollection()->transform(function ($course) {
+        return [
+            'id' => $course->id,
+            'course_name' => $course->course_name,
+            'difficulty_level' => $course->difficulty_level,
+            'course_rating' => $course->course_rating,
+            'course_url' => $course->course_url,
+            'image' => $course->image,
+            'course_description' => $course->course_description,
+            'is_certificate_enabled' => $course->is_certificate_enabled,
+            'price' => $course->price,
+            'skills' => $course->skills,
+            'status' => $course->status,
+            'instructor' => $course->instructors,
+            'category' => $course->categories,
+            'user' => $course->instructors->user ?? null,
+            'total_lessons' => $course->lessons->count(),
+            'total_time' => $course->lessons->sum('duration'),
+            'number_of_ratings' => $course->reviews->count(),
+            'enrollments_count' => $course->enrollments_count,
+            'created_at' => $course->created_at,
+            'updated_at' => $course->updated_at,
+        ];
+    });
 
+    return response()->json([
+        'success' => true,
+        'message' => 'Popular courses in category "' . $category->name . '"',
+        'category' => [
+            'id' => $category->id,
+            'name' => $category->name,
+        ],
+        'data' => $courses->items(),
+        'meta' => [
+            'current_page' => $courses->currentPage(),
+            'last_page' => $courses->lastPage(),
+            'per_page' => $courses->perPage(),
+            'total' => $courses->total(),
+        ]
+    ]);
 }
+
+
 
 public function banAndRefundCourse($id)
 {

@@ -132,6 +132,7 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor_or_student'])->
 
 
 
+    Route::get('/title_random_category/courses/popular-random-category', [CourseController::class, 'getPopularCoursesInRandomCategory']);
 });
 
 // Instructor Routes
@@ -448,7 +449,6 @@ Route::get('/title_latest/courses', [CourseController::class, 'getCoursesByCrite
 Route::get('/title_popular/courses/popular', [CourseController::class, 'getPopularCourses']);
 Route::get('/title_high_rated/courses/high-rated', [CourseController::class, 'getHighRatedCourses']);
 Route::get('/title_active_course/courses/active', [CourseController::class, 'getActiveCourses']);
-Route::get('/title_random_category/courses/popular-random-category', [CourseController::class, 'getPopularCoursesInRandomCategory']);
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 // Payment Callback (Existing)

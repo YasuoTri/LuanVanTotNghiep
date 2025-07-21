@@ -258,6 +258,7 @@ public function getInstructorCourses(Request $request,$instructorId)
         ->leftJoin('reviews', 'courses.id', '=', 'reviews.course_id')
         ->leftJoin('reports', 'courses.id', '=', 'reports.course_id')
         ->where('courses.instructor_id', $instructorId)
+        ->where('courses.status', 'approved')
         ->groupBy(
             'courses.id',
             'courses.course_name',

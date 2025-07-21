@@ -555,17 +555,17 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'This course requires payment. Please use the payment process.'], 400);
         }
 
-        $existingEnrollment = Enrollment::where('user_id', $user->id)
-        ->where('course_id', $course_id)
-        ->where(function ($query) {
-        $query->whereNull('expires_at')
-              ->orWhere('expires_at', '>=', now());
-        })
-        ->first();
+        // $existingEnrollment = Enrollment::where('user_id', $user->id)
+        // ->where('course_id', $course_id)
+        // ->where(function ($query) {
+        // $query->whereNull('expires_at')
+        //       ->orWhere('expires_at', '>=', now());
+        // })
+        // ->first();
 
-        if ($existingEnrollment) {
-            return response()->json(['message' => 'You are already enrolled in this course'], 409);
-        }
+        // if ($existingEnrollment) {
+        //     return response()->json(['message' => 'You are already enrolled in this course'], 409);
+        // }
 
         // Create enrollment
         $enrollment = Enrollment::create([

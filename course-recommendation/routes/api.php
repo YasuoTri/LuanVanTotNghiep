@@ -451,6 +451,7 @@ Route::get('/title_high_rated/courses/high-rated', [CourseController::class, 'ge
 Route::get('/title_active_course/courses/active', [CourseController::class, 'getActiveCourses']);
 
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
+Route::get('/get-highest-revenue-course', [CourseController::class, 'GetCourseHighestRevenu']);
 // Payment Callback (Existing)
 // Route::post('/vnpay_payment', [PaymentGateway::class, 'createOrder']);
 Route::get('/vnpay_payment', [VNPay::class, 'createPayment']);

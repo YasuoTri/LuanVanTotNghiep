@@ -141,6 +141,7 @@ public function show($id)
         ->findOrFail($id);
     return response()->json($course);
 }
+
  public function showSlug($slug)
     {
         try {
@@ -2090,5 +2091,24 @@ public function refundCourseFromInstructor(Request $request): JsonResponse
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function GetCourseHighestRevenu(){
+        $courses=Course::all()->map(function($course){
+            return [
+                'course_id'=>$course->id,
+                'course_name'=>$course->course_name,
+                'revenue'=>$course->payments->sum('amount')
+            ];
+        })->filter(function($q){
+            return $q['revenue']>0;
+        })->sortByDesc('revenue') // <- FIX: dùng sortByDesc thay cho orderBy
+        ->values()              // reset lại index sau khi sort
+        ->take(10);
+        return response()->json([
+            'status'=>'success',
+            'data'=>$courses,
+            'message'=>'Courses retrieved successfully'
+        ],200);
     }
 }

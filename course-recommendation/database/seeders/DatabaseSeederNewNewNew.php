@@ -537,12 +537,12 @@ class DatabaseSeederNewNewNew extends Seeder
     {
         $this->command->info('Seeding revenue sessions...');
 
-        $months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        $months = [1, 2, 3, 4, 5, 6];
         foreach ($months as $month) {
             RevenueSession::create([
                 'month' => $month,
                 'year' => 2025,
-                'total_revenue' => rand(1000000, 10000000),
+                'total_revenue' => rand(100, 1000),
                 'status' => collect(['open', 'closed', 'distributed'])->random(),
                 'created_at' => now(),
                 'updated_at' => now(),

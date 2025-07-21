@@ -253,6 +253,7 @@ public function show($id)
             return response()->json(['message' => 'Failed to update course:'.$e->getMessage()], 500);
         }
     }
+
     public function destroy($id)
     {
         try {            
@@ -1526,6 +1527,7 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
                 'skills' => $course->skills,
                 'status' => $course->status,
                 'instructor' => $course->instructors,
+                'category'=> $course->categories,
                 'user' => $course->instructors->user,
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'),
@@ -1578,6 +1580,7 @@ public function getActiveCourses(Request $request)
                 'skills' => $course->skills,
                 'status' => $course->status,
                 'instructor' => $course->instructors,
+                'category'=> $course->categories,
                 'user' => $course->instructors->user,
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'),
@@ -1630,6 +1633,7 @@ public function getPopularCourses(Request $request)
                 'skills' => $course->skills,
                 'status' => $course->status,
                 'instructor' => $course->instructors,
+                'category'=> $course->categories,
                 'user' => $course->instructors->user,
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'),
@@ -1694,6 +1698,7 @@ public function getPopularCourses(Request $request)
             'skills' => $course->skills,
             'status' => $course->status,
             'instructor' => $course->instructors,
+            'category'=> $course->categories,
             'user' => $course->instructors->user,
             'total_lessons' => $course->lessons->count(),
             'total_time' => $course->lessons->sum('duration'), // Tổng thời lượng
@@ -1757,6 +1762,7 @@ public function getPopularCourses(Request $request)
                 'skills' => $course->skills,
                 'status' => $course->status,
                 'instructor' => $course->instructors,
+                'category'=> $course->categories,
                 'user' => $course->instructors->user,
                 'total_lessons' => $course->lessons->count(),
                 'total_time' => $course->lessons->sum('duration'),

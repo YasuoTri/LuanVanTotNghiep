@@ -241,7 +241,7 @@ class RevenueDistributePaypal extends Controller
                 continue;
             }
 
-            $amount = $payment->status === 'refunded' ? -$payment->amount : $payment->amount;
+            $amount =$payment->amount;
 
             // Theo chính sách Udemy
             if ($payment->coupon_id !== null) {

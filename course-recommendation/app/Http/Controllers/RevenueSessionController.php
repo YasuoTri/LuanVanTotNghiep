@@ -223,8 +223,24 @@ public function checkRevenueDistributed($sessionId)
 public function getAllRevenueSessions()
 {
     $sessions = RevenueSession::all()->map(function ($session) {
-        $adminShare = $session->total_revenue * 0.10;
-        $instructorShare = $session->total_revenue * 0.90;
+        $payments = \App\Models\Payment::where('revenue_session_id', $session->id)
+            ->where('status', 'completed')
+            ->get();
+
+        $adminShare = 0;
+        $instructorShare = 0;
+
+        foreach ($payments as $payment) {
+            $amount = $payment->amount;
+
+            if ($payment->coupon_id !== null) {
+                $instructorShare += $amount * 0.97;
+                $adminShare += $amount * 0.03;
+            } else {
+                $instructorShare += $amount * 0.37;
+                $adminShare += $amount * 0.63;
+            }
+        }
 
         return [
             'session_id' => $session->id,
@@ -245,5 +261,6 @@ public function getAllRevenueSessions()
         'data' => $sessions
     ]);
 }
+
 
 }

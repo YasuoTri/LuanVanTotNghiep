@@ -116,6 +116,7 @@ class PayPalService
                 // Trả về object giống như SDK
                 return (object) [
                     'result' => (object) [
+                        'success' => true,
                         'batch_header' => (object) $result['batch_header'],
                         'items' => array_map(function($item) {
                             return (object) $item;

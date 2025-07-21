@@ -675,6 +675,7 @@ class LessonController extends Controller
     //         ], 500);
     //     }
     // }
+    
 public function updateForInstructor(UpdateLessonRequest $request, $course_id, $lesson_id): JsonResponse
 {
     try {

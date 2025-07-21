@@ -388,6 +388,11 @@ public function storeCourseInstructor(CreateCourseRequest $request)
     {
         try {
             $user=Auth::user();
+            $validated = $request->validated();
+            $contains=Str::contains($validated['course_name'], ['  ','..']);
+            if($contains){
+                return response()->json(['message' => 'Course name cannot contain spaces'], 422);
+            }
             if ($user->role === 'student' && !$user->instructor) {
                 return response()->json([
                     'message' => 'Instructor profile not found. Please complete your instructor profile.',

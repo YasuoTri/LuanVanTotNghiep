@@ -19,7 +19,7 @@ class PayoutCompletedMail extends Mailable
     public $revenueDistribution;
     public $user;
 
-    public function __construct($instructor, $amountUSD, $revenueDistribution)
+    public function __construct($instructor, $amountUSD, $revenueDistribution=null)
     {
         $this->instructor = $instructor;
         $tempuser=User::find($instructor->user_id);

@@ -222,6 +222,9 @@ Route::middleware(['EnsureUserHasRole','jwt_cookie', 'instructor'])->group(funct
     Route::get('/instructor/courses/revenuDistributeSearch', [RevenueDistribute::class, 'getInstructorRevenueDistributions']);
     Route::get('/instructor/courses/instructorExcepBan', [CourseController::class, 'getCoursesByInstructor']);
     Route::post('/instructor/generate-certificate', [CertificateController::class, 'generateAndUpload']);
+
+    Route::get('/instructor/unreceived-revenue/check', [RevenueDistributePaypal::class, 'checkUnreceivedRevenue']);
+    Route::post('/instructor/unreceived-revenue/retry', [RevenueDistributePaypal::class, 'retryUnreceivedRevenue']);
 });
 // Admin Routes
 Route::middleware(['EnsureUserHasRole','jwt_cookie', 'admin'])->group(function () {

@@ -7,6 +7,7 @@ use App\Models\RevenueSession;
 use App\Models\Payment;
 use App\Models\RevenueDistribution;
 use App\Models\Course;
+use App\Models\Instructors;
 use App\Models\User;
 use App\Services\PayPalService;
 use Illuminate\Http\Request;
@@ -406,7 +407,7 @@ class RevenueDistributePaypal extends Controller
             // Cập nhật thành công
             $revenueDistribution->update([
                 'status' => 'completed',
-                'paypal_batch_id' => $response->result->batch_header->payout_batch_id ?? null,
+                'transaction_code' => $response->result->batch_header->payout_batch_id ?? null,
                 'paypal_response' => json_encode($response->result)
             ]);
 
@@ -779,5 +780,78 @@ class RevenueDistributePaypal extends Controller
             ], 500);
         }
     }
+
+
+    
+
+
+    public function checkUnreceivedRevenue(Request $request)
+{
+    $userId =Auth::user()->id;
+    $instructor = Instructors::where('user_id', $userId)->first();
+
+    if (!$instructor) {
+        return response()->json(['message' => 'Instructor not found'], 404);
+    }
+
+    $totalUnreceived = RevenueDistribution::where('status', 'failed')
+        ->whereIn('course_id', Course::where('instructor_id', $instructor->id)->pluck('id'))
+        ->sum('instructor_share');
+
+    return response()->json([
+        'has_unreceived_revenue' => $totalUnreceived > 0,
+        'total_amount_unreceived' => $totalUnreceived
+    ]);
+}
+
+
+public function retryUnreceivedRevenue(Request $request)
+{
+    $userId = Auth::user()->id;
+    $instructor = Instructors::where('user_id', $userId)->first();
+
+    if (!$instructor || !$instructor->email_paypal) {
+        return response()->json(['message' => 'Instructor not found or PayPal email missing'], 404);
+    }
+
+    $courses = Course::where('instructor_id', $instructor->id)->pluck('id');
+
+    $failedDistributions = RevenueDistribution::where('status', 'failed')
+        ->whereIn('course_id', $courses)
+        ->get();
+
+
+    $retried = 0;
+    foreach ($failedDistributions as $distribution) {
+        $result = $this->paypalService->sendPayout(
+            $instructor->email_paypal,
+            $distribution->instructor_share,
+            'USD',
+            "Revenue distribution for course: " . ($distribution->course->title ?? 'Course')
+        );
+        Log::info('Retry payout for distribution ID: ' . $distribution->id . ' - Result: ' . json_encode($result));
+        if ($result->result->success) {
+            $distribution->status = 'completed';
+            $distribution->transaction_code = $result->result->transaction_code ?? null;
+            $distribution->save();
+            $retried++;
+        }
+        try {
+            $user=User::find($instructor->user_id);
+            Log::info("📧 Sent payout notification email to instructor {$instructor}");
+            Mail::to($user->email)->send(new PayoutCompletedMail($instructor, $distribution->instructor_share,$distribution));                
+            Log::info("📧 Sent payout notification email to instructor {$instructor->id}");
+        } catch (\Exception $mailEx) {
+            Log::warning("⚠️ Failed to send payout email to instructor {$instructor->id}: " . $mailEx->getMessage());
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => "$retried khoản tiền đã được gửi lại thành công",
+        'retried_count' => $retried
+    ]);
+}
+
 }
 

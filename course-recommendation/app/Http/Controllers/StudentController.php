@@ -112,7 +112,7 @@ public function createStudentProfile(Request $request): JsonResponse
     $validator = Validator::make($request->all(), [
         'LoE_DI' => 'string|nullable|max:50',
         'learning_goals' => 'string|nullable',
-        'category_ids' => 'array|nullable',
+        'category_ids' => 'required|array|min:1',
         'category_ids.*' => 'integer|exists:categories,id',
     ]);
 

@@ -198,12 +198,12 @@ class PaymentController extends Controller
     }
     $coupon = null;
     if (!empty($paymentData['code'])) {
-    $coupon = Coupon::where('code', $paymentData['code'])
-        ->where('is_active', true)
-        ->where('start_date', '<=', now())
-        ->where('end_date', '>=', now())
-        ->whereColumn('used_count', '<', 'usage_limit')
-        ->first();
+        $coupon = Coupon::where('code', $paymentData['code'])
+            ->where('is_active', true)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->whereColumn('used_count', '<', 'usage_limit')
+            ->first();
 
     if (!$coupon) {
         return response()->json(['message' => 'Invalid or expired coupon'], 400);

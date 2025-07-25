@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Traits\DetectAndUpdateIfChanged;
+use Illuminate\Support\Facades\DB;
+
 class CategoryController extends Controller
 {
     use DetectAndUpdateIfChanged;
@@ -155,5 +157,16 @@ public function getSubcategories()
         return response()->json(['message' => 'Category deleted successfully']);
     }
     
+    public function topCategories()
+    {
+        $topCategories = Category::withCount('courses')
+            ->orderByDesc('courses_count')
+            ->limit(5)
+            ->get();
 
+        return response()->json([
+            'success' => true,
+            'data' => $topCategories
+        ]);
+    }
 }

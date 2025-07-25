@@ -461,10 +461,10 @@ class DatabaseSeederNewNewNew extends Seeder
 
         $courses = Course::all()->pluck('id')->toArray();
         $couponData = [
-            ['code' => 'SAVE10', 'discount_type' => 'percent', 'discount_value' => 10, 'min_order' => 10],
-            ['code' => 'FIXED5000', 'discount_type' => 'fixed', 'discount_value' => 15, 'min_order' => 20],
-            ['code' => 'WELCOME20', 'discount_type' => 'percent', 'discount_value' => 5, 'min_order' => 15],
-            ['code' => 'FREECOURSE', 'discount_type' => 'fixed', 'discount_value' => 2, 'min_order' => 10],
+            ['code' => 'SAVE10', 'discount_type' => 'percent', 'discount_value' => 10],
+            ['code' => 'FIXED5000', 'discount_type' => 'fixed', 'discount_value' => 15],
+            ['code' => 'WELCOME20', 'discount_type' => 'percent', 'discount_value' => 5],
+            ['code' => 'FREECOURSE', 'discount_type' => 'fixed', 'discount_value' => 2],
         ];
 
         foreach ($couponData as $data) {
@@ -473,7 +473,6 @@ class DatabaseSeederNewNewNew extends Seeder
                 'code' => $data['code'],
                 'discount_type' => $data['discount_type'],
                 'discount_value' => $data['discount_value'],
-                'min_order' => $data['min_order'],
                 'start_date' => now()->subDays(rand(10, 30)),
                 'end_date' => now()->addDays(rand(30, 90)),
                 'usage_limit' => rand(50, 200),

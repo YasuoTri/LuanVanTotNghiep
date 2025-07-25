@@ -450,6 +450,9 @@ Route::get('/title_popular/courses/popular', [CourseController::class, 'getPopul
 Route::get('/title_high_rated/courses/high-rated', [CourseController::class, 'getHighRatedCourses']);
 Route::get('/title_active_course/courses/active', [CourseController::class, 'getActiveCourses']);
 
+Route::get('/top-categories', [CategoryController::class, 'topCategories']);
+
+
 Route::middleware('auth:api')->post('/instructor/documents', [AuthController::class, 'uploadInstructorDocuments']);
 Route::get('/get-highest-revenue-course', [CourseController::class, 'GetCourseHighestRevenu']);
 // Payment Callback (Existing)

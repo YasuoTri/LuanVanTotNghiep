@@ -43,8 +43,8 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->seedCourses();
         $this->seedStudentCategories();
         $this->seedLessons();
-        $this->seedLessonProgress();
         $this->seedEnrollments();
+        $this->seedLessonProgress();
         $this->seedCertificates();
         $this->seedCertificateRules();
         $this->seedCoupons();
@@ -461,10 +461,10 @@ class DatabaseSeederNewNewNew extends Seeder
 
         $courses = Course::all()->pluck('id')->toArray();
         $couponData = [
-            ['code' => 'SAVE10', 'discount_type' => 'percent', 'discount_value' => 10, 'min_order' => 100000],
-            ['code' => 'FIXED5000', 'discount_type' => 'fixed', 'discount_value' => 50000, 'min_order' => 200000],
-            ['code' => 'WELCOME20', 'discount_type' => 'percent', 'discount_value' => 20, 'min_order' => 150000],
-            ['code' => 'FREECOURSE', 'discount_type' => 'fixed', 'discount_value' => 100000, 'min_order' => 100000],
+            ['code' => 'SAVE10', 'discount_type' => 'percent', 'discount_value' => 10, 'min_order' => 10],
+            ['code' => 'FIXED5000', 'discount_type' => 'fixed', 'discount_value' => 15, 'min_order' => 20],
+            ['code' => 'WELCOME20', 'discount_type' => 'percent', 'discount_value' => 5, 'min_order' => 15],
+            ['code' => 'FREECOURSE', 'discount_type' => 'fixed', 'discount_value' => 2, 'min_order' => 10],
         ];
 
         foreach ($couponData as $data) {
@@ -607,15 +607,14 @@ class DatabaseSeederNewNewNew extends Seeder
         $this->command->info('Seeding lesson progress...');
         $enrollments = Enrollment::all();
         foreach ($enrollments as $enrollment) {
-            $lessons = Lesson::where('course_id', $enrollment->course_id)->get();
+            $lessons = Lesson::where('course_id', $enrollment->course_id)->where('is_visible',true)->get();
             foreach ($lessons as $lesson) {
                 LessonProgress::create([
                     'user_id' => $enrollment->user_id,
                     'lesson_id' => $lesson->id,
                     'status' => collect(['not_started', 'in_progress', 'completed'])->random(),
                     'completed_at' => rand(0, 1) ? now()->subDays(rand(1, 10)) : null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at' => now()
                 ]);
             }
         }

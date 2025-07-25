@@ -574,19 +574,25 @@ class EnrollmentController extends Controller
             'enrolled_at' => now()
         ]);
 
-         // ✅ Tạo lesson_progress cho tất cả bài học (mọi version)
-        $allLessons = Lesson::where('course_id', $course_id)->get();
+        $allLessons = Lesson::where('course_id', $course_id)
+        ->where('is_visible', true)
+        ->get();
 
         foreach ($allLessons as $lesson) {
-            LessonProgress::create([
-                'user_id' => $user->id,
-                'lesson_id' => $lesson->id,
-                'status' => 'not_started',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $exists = LessonProgress::where('user_id', $user->id)
+                ->where('lesson_id', $lesson->id)
+                ->exists();
+
+            if (!$exists) {
+                LessonProgress::create([
+                    'user_id' => $user->id,
+                    'lesson_id' => $lesson->id,
+                    'status' => 'not_started',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
-        
         return response()->json([
             'message' => 'Successfully enrolled in free course',
             'data' => $enrollment

@@ -6,6 +6,7 @@ use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Http\Requests\Payment\UpdatePaymentRequest;
 use App\Models\AdminAccount;
 use App\Models\AuditLog;
+use App\Models\LessonProgress;
 use App\Models\Payment;
 use App\Models\RevenueSession;
 use App\Services\PaymentGateways\PayPalGateway;
@@ -25,6 +26,7 @@ use App\Models\Course;
 use App\Models\PaymentMethod;
 use App\Models\PaymentStatus;
 use App\Models\Admins;
+use App\Models\Lesson;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -208,11 +210,10 @@ class PaymentController extends Controller
     if (!$coupon) {
         return response()->json(['message' => 'Invalid or expired coupon'], 400);
     }
-      // Check if coupon is valid for the specified course
-        if ($coupon->course_id !== null && $coupon->course_id != $courseId) {
-            return response()->json(['message' => 'Coupon is not valid for this course'], 400);
-        }
-    
+    // Check if coupon is valid for the specified course
+    if ($coupon->course_id !== null && $coupon->course_id != $courseId) {
+        return response()->json(['message' => 'Coupon is not valid for this course'], 400);
+    }
     $paymentData['coupon_id'] = $coupon->id;
 
         if ($coupon->discount_type === 'percent') {
@@ -275,7 +276,25 @@ class PaymentController extends Controller
             // 'payment_date' => $paymentData['payment_date'] ?? null,
             'revenue_session_id' => $revenueSession->id,
         ]);
-        
+        $allLessons = Lesson::where('course_id', $courseId)
+        ->where('is_visible', true)
+        ->get();
+
+        foreach ($allLessons as $lesson) {
+            $exists = LessonProgress::where('user_id', $userId)
+                ->where('lesson_id', $lesson->id)
+                ->exists();
+
+            if (!$exists) {
+                LessonProgress::create([
+                    'user_id' => $user->id,
+                    'lesson_id' => $lesson->id,
+                    'status' => 'not_started',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
         // AuditLog::create([
         //     'payment_id' => $payment->id,
         //     'action' => 'created',
@@ -727,7 +746,7 @@ public function handlePayPalSuccess(Request $request)
                     'enrolled_at' => now(),
                 ]
             );
-
+            
             // Update revenue session
             $revenueSession = RevenueSession::find($payment->revenue_session_id);
             if ($revenueSession) {

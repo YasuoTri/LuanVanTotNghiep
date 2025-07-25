@@ -75,18 +75,19 @@ class ExportRecommendController extends Controller
         fputcsv($enrollFile, ['user_id', 'course_id', 'comment', 'rating', 'enrolled_at']);
 
         $records = DB::table('enrollments')
-            ->leftJoin('reviews', function ($join) {
-                $join->on('enrollments.user_id', '=', 'reviews.user_id')
-                     ->on('enrollments.course_id', '=', 'reviews.course_id');
-            })
-            ->select(
-                'enrollments.user_id',
-                'enrollments.course_id',
-                'reviews.comment',
-                'reviews.rating',
-                'enrollments.enrolled_at'
-            )
-            ->get();
+        ->join('reviews', function ($join) {
+            $join->on('enrollments.user_id', '=', 'reviews.user_id')
+                ->on('enrollments.course_id', '=', 'reviews.course_id');
+        })
+        ->select(
+            'enrollments.user_id',
+            'enrollments.course_id',
+            'reviews.comment',
+            'reviews.rating',
+            'enrollments.enrolled_at'
+        )
+        ->get();
+
 
         foreach ($records as $row) {
             fputcsv($enrollFile, [

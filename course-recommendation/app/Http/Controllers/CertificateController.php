@@ -924,6 +924,7 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
     //         ], 500);
     //     }
     // }
+
     public function generateAndUpload($courseId, $userId, $userIdIssued)
     {
         try {
@@ -1103,10 +1104,10 @@ public function getCourseProgress(Request $request, int $courseId): JsonResponse
             Storage::disk('public')->delete($tempPath);
 
             // Save certificate to database
-            $enrollment = \App\Models\Enrollment::where('user_id', $userId)
+            $enrollment = Enrollment::where('user_id', $userId)
                 ->where('course_id', $courseId)
                 ->firstOrFail();
-            $certificate = new \App\Models\Certificate();
+            $certificate = new Certificate();
             $certificate->enrollment_id = $enrollment->id;
             $certificate->certificate_code = 'CERT-' . strtoupper(uniqid());
             $certificate->download_url = $certificateUrl;

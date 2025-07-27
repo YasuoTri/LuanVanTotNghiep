@@ -11,13 +11,26 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 class InstructorController extends Controller
 {
     public function index()
-    {
-        $instructors = Instructors::paginate(10);
+    {$instructors = Instructors::with('user')
+        ->paginate(10)
+        ->through(function ($instructor) {
+            $user = $instructor->user ?? null;
+            return [
+                'name' => $user ? $user->fullname : 'Unknown',
+                'email' => $user ? $user->email : 'Unknown',
+                'bio' => $instructor->bio,
+                'organization' => $instructor->organization,
+                'email_paypal' => $instructor->email_paypal,
+                'avatar' => $user ? $user->avatar : null,
+                'created_at' => $instructor->created_at,
+            ];
+        });
         return response()->json($instructors);
     }
       public function indexWithoutAuthentication()

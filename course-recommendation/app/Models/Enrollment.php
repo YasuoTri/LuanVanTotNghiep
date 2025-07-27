@@ -14,12 +14,11 @@ class Enrollment extends Model
     public $timestamps = false;
     public $incrementing = true;
     protected $fillable = [
-        'user_id', 'course_id', 'enrolled_at', 'completed_at'
+        'user_id', 'course_id', 'completed_at'
     ];
     protected $dates = ['deleted_at'];
     protected $casts = [
         'enrolled_at' => 'datetime',
-        'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

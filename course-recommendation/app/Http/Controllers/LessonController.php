@@ -919,7 +919,7 @@ public function getCourseLessons($id): JsonResponse
 
         foreach ($baseLessons as $lesson) {
             // Skip soft-deleted lessons with no meaningful progress
-            if ($lesson->deleted_at !== null && $enrollment->enrolled_at > $lesson->deleted_at) {
+            if ($lesson->deleted_at !== null && $enrollment->created_at > $lesson->deleted_at) {
                 $progress = $lesson->lessonProgress->first();
                 if (!$progress || $progress->status === 'not_started') {
                     continue;

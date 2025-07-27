@@ -72,7 +72,7 @@ class ExportRecommendController extends Controller
         // 2. Export: enrollments.csv
         $enrollmentsPath = $exportDir . '/enrollments.csv';
         $enrollFile = fopen($enrollmentsPath, 'w');
-        fputcsv($enrollFile, ['user_id', 'course_id', 'comment', 'rating', 'enrolled_at']);
+        fputcsv($enrollFile, ['user_id', 'course_id', 'comment', 'rating', 'created_at as enrolled_at']);
 
         $records = DB::table('enrollments')
         ->join('reviews', function ($join) {
@@ -84,7 +84,7 @@ class ExportRecommendController extends Controller
             'enrollments.course_id',
             'reviews.comment',
             'reviews.rating',
-            'enrollments.enrolled_at'
+            'enrollments.created_at'
         )
         ->get();
 
@@ -95,7 +95,7 @@ class ExportRecommendController extends Controller
                 $row->course_id,
                 $row->comment ?? '',
                 $row->rating ?? '',
-                $row->enrolled_at,
+                $row->created_at,
             ]);
         }
 

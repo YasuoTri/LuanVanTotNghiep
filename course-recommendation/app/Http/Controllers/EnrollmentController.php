@@ -238,73 +238,73 @@ class EnrollmentController extends Controller
             ], 500);
         }
     }
-    /**
-     * Xóa enrollment (hủy đăng ký khóa học)
-     *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function destroy($id)
-    {
-        try {
-            // Tìm enrollment theo ID và đảm bảo thuộc về student
-            $enrollment = Enrollment::where('id', $id)
-                ->where('user_id', Auth::user()->id)
-                ->first();
+    // /**
+    //  * Xóa enrollment (hủy đăng ký khóa học)
+    //  *
+    //  * @param int $id
+    //  * @return \Illuminate\Http\JsonResponse
+    //  */
+    // public function destroy($id)
+    // {
+    //     try {
+    //         // Tìm enrollment theo ID và đảm bảo thuộc về student
+    //         $enrollment = Enrollment::where('id', $id)
+    //             ->where('user_id', Auth::user()->id)
+    //             ->first();
 
-            if (!$enrollment) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Enrollment not found or you do not have permission.'
-                ], 404);
-            }
+    //         if (!$enrollment) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Enrollment not found or you do not have permission.'
+    //             ], 404);
+    //         }
 
-            // Kiểm tra trạng thái enrollment
-            if ($enrollment->status !== 'active' || $enrollment->completed_at) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Only active and incomplete enrollments can be cancelled.'
-                ], 400);
-            }
+    //         // Kiểm tra trạng thái enrollment
+    //         if ($enrollment->status !== 'active' || $enrollment->completed_at) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Only active and incomplete enrollments can be cancelled.'
+    //             ], 400);
+    //         }
 
-            // Kiểm tra thời gian hủy (ví dụ: chỉ cho phép trong 7 ngày)
-            $enrollmentDate = Carbon::parse($enrollment->enrolled_at);
-            if ($enrollmentDate->diffInDays(Carbon::now()) > 7) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Cancellation period has expired (7 days).'
-                ], 400);
-            }
+    //         // Kiểm tra thời gian hủy (ví dụ: chỉ cho phép trong 7 ngày)
+    //         $enrollmentDate = Carbon::parse($enrollment->enrolled_at);
+    //         if ($enrollmentDate->diffInDays(Carbon::now()) > 7) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Cancellation period has expired (7 days).'
+    //             ], 400);
+    //         }
 
-            // Kiểm tra thanh toán liên quan
-            $payment = Payment::where('course_id', $enrollment->course_id)
-                ->where('user_id', Auth::user()->id)
-                ->where('status', 'completed')
-                ->first();
+    //         // Kiểm tra thanh toán liên quan
+    //         $payment = Payment::where('course_id', $enrollment->course_id)
+    //             ->where('user_id', Auth::user()->id)
+    //             ->where('status', 'completed')
+    //             ->first();
 
-            if ($payment) {
-                // TODO: Xử lý hoàn tiền nếu cần (cập nhật payments.status thành 'refunded')
-                // Ví dụ: $payment->status = 'refunded'; $payment->save();
-            }
+    //         if ($payment) {
+    //             // TODO: Xử lý hoàn tiền nếu cần (cập nhật payments.status thành 'refunded')
+    //             // Ví dụ: $payment->status = 'refunded'; $payment->save();
+    //         }
 
-            // Vô hiệu hóa certificate nếu có
-            Certificate::where('enrollment_id', $enrollment->id)->delete();
+    //         // Vô hiệu hóa certificate nếu có
+    //         Certificate::where('enrollment_id', $enrollment->id)->delete();
 
-            // Xóa enrollment
-            $enrollment->delete();
+    //         // Xóa enrollment
+    //         $enrollment->delete();
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Enrollment cancelled successfully.'
-            ], 200);
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'message' => 'Enrollment cancelled successfully.'
+    //         ], 200);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while cancelling enrollment.'
-            ], 500);
-        }
-    }
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'An error occurred while cancelling enrollment.'
+    //         ], 500);
+    //     }
+    // }
     // public function getStudentEnrollments(): JsonResponse
     // {
     //     $user = Auth::user();
@@ -336,8 +336,8 @@ class EnrollmentController extends Controller
         ->with(['course', 'course.reports' => function($query) use ($user) {
             $query->where('user_id', $user->id); // chỉ lấy report của user này
         }])
-        ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at')
-        ->orderBy('enrolled_at', 'desc')
+        ->select('id', 'user_id', 'course_id', 'created_at as enrolled_at', 'completed_at')
+        ->orderBy('created_at', 'desc')
         ->paginate(10);
 
     // Thêm biến has_pending_report
@@ -360,7 +360,7 @@ class EnrollmentController extends Controller
             ->with(['course' => function ($query) {
                 $query->select('id', 'course_name', 'university');
             }])
-            ->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at')
+            ->select('id', 'user_id', 'course_id', 'created_at as enrolled_at', 'completed_at')
             ->firstOrFail();
 
         return response()->json(['data' => $enrollment]);
@@ -570,8 +570,7 @@ class EnrollmentController extends Controller
         // Create enrollment
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
-            'course_id' => $course_id,
-            'enrolled_at' => now()
+            'course_id' => $course_id
         ]);
 
         $allLessons = Lesson::where('course_id', $course_id)

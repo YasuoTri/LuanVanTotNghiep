@@ -10,7 +10,7 @@ class Coupon extends Model
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = ['course_id',
-        'code', 'discount_type', 'discount_value', 'min_order', 'start_date',
+        'code', 'discount_type', 'discount_value', 'start_date',
         'end_date', 'usage_limit', 'used_count', 'is_active'
     ];
     protected $casts = [

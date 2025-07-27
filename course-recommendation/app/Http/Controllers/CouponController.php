@@ -112,14 +112,14 @@ class CouponController extends Controller
                 'integer',
                 'min:0',
                 function ($attribute, $value, $fail) use ($request, $course) {
-                    $minDiscount = $course->price * 0.5; // 50% of course price
+                    $minDiscount = $course->price; // 50% of course price
                     
                     if ($request->discount_type === 'fixed' && $value > $minDiscount) {
-                        $fail("Fixed discount can not be more than 50% of the course price ($minDiscount).");
+                        $fail("Fixed discount can not be more than 100% of the course price ($minDiscount).");
                     }
                     
-                    if ($request->discount_type === 'percent' && $value > 50) {
-                        $fail("Percentage discount can not be more than 50%.");
+                    if ($request->discount_type === 'percent' && $value >100) {
+                        $fail("Percentage discount can not be more than 100%.");
                     }
                 },
             ],

@@ -36,6 +36,8 @@ class CouponController extends Controller
     }
     public function update(Request $request, $id)
     {
+        
+        $user = Auth::user();
         // Update an existing coupon
         $coupon = Coupon::find($id);
         if (!$coupon) {
@@ -45,6 +47,38 @@ class CouponController extends Controller
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
         }
+        // Kiểm tra course có thuộc instructor không
+        $course = Course::where('id', $request->course_id)
+            ->where('instructor_id', $user->instructor->id)
+            ->where('status', '!=', 'banned')
+            ->first();
+        
+            $request->validate([
+            'code' => [
+                'required', 'string', 'max:20',
+                Rule::unique('coupons')->where(fn($q) => $q->where('course_id', $course->id))
+            ],
+            'discount_type' => ['required', Rule::in(['percent', 'fixed'])],
+            'discount_value' => [
+                'required',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request, $course) {
+                    $minDiscount = $course->price; // 50% of course price
+                    
+                    if ($request->discount_type === 'fixed' && $value > $minDiscount) {
+                        $fail("Fixed discount can not be more than 100% of the course price ($minDiscount).");
+                    }
+                    
+                    if ($request->discount_type === 'percent' && $value >100) {
+                        $fail("Percentage discount can not be more than 100%.");
+                    }
+                },
+            ],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'usage_limit' => ['nullable', 'integer', 'min:1'],
+        ]);
           // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
         // $startDate = $request->start_date;
         // $endDate = $request->end_date;

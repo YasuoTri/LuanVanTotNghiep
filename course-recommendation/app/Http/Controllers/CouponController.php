@@ -41,7 +41,7 @@ class CouponController extends Controller
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
-        $payment=Payment::where('coupon_id', $id)->get();
+        $payment=Payment::where('coupon_id', $id)->where("status","completed")->get();
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
         }

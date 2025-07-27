@@ -76,6 +76,10 @@ class CouponController extends Controller
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
+        $payment = Payment::where('coupon_id', $id)->where('status',"completed")->first();
+        if ($payment) {
+            return response()->json(['message' => 'Cannot delete coupon with existing payments'], 400);
+        }
         $coupon->delete();
         return response()->json(['message' => 'Coupon deleted successfully']);
     }

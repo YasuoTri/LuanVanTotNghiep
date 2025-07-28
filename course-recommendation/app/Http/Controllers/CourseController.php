@@ -420,7 +420,15 @@ public function storeCourseInstructor(CreateCourseRequest $request)
             }
 
             $instructor = Auth::user()->instructor;
-            $validated['course_url'] = Str::slug($validated['course_name']);
+            $baseSlug = Str::slug($validated['course_name']);
+            $slug = $baseSlug;
+            $counter = 1;
+
+            while (Course::withTrashed()->where('course_url', $slug)->exists()) {
+                $slug = $baseSlug . '-' . $counter++;
+            }
+
+            $validated['course_url'] = $slug;
             $validated['status'] = 'draft';
 
             // Xử lý upload hình ảnh
@@ -429,7 +437,6 @@ public function storeCourseInstructor(CreateCourseRequest $request)
                 if (!$validated['image']) {
                     return response()->json(['message' => 'Image upload failed'], 422);
                 }
-                
             }
             $user=Auth::user()->instructor;
             // Tạo khóa học
@@ -1365,18 +1372,28 @@ public function searchCourseAdmin(Request $request)
             // Tạo tên khóa học mới và đảm bảo tính duy nhất
             $baseName = $originalCourse->course_name . ' (Clone)';
             $newCourseName = $baseName;
-            $counter = 1;
+            // $counter = 1;
 
             // Kiểm tra xem tên khóa học đã tồn tại chưa
-            while (Course::where('course_name', $newCourseName)->exists()) {
-                $newCourseName = $baseName . ' ' . $counter;
-                $counter++;
+            // while (Course::where('course_name', $newCourseName)->exists()) {
+            //     $newCourseName = $baseName . ' ' . $counter;
+            //     $counter++;
+            // }
+            // Tạo slug từ tên mới
+            $baseSlug = Str::slug($newCourseName);
+            $newSlug = $baseSlug;
+            $slugCounter = 1;
+
+            // Kiểm tra trùng slug (bao gồm cả bản ghi đã xóa mềm nếu bạn dùng restore)
+            while (Course::withTrashed()->where('course_url', $newSlug)->exists()) {
+                $newSlug = $baseSlug . '-' . $slugCounter++;
             }
 
             // Clone course
             $clonedCourse = $originalCourse->replicate();
             $clonedCourse->status = 'draft';
             $clonedCourse->course_name = $newCourseName;
+            $clonedCourse->course_url=$newSlug;
             $clonedCourse->course_rating = 0;
             $clonedCourse->save();
 

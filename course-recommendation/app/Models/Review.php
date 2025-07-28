@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Log;
 
 class Review extends Model
 {
-    use SoftDeletes;
     protected $table = 'reviews';
     protected $primaryKey = 'id';
     public $timestamps = false;
@@ -18,7 +17,6 @@ class Review extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-    protected $dates = ['deleted_at'];
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -53,7 +51,6 @@ protected function updateCourseRating()
 
     if ($course) {
         $averageRating = Review::where('course_id', $course->id)
-            ->whereNull('deleted_at')
             ->avg('rating') ?? 0;
         Log::info('Average Rating: ' . $averageRating);
 

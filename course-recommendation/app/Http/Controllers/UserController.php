@@ -41,8 +41,7 @@ class UserController extends Controller
             'gender',
             'role',
             'created_at',
-            'updated_at',
-            'deleted_at'
+            'updated_at'
         ]);
 
         // Xử lý filter with_trashed
@@ -183,7 +182,7 @@ public function show($id): JsonResponse
     // Find user with relevant relationships
     $user = User::with([
         'enrollments' => function ($query) {
-            $query->select('id', 'user_id', 'course_id', 'enrolled_at', 'completed_at');
+            $query->select('id', 'user_id', 'course_id', 'created_at as enrolled_at', 'completed_at');
         },
         // 'certificates' => function ($query) {
         //     $query->select('id', 'user_id', 'course_id', 'certificate_code', 'issued_at');

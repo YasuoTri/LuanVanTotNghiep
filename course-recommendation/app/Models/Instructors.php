@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Instructors extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
     protected $table = 'instructors';
     protected $primaryKey = 'id';
     protected $fillable = ['user_id', 'bio', 'organization','email_paypal'];
-    protected $dates = ['deleted_at'];
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

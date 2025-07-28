@@ -391,9 +391,6 @@ class PaymentController extends Controller
         [
             'user_id' => $payment->user_id,
             'course_id' => $courseId,
-        ],
-        [
-            'enrolled_at' => now(),
         ]
     );
 }
@@ -469,9 +466,6 @@ try{
                 [
                     'user_id' => $payment->user_id,
                     'course_id' => $payment->course_id,
-                ],
-                [
-                    'enrolled_at' => now(),
                 ]
             );
 
@@ -574,9 +568,6 @@ public function handleVNPayIPN(Request $request): JsonResponse
                 [
                     'user_id' => $payment->user_id,
                     'course_id' => $courseId,
-                ],
-                [
-                    'enrolled_at' => now(),
                 ]
             );
         }
@@ -741,9 +732,6 @@ public function handlePayPalSuccess(Request $request)
                 [
                     'user_id' => $payment->user_id,
                     'course_id' => $payment->course_id,
-                ],
-                [
-                    'enrolled_at' => now(),
                 ]
             );
             

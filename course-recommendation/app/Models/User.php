@@ -11,7 +11,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Support\Str;
 class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens,HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens,HasFactory, Notifiable;
 
     protected $fillable = [
         'id',
@@ -25,7 +25,6 @@ class User extends Authenticatable implements JWTSubject
         'role',
         'provider',
         'provider_id',
-        'suspended_until',
         'created_at',
         'updated_at',
     ];
@@ -36,7 +35,6 @@ class User extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'password' => 'hashed',
-        'deleted_at' => 'datetime',
         'birthdate' => 'date', // Ensure birthdate is cast to date
     ];
 

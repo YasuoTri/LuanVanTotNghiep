@@ -7,15 +7,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Payment extends Model
 {
-    use SoftDeletes;
     protected $table = 'payments';
     protected $primaryKey = 'id';
     public $timestamps = false;
     protected $fillable = [
         'user_id', 'course_id', 'amount', 'method', 'transaction_code',
-        'coupon_id', 'status', 'revenue_session_id', 'created_at', 'updated_at', 'deleted_at'
+        'coupon_id', 'status', 'revenue_session_id', 'created_at', 'updated_at'
     ];
-    protected $dates = ['deleted_at'];
     protected $casts = [
         'method' => 'string',
         'status' => 'string',

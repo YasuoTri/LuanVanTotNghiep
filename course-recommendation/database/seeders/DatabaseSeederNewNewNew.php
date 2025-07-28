@@ -402,8 +402,7 @@ class DatabaseSeederNewNewNew extends Seeder
                 Enrollment::create([
                     'user_id' => $student->id,
                     'course_id' => $courseId,
-                    'enrolled_at' => now()->subDays(rand(1, 30)),
-                    'completed_at' => rand(0, 1) ? now()->subDays(rand(1, 10)) : null,
+                    'completed_at' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -611,8 +610,9 @@ class DatabaseSeederNewNewNew extends Seeder
                 LessonProgress::create([
                     'user_id' => $enrollment->user_id,
                     'lesson_id' => $lesson->id,
-                    'status' => collect(['not_started', 'in_progress', 'completed'])->random(),
-                    'completed_at' => rand(0, 1) ? now()->subDays(rand(1, 10)) : null,
+                    // 'status' => collect(['not_started', 'in_progress', 'completed'])->random(),
+                    'status' => 'not_started',
+                    'completed_at' => null,
                     'created_at' => now()
                 ]);
             }

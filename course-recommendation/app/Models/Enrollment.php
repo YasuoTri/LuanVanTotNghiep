@@ -18,7 +18,6 @@ class Enrollment extends Model
     ];
     protected $dates = ['deleted_at'];
     protected $casts = [
-        'enrolled_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

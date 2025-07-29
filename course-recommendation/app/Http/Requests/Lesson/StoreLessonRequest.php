@@ -20,6 +20,7 @@ class StoreLessonRequest extends FormRequest
             'title' => 'required|string|max:255',
             'video' => 'required|file|max:102400', // Video tối đa 100MB
             'is_preview' => 'boolean',
+            'is_visible'=>'nullable|string|max:255',
             'sort_order' => 'integer|min:0',
         ];
     }

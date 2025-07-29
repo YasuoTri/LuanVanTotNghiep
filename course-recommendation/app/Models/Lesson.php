@@ -11,7 +11,7 @@ class Lesson extends Model
     protected $table = 'lessons';
     protected $primaryKey = 'id';
     public $timestamps = false;
-    protected $fillable = ['origin_id','version',
+    protected $fillable = ['origin_id','version','is_visible',
         'course_id', 'title', 'video_url', 'duration', 'is_preview', 'sort_order','status', 'created_at', 'updated_at'
     ];
     protected $casts = [

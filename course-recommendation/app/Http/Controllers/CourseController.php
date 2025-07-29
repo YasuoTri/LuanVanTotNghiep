@@ -583,7 +583,6 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             if (!$course) {
                 return response()->json(['message' => 'Course not found'], 404);
             }
-
             $instructor = Auth::user()->instructor;
             $course = Course::findOrFail($id);
 
@@ -594,10 +593,10 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             if ($hasEnrollment) {
                 return response()->json(['message' => 'Cannot update course. There are students enrolled in this course.'], 403);
             }
-                // Thay thế hai if cũ bằng 1 if duy nhất:
-            if ($course->status !== 'pending' && $course->status !== 'draft') {
+            
+            if ($course->status !== 'draft' && $course->status !== 'rejected') {
                 return response()->json([
-                    'message' => 'Cannot update course, its status must be draft or pending'
+                    'message' => 'Cannot update course, its status must be draft'
                 ], 403);
             }
 
@@ -622,7 +621,7 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
 
                 // Upload ảnh mới
                 $validated['image'] = $this->cloudinaryService->uploadImage($newFile, 'courses');
-            }
+                }
             }
 
             $courseCategory = CourseCategory::where('course_id', $course->id)->pluck('category_id')->toArray();
@@ -646,11 +645,11 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
                 return response()->json(['message' => 'No changes detected'], 200);
             }
 
-            $validated['status'] = 'draft'; // Cập nhật khóa học sẽ chuyển về trạng thái pending
+            $validated['status'] = 'draft';
             $course->update($validated);
             return response()->json([
                 'success' => true,
-                'message' => 'Course updated successfully, pending review.',
+                'message' => 'Course updated successfully',
                 'course' => $course->load('categories'),
             ], 200);
         } catch (\Exception $e) {
@@ -658,6 +657,7 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             return response()->json(['message' => 'Failed to update course', 'error' => $e->getMessage()], 500);
         }
     }
+
 // public function updateCourseInstructor(UpdateCourseRequest $request, $id)
 // {
 //     try {
@@ -848,19 +848,22 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
 
         // Kiểm tra quyền instructor
         if ($course->instructor_id !== $instructor->id) {
-            return response()->json(['message' => 'Unauthorized: You are not the owner of this course'], 403);
         }
 
         // Kiểm tra nếu có học viên đã đăng ký
         if (Enrollment::where('course_id', $course->id)->exists()) {
-            return response()->json(['message' => 'Cannot delete course: There are students enrolled'], 400);
+            return response()->json(['message' => 'Can not delete course: There are students enrolled'], 400);
         }
-
+        if($course->status=='approved'){
+            return response()->json(['message' => 'Can not delete course: it is alredy on the market'], 403);
+        }
+        if($course->status=='pending'){
+            return response()->json(['message' => 'Can not delete course: it is reviewed'], 403);
+        }
         // Xóa ảnh nếu có
         if ($course->image) {
             $this->cloudinaryService->deleteByUrl($course->image);
         }
-
         // Soft delete
         $course->delete();
 
@@ -1263,15 +1266,20 @@ public function getPendingCourses()
 
         // Kiểm tra quyền instructor
         $instructor = Auth::user()->instructor;
-       $course = Course::findOrFail($id);
+        $course = Course::findOrFail($id);
 
-if ($course->instructor_id !== $instructor->id) {
-    return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
-}
-
+        if ($course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Unauthorized: Not assigned to this course'], 403);
+        }
         $course=Course::where("course_name",$course->course_name)->where('status', 'approved')->first();
         if ($course) {
             return response()->json(['message' => 'Course with this name already exists and is approved'], 422);
+        }
+
+        $lessonCount=Lesson::where('course_id',$course->id)->where('is_visible',true)->count();
+        
+        if($lessonCount<1){
+           return response()->json(['message' => 'Course must have at least 1 visible lesson to submit for review'], 422);
         }
         // Cập nhật trạng thái sang pending
         $course->update(['status' => 'pending']);
@@ -1458,6 +1466,7 @@ public function searchCourseAdmin(Request $request)
             ], 500);
         }
     }
+
 public function InstructorUpdateStatusToPending($course_id): JsonResponse
     {
         try {
@@ -1488,6 +1497,15 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
                     'message' => 'Status is invalid,only draft can be updated to pending.'
                 ], 422);
             }
+            $instructor = Instructors::where('user_id', $user->id)->first();
+            $courseCount=Course::where("instructor_id",$instructor->id)->where("course_name",$course->course_name)->whereIn('status', ['approved','pending'])->count();
+            if ($courseCount>1) {
+                return response()->json(['message' => 'Course with this name already exists and is approved or is reviewd'], 422);
+            }
+            $lessonCount=Lesson::where('course_id',$course->id)->where('is_visible',true)->count();
+            if($lessonCount<1){
+            return response()->json(['message' => 'Course must have at least 1 visible lesson to submit for review'], 422);
+            }
             // Cập nhật status thành pending
             $course->update(['status' => 'pending']);
 
@@ -1513,6 +1531,7 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
             return response()->json([
                 'message' => 'An error occurred while updating the course status.',
                 'error' => $e->getMessage()
+            
             ], 500);
         }
     }

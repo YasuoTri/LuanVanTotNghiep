@@ -19,6 +19,7 @@ class UpdateLessonRequest extends FormRequest
             'course_id' => 'sometimes|exists:courses,id',
             'title' => 'sometimes|string|max:255',
             'video' => 'sometimes|file|mimetypes:video/mp4,video/avi,video/mov|max:102400', // Video tối đa 100MB
+            'is_visible'=>'sometimes|string|max:255',
             'is_preview' => 'boolean',
             'sort_order' => 'integer|min:0',
         ];

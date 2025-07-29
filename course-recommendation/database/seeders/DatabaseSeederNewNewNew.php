@@ -500,8 +500,8 @@ class DatabaseSeederNewNewNew extends Seeder
                 'amount' => $course->price,
                 'method' => collect(['vnpay', 'paypal'])->random(),
                 'transaction_code' => 'TXN-' . Str::random(10),
-                'coupon_id' => rand(0, 1) ? $coupons[array_rand($coupons)] : null,
-                'status' => collect(['pending', 'completed', 'failed'])->random(),
+                'coupon_id' => null,
+                'status' => "completed",
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

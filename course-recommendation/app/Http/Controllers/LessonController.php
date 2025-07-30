@@ -858,15 +858,15 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             if ($hasEnrollment) {
                 return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
             };
+            
+            // $lessonCount = Lesson::where("course_id", $course->id)
+            // ->where("is_visible", true)
+            // ->where("id", "!=", $lesson_id)
+            // ->count();
 
-            $lessonCount = Lesson::where("course_id", $course->id)
-            ->where("is_visible", true)
-            ->where("id", "!=", $lesson_id)
-            ->count();
-
-            if ($lesson->is_visible && $lessonCount == 0) {
-                return response()->json(['message' => 'Can not delete lesson, Course must have at least 1 visible lesson']);
-            }
+            // if ($lesson->is_visible && $lessonCount == 0) {
+            //     return response()->json(['message' => 'Can not delete lesson, Course must have at least 1 visible lesson']);
+            // }
 
             // Xóa video trên Cloudinary nếu có
             if ($lesson->video_url) {

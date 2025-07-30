@@ -296,6 +296,7 @@ public function show($id)
             $courses = $instructor->courses()
                 ->with('coursereview', 'categories')
                 ->withCount('lessons')
+                ->whereNot("status","banned")
                 ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
                 ->orderBy('created_at', 'desc') // Sắp xếp thêm theo thời gian tạo (tùy chọn)
                 ->get();
@@ -596,7 +597,7 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             
             if ($course->status !== 'draft' && $course->status !== 'rejected') {
                 return response()->json([
-                    'message' => 'Cannot update course, its status must be draft'
+                    'message' => 'Cannot update course, its status must be draft or rejected'
                 ], 403);
             }
 

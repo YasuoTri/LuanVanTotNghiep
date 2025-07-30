@@ -848,6 +848,7 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
 
         // Kiểm tra quyền instructor
         if ($course->instructor_id !== $instructor->id) {
+            return response()->json(['message' => 'Can not delete course: You are not the owner of this course'], 400);
         }
 
         // Kiểm tra nếu có học viên đã đăng ký

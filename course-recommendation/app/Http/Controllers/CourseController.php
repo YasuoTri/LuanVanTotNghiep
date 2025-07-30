@@ -1502,10 +1502,10 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
             if ($courseCount>1) {
                 return response()->json(['message' => 'Course with this name already exists and is approved or is reviewd'], 422);
             }
-            $lessonCount=Lesson::where('course_id',$course->id)->where('is_visible',true)->count();
-            if($lessonCount<1){
-            return response()->json(['message' => 'Course must have at least 1 visible lesson to submit for review'], 422);
-            }
+            // $lessonCount=Lesson::where('course_id',$course->id)->where('is_visible',true)->count();
+            // if($lessonCount<1){
+            // return response()->json(['message' => 'Course must have at least 1 visible lesson to submit for review'], 422);
+            // }
             // Cập nhật status thành pending
             $course->update(['status' => 'pending']);
 

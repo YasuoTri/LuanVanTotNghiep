@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Coupon;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -238,7 +239,24 @@ class PayPalService
         } else {
             throw new \Exception('Failed to retrieve order details: ' . $orderResponse->body());
         }
-         $accessToken = $this->getAccessToken();
+        $accessToken = $this->getAccessToken();
+        $payment = Payment::where('transaction_code', $orderId)->first();
+        if ($payment && $payment->coupon_id) {
+            $coupon = Coupon::find($payment->coupon_id);
+
+            if (!$coupon || !$coupon->is_active) {
+                throw new \Exception('❌ Coupon is inactive or not found');
+            }
+
+            if ($coupon->expiry_date && now()->gt($coupon->expiry_date)) {
+                throw new \Exception('❌ Coupon has expired');
+            }
+
+            if ($coupon->usage_limit && $coupon->used_count >= $coupon->usage_limit) {
+                throw new \Exception('❌ Coupon usage limit exceeded');
+            }
+            Log::info('✅ Coupon is valid for use', ['coupon_id' => $coupon->id]);
+        }
         // Capture the payment with an empty JSON object
         $response = Http::withToken($accessToken)
             ->withHeaders([

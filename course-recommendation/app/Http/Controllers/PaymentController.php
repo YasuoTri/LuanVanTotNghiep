@@ -203,7 +203,7 @@ class PaymentController extends Controller
         $coupon = Coupon::where('code', $paymentData['code'])
             ->where('is_active', true)
             ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
+            ->where('end_date',  '>=', now())
             ->whereColumn('used_count', '<', 'usage_limit')
             ->first();
 
@@ -260,7 +260,6 @@ class PaymentController extends Controller
             'error' => $result
         ], 400);
     }
-
     // Start transaction
     DB::beginTransaction();
     try {
@@ -295,25 +294,10 @@ class PaymentController extends Controller
                 ]);
             }
         }
-        // AuditLog::create([
-        //     'payment_id' => $payment->id,
-        //     'action' => 'created',
-        //     'details' => 'Init payment',
-        //     'user_id' => $payment->user_id, // Người dùng thực hiện thanh toán
-        // ]);
 
         // Update coupon
         if ($coupon) {
             $coupon->increment('used_count');
-        }
-
-        // Update admin account balance when payment is completed
-        if ($result['success'] && $finalAmount > 0) {
-            // $adminAccount = AdminAccount::firstOrCreate(
-            //     ['admin_id' => Admins::first()->id], // Giả sử có 1 admin chính
-            //     ['balance' => 0]
-            // );
-            // $adminAccount->increment('balance', $finalAmount);
         }
 
         DB::commit();
@@ -660,7 +644,7 @@ public function handleVNPayIPN(Request $request): JsonResponse
     $query = Payment::query();
 
     if ($request->filled('method')) {
-        $query->where('method', $request->method);
+        $query->where('method', $request->input('method'));
     }
 
     if ($request->filled('status')) {
@@ -711,7 +695,6 @@ public function handlePayPalSuccess(Request $request)
         // Execute PayPal payment
         $gateway = new PayPalGateway();
         $result = $gateway->executePayment($token, $payerId);
-
         if (!$result['success']) {
             $payment->update(['status' => 'failed']);
             Log::error('PayPal Execute Failed', ['result' => $result, 'payment_id' => $payment->id]);
@@ -724,7 +707,7 @@ public function handlePayPalSuccess(Request $request)
             // Update payment status
             $payment->update([
                 'status' => 'completed',
-                // 'payment_date' => now(),
+                'updated_at'=>now()
             ]);
 
             // Create enrollment
@@ -740,14 +723,6 @@ public function handlePayPalSuccess(Request $request)
             if ($revenueSession) {
                 $revenueSession->increment('total_revenue', $payment->amount);
             }
-
-            // Log audit
-            // AuditLog::create([
-            //     'payment_id' => $payment->id,
-            //     'action' => 'payment_completed',
-            //     'details' => 'PayPal payment completed - Money received in PayPal business account',
-            //     'user_id' => $payment->user_id,
-            // ]);
 
             DB::commit();
 

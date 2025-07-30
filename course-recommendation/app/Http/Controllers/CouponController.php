@@ -36,14 +36,14 @@ class CouponController extends Controller
     }
     public function update(Request $request, $id)
     {
-        
         $user = Auth::user();
         // Update an existing coupon
         $coupon = Coupon::find($id);
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
-        $payment=Payment::where('coupon_id', $id)->where("status","completed")->get();
+    
+        $payment=Payment::where('coupon_id', $id)->get();
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
         }
@@ -56,7 +56,9 @@ class CouponController extends Controller
             $request->validate([
             'code' => [
                 'required', 'string', 'max:20',
-                Rule::unique('coupons')->where(fn($q) => $q->where('course_id', $course->id))
+                Rule::unique('coupons')->where(function ($query) use ($course) {
+                    return $query->where('course_id', $course->id);
+                })->ignore($coupon->id)
             ],
             'discount_type' => ['required', Rule::in(['percent', 'fixed'])],
             'discount_value' => [
@@ -110,7 +112,7 @@ class CouponController extends Controller
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
-        $payment = Payment::where('coupon_id', $id)->where('status',"completed")->first();
+        $payment = Payment::where('coupon_id', $id)->first();
         if ($payment) {
             return response()->json(['message' => 'Cannot delete coupon with existing payments'], 400);
         }

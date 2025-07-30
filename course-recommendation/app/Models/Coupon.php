@@ -11,7 +11,7 @@ class Coupon extends Model
     public $timestamps = false;
     protected $fillable = ['course_id',
         'code', 'discount_type', 'discount_value', 'start_date',
-        'end_date', 'usage_limit', 'used_count', 'is_active'
+        'end_date', 'usage_limit', 'used_count', 'is_active','created_at','updated_at'
     ];
     protected $casts = [
         'discount_type' => 'string',

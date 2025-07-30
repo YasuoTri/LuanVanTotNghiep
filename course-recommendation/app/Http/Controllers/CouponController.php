@@ -36,16 +36,19 @@ class CouponController extends Controller
     }
     public function update(Request $request, $id)
     {
+        
         $user = Auth::user();
         // Update an existing coupon
         $coupon = Coupon::find($id);
         if (!$coupon) {
             return response()->json(['message' => 'Coupon not found'], 404);
         }
-    
         $payment=Payment::where('coupon_id', $id)->get();
         if ($payment->count() > 0) {
             return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
+        }
+        if($coupon->is_active==true){
+             return response()->json(['message' => 'Cannot update coupon.It is already worked.Its status is Active'], 400);
         }
         // Kiểm tra course có thuộc instructor không
         $course = Course::where('id', $request->course_id)
@@ -81,23 +84,7 @@ class CouponController extends Controller
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'usage_limit' => ['nullable', 'integer', 'min:1'],
         ]);
-          // Kiểm tra số lượng coupon hiệu lực trong khoảng thời gian giao nhau
-        // $startDate = $request->start_date;
-        // $endDate = $request->end_date;
 
-        // $overlapCoupons = Coupon::where('course_id', $coupon->course->id)
-        //     ->where('is_active', 1)
-        //     ->where(function($query) use ($startDate, $endDate) {
-        //         $query->where(function($q) use ($startDate, $endDate) {
-        //             $q->where('start_date', '<=', $endDate)
-        //               ->where('end_date', '>=', $startDate);
-        //         });
-        //     })
-        //     ->count();
-
-        // if ($overlapCoupons >= 3) {
-        //     return response()->json(['message' => 'Only up to 3 active coupons are allowed for the course during overlapping time periods.'], 422);
-        // }
         $coupon->fill($request->all());
         if (!$coupon->isDirty()) {
             return response()->json(['message' => 'No changes detected'], 200);
@@ -115,6 +102,9 @@ class CouponController extends Controller
         $payment = Payment::where('coupon_id', $id)->first();
         if ($payment) {
             return response()->json(['message' => 'Cannot delete coupon with existing payments'], 400);
+        }
+        if($coupon->is_active==true){
+            return response()->json(['message' => 'Cannot update coupon.It is already worked.Its status is Active'], 400);
         }
         $coupon->delete();
         return response()->json(['message' => 'Coupon deleted successfully']);
@@ -139,7 +129,17 @@ class CouponController extends Controller
         if (!$course) {
             return response()->json(['message' => 'Course not found or not owned by instructor.'], 404);
         }
+          // ✅ Check giới hạn tạo coupon trong tháng
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
 
+        $couponCount = Coupon::where('course_id', $course->id)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        if ($couponCount >= 3) {
+            return response()->json(['message' => 'You can only create up to 3 coupons for this course this month.'], 400);
+        }
         // Validate request
         $request->validate([
             'code' => [
@@ -168,8 +168,6 @@ class CouponController extends Controller
             'usage_limit' => ['nullable', 'integer', 'min:1'],
         ]);
 
-      
-
         // Tạo coupon
         $coupon = Coupon::create([
             'code' => $request->code,
@@ -179,6 +177,7 @@ class CouponController extends Controller
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'usage_limit' => $request->usage_limit,
+            'created_at'=>now()
         ]);
 
         return response()->json(['message' => 'Coupon created successfully', 'data' => $coupon]);

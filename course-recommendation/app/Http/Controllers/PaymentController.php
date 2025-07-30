@@ -167,102 +167,254 @@ class PaymentController extends Controller
     ]);
 }
 
-    public function store(array $paymentData, int $userId, int $courseId): JsonResponse
+//     public function store(array $paymentData, int $userId, int $courseId): JsonResponse
+// {
+//     $user = Auth::user();
+//     // Validate payment data
+//     $requiredFields = ['amount', 'method'];
+//     foreach ($requiredFields as $field) {
+//         if (!isset($paymentData[$field])) {
+//             return response()->json(['message' => "Missing required field: {$field}"], 400);
+//         }
+//     }
+//     $apiUrl = "https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD";
+
+//     $response = Http::get($apiUrl);
+//      if ($response->failed()) {
+//         return response()->json([
+//             'error' => 'Cannot fetch exchange rate'
+//         ], 500);
+//     }
+//     $rateData = $response->json();
+//     $vndRate = $rateData['conversion_rates']['VND'] ?? null;
+//     if (!$vndRate) {
+//         return response()->json([
+//             'error' => 'Cannot find VND exchange rate in the response from ExchangeRate API'
+//         ], 500);
+//     }
+//     // Apply coupon if provided
+//     if ($paymentData['method'] == 'vnpay') {
+//         $finalAmount = round($paymentData['amount'] * $vndRate);
+//     } else {
+//         $finalAmount =round($paymentData['amount'], 2);
+//     }
+//     $coupon = null;
+//     if (!empty($paymentData['code'])) {
+//         $coupon = Coupon::where('code', $paymentData['code'])
+//             ->where('is_active', true)
+//             ->where('start_date', '<=', now())
+//             ->where('end_date',  '>=', now())
+//             ->whereColumn('used_count', '<', 'usage_limit')
+//             ->first();
+
+//     if (!$coupon) {
+//         return response()->json(['message' => 'Invalid or expired coupon'], 400);
+//     }
+//     // Check if coupon is valid for the specified course
+//     if ($coupon->course_id !== null && $coupon->course_id != $courseId) {
+//         return response()->json(['message' => 'Coupon is not valid for this course'], 400);
+//     }
+//     $paymentData['coupon_id'] = $coupon->id;
+
+//         if ($coupon->discount_type === 'percent') {
+//             $finalAmount = $finalAmount * (1 - $coupon->discount_value / 100);
+//         } else {
+//             $finalAmount = $finalAmount - $coupon->discount_value;
+//         }
+
+//         if ($finalAmount < 0) {
+//             $finalAmount = 0;
+//         }
+//     }
+//     if ($paymentData['method'] !== 'vnpay') {
+//             $finalAmount = round($finalAmount, 2);
+//     }
+//     // Get or create revenue session for current month
+//     $currentMonth = now()->month;
+//     $currentYear = now()->year;
+//     $revenueSession = RevenueSession::firstOrCreate(
+//         ['month' => $currentMonth, 'year' => $currentYear],
+//         ['total_revenue' => 0, 'status' => 'open']
+//     );
+
+//     // Select payment gateway
+//     $gatewayClass = $this->gateways[$paymentData['method']] ?? PayPalGateway::class;
+//     $gateway = new $gatewayClass();
+
+//     // Create order
+//     $orderData = [
+//         'user_id' => $userId,
+//         'course_id' => $courseId,
+//         'amount' => $paymentData['amount'],
+//         'final_amount' => $finalAmount,
+//         'coupon_id' => $paymentData['coupon_id'] ?? null,
+//         'currency' => 'USD', // PayPal thường dùng USD
+//         'description' => 'Course Payment - Course ID: ' . $courseId,
+//     ];
+
+//     $result = $gateway->createOrder($orderData);
+
+//     if (!$result['success']) {
+//         return response()->json([
+//             'message' => $result['message'] ?? 'Failed to create payment order',
+//             'error' => $result
+//         ], 400);
+//     }
+//     // Start transaction
+//     DB::beginTransaction();
+//     try {
+//         // Store payment
+//         $payment = Payment::create([
+//             'user_id' => $userId,
+//             'course_id' => $courseId,
+//             'amount' => $finalAmount,
+//             'method' => $paymentData['method'],
+//             'transaction_code' => $result['transaction_code'],
+//             'coupon_id' => $paymentData['coupon_id'] ?? null,
+//             'status' => 'pending',
+//             // 'payment_date' => $paymentData['payment_date'] ?? null,
+//             'revenue_session_id' => $revenueSession->id,
+//         ]);
+//         $allLessons = Lesson::where('course_id', $courseId)
+//         ->where('is_visible', true)
+//         ->get();
+
+//         foreach ($allLessons as $lesson) {
+//             $exists = LessonProgress::where('user_id', $userId)
+//                 ->where('lesson_id', $lesson->id)
+//                 ->exists();
+
+//             if (!$exists) {
+//                 LessonProgress::create([
+//                     'user_id' => $user->id,
+//                     'lesson_id' => $lesson->id,
+//                     'status' => 'not_started',
+//                     'created_at' => now(),
+//                     'updated_at' => now(),
+//                 ]);
+//             }
+//         }
+
+//         // Update coupon
+//         if ($coupon) {
+//             $coupon->increment('used_count');
+//         }
+
+//         DB::commit();
+
+//         $responseData =[
+//             'message' => 'Payment initiated successfully',
+//             'data' => $payment,
+//             'order' => $result['data'],
+//             'payment_method' => $paymentData['method']
+//         ];
+//         if ($paymentData['method'] === 'paypal' && isset($result['data']['approval_url'])) {
+//             $responseData['approval_url'] = $result['data']['approval_url'];
+//             $responseData['redirect_required'] = true;
+//         } else {
+//             $responseData['order'] = $result['data'];
+//         }
+//         return response()->json($responseData, 201);
+//     } catch (\Exception $e) {
+//         DB::rollBack();
+//         Log::error('Payment creation failed', ['error' => $e->getMessage()]);
+//         return response()->json([
+//             'message' => 'Failed to create payment',
+//             'error' => $e->getMessage()
+//         ], 500);
+//     }
+// }
+public function store(array $paymentData, int $userId, int $courseId): JsonResponse
 {
     $user = Auth::user();
-    // Validate payment data
-    $requiredFields = ['amount', 'method'];
-    foreach ($requiredFields as $field) {
+
+    // Validate required fields
+    foreach (['amount', 'method'] as $field) {
         if (!isset($paymentData[$field])) {
             return response()->json(['message' => "Missing required field: {$field}"], 400);
         }
     }
-    $apiUrl = "https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD";
 
-    $response = Http::get($apiUrl);
-     if ($response->failed()) {
-        return response()->json([
-            'error' => 'Cannot fetch exchange rate'
-        ], 500);
+    // Get exchange rate
+    $rateResponse = Http::get("https://v6.exchangerate-api.com/v6/4f9127878d7801342b6c0abd/latest/USD");
+    if ($rateResponse->failed()) {
+        return response()->json(['error' => 'Cannot fetch exchange rate'], 500);
     }
-    $rateData = $response->json();
-    $vndRate = $rateData['conversion_rates']['VND'] ?? null;
+
+    $vndRate = $rateResponse->json()['conversion_rates']['VND'] ?? null;
     if (!$vndRate) {
-        return response()->json([
-            'error' => 'Cannot find VND exchange rate in the response from ExchangeRate API'
-        ], 500);
+        return response()->json(['error' => 'Cannot find VND exchange rate'], 500);
     }
-    // Apply coupon if provided
-    if ($paymentData['method'] == 'vnpay') {
-        $finalAmount = round($paymentData['amount'] * $vndRate);
-    } else {
-        $finalAmount =round($paymentData['amount'], 2);
-    }
-    $coupon = null;
-    if (!empty($paymentData['code'])) {
-        $coupon = Coupon::where('code', $paymentData['code'])
-            ->where('is_active', true)
-            ->where('start_date', '<=', now())
-            ->where('end_date',  '>=', now())
-            ->whereColumn('used_count', '<', 'usage_limit')
-            ->first();
 
-    if (!$coupon) {
-        return response()->json(['message' => 'Invalid or expired coupon'], 400);
-    }
-    // Check if coupon is valid for the specified course
-    if ($coupon->course_id !== null && $coupon->course_id != $courseId) {
-        return response()->json(['message' => 'Coupon is not valid for this course'], 400);
-    }
-    $paymentData['coupon_id'] = $coupon->id;
+    $originalAmount = $paymentData['amount'];
+    $finalAmount = $paymentData['method'] === 'vnpay'
+        ? round($originalAmount * $vndRate)
+        : round($originalAmount, 2);
 
-        if ($coupon->discount_type === 'percent') {
-            $finalAmount = $finalAmount * (1 - $coupon->discount_value / 100);
-        } else {
-            $finalAmount = $finalAmount - $coupon->discount_value;
-        }
-
-        if ($finalAmount < 0) {
-            $finalAmount = 0;
-        }
-    }
-    if ($paymentData['method'] !== 'vnpay') {
-            $finalAmount = round($finalAmount, 2);
-    }
-    // Get or create revenue session for current month
-    $currentMonth = now()->month;
-    $currentYear = now()->year;
-    $revenueSession = RevenueSession::firstOrCreate(
-        ['month' => $currentMonth, 'year' => $currentYear],
-        ['total_revenue' => 0, 'status' => 'open']
-    );
-
-    // Select payment gateway
-    $gatewayClass = $this->gateways[$paymentData['method']] ?? PayPalGateway::class;
-    $gateway = new $gatewayClass();
-
-    // Create order
-    $orderData = [
-        'user_id' => $userId,
-        'course_id' => $courseId,
-        'amount' => $paymentData['amount'],
-        'final_amount' => $finalAmount,
-        'coupon_id' => $paymentData['coupon_id'] ?? null,
-        'currency' => 'USD', // PayPal thường dùng USD
-        'description' => 'Course Payment - Course ID: ' . $courseId,
-    ];
-
-    $result = $gateway->createOrder($orderData);
-
-    if (!$result['success']) {
-        return response()->json([
-            'message' => $result['message'] ?? 'Failed to create payment order',
-            'error' => $result
-        ], 400);
-    }
     // Start transaction
     DB::beginTransaction();
     try {
+        $coupon = null;
+        if (!empty($paymentData['code'])) {
+            $coupon = Coupon::where('code', $paymentData['code'])
+                ->where('is_active', true)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->where(function ($query) use ($courseId) {
+                    $query->whereNull('course_id')->orWhere('course_id', $courseId);
+                })
+                ->lockForUpdate()
+                ->first();
+
+            if (!$coupon || ($coupon->usage_limit && $coupon->used_count >= $coupon->usage_limit)) {
+                DB::rollBack();
+                return response()->json(['message' => 'Coupon expired or fully used'], 400);
+            }
+
+            $paymentData['coupon_id'] = $coupon->id;
+
+            if ($coupon->discount_type === 'percent') {
+                $finalAmount *= (1 - $coupon->discount_value / 100);
+            } else {
+                $finalAmount -= $coupon->discount_value;
+            }
+
+            $finalAmount = max($finalAmount, 0);
+        }
+
+        if ($paymentData['method'] !== 'vnpay') {
+            $finalAmount = round($finalAmount, 2);
+        }
+
+        // Get/create revenue session
+        $revenueSession = RevenueSession::firstOrCreate(
+            ['month' => now()->month, 'year' => now()->year],
+            ['total_revenue' => 0, 'status' => 'open']
+        );
+
+        // Create order via gateway
+        $gatewayClass = $this->gateways[$paymentData['method']] ?? PayPalGateway::class;
+        $gateway = new $gatewayClass();
+
+        $orderData = [
+            'user_id' => $userId,
+            'course_id' => $courseId,
+            'amount' => $originalAmount,
+            'final_amount' => $finalAmount,
+            'coupon_id' => $paymentData['coupon_id'] ?? null,
+            'currency' => 'USD',
+            'description' => 'Course Payment - Course ID: ' . $courseId,
+        ];
+
+        $result = $gateway->createOrder($orderData);
+        if (!$result['success']) {
+            DB::rollBack();
+            return response()->json([
+                'message' => $result['message'] ?? 'Failed to create payment order',
+                'error' => $result
+            ], 400);
+        }
+
         // Store payment
         $payment = Payment::create([
             'user_id' => $userId,
@@ -272,48 +424,40 @@ class PaymentController extends Controller
             'transaction_code' => $result['transaction_code'],
             'coupon_id' => $paymentData['coupon_id'] ?? null,
             'status' => 'pending',
-            // 'payment_date' => $paymentData['payment_date'] ?? null,
             'revenue_session_id' => $revenueSession->id,
         ]);
-        $allLessons = Lesson::where('course_id', $courseId)
-        ->where('is_visible', true)
-        ->get();
 
-        foreach ($allLessons as $lesson) {
-            $exists = LessonProgress::where('user_id', $userId)
-                ->where('lesson_id', $lesson->id)
-                ->exists();
+        // Setup lesson progress
+        Lesson::where('course_id', $courseId)->where('is_visible', true)->get()->each(function ($lesson) use ($userId) {
+            LessonProgress::firstOrCreate([
+                'user_id' => $userId,
+                'lesson_id' => $lesson->id
+            ], [
+                'status' => 'not_started',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
 
-            if (!$exists) {
-                LessonProgress::create([
-                    'user_id' => $user->id,
-                    'lesson_id' => $lesson->id,
-                    'status' => 'not_started',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        // Update coupon
+        // Increase used_count if coupon applied
         if ($coupon) {
             $coupon->increment('used_count');
         }
 
         DB::commit();
 
-        $responseData =[
+        $responseData = [
             'message' => 'Payment initiated successfully',
             'data' => $payment,
             'order' => $result['data'],
             'payment_method' => $paymentData['method']
         ];
+
         if ($paymentData['method'] === 'paypal' && isset($result['data']['approval_url'])) {
             $responseData['approval_url'] = $result['data']['approval_url'];
             $responseData['redirect_required'] = true;
-        } else {
-            $responseData['order'] = $result['data'];
         }
+
         return response()->json($responseData, 201);
     } catch (\Exception $e) {
         DB::rollBack();
@@ -324,6 +468,7 @@ class PaymentController extends Controller
         ], 500);
     }
 }
+
     public function update(UpdatePaymentRequest $request, $id): JsonResponse
     {
         $payment = Payment::findOrFail($id);

@@ -176,7 +176,10 @@ public function indexForInstructor(Request $request, $courseId): JsonResponse
         if (!$instructor || $quiz->lesson->course->instructor_id !== $instructor->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-
+        $isHaveQuizResult = QuizResult::where('quiz_id', $id)->exists();
+        if ($isHaveQuizResult) {
+            return response()->json(['message' => 'Quiz has been taken by students.Can not update'], 400);
+        }
         $quiz->fill($request->validated());
         if(!$quiz->isDirty()) {
             return response()->json(['message' => 'No changes detected'], 400);
@@ -2486,6 +2489,7 @@ public function getQuizzesByLessonId($lessonId): JsonResponse
         $newQuiz->updated_at = now();
         $newQuiz->origin_id = $originId;
         $newQuiz->version = $nextVersion;
+        $newQuiz->title = $originalQuiz->title . " Clone";
         $newQuiz->save();
 
         // Bước 4: Clone question + choice

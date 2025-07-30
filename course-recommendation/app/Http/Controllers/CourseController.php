@@ -855,10 +855,10 @@ function isSameImage(string $cloudinaryUrl, \Illuminate\Http\UploadedFile $uploa
             return response()->json(['message' => 'Can not delete course: There are students enrolled'], 400);
         }
         if($course->status=='approved'){
-            return response()->json(['message' => 'Can not delete course: it is alredy on the market'], 403);
+            return response()->json(['message' => 'Can not delete course: it is already on the market'], 400);
         }
         if($course->status=='pending'){
-            return response()->json(['message' => 'Can not delete course: it is reviewed'], 403);
+            return response()->json(['message' => 'Can not delete course: it is reviewed'], 400);
         }
         // Xóa ảnh nếu có
         if ($course->image) {

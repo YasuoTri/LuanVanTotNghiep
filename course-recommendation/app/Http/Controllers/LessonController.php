@@ -830,6 +830,7 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
         ], 500);
     }
 }
+
     public function destroyForInstructor($course_id, $lesson_id): JsonResponse
     {
         try {
@@ -841,7 +842,6 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             if (!$course) {
                 return response()->json(['message' => 'You are not an instructor for this course'], 403);
             }
-
             $lesson = Lesson::where('id', $lesson_id)
                 ->where('course_id', $course_id)
                 ->first();
@@ -851,16 +851,24 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             }
 
             // Kiểm tra có học viên nào đã enroll chưa
-            $hasEnrollment = LessonProgress::where('lesson_id', $lesson_id)->exists();
+            $hasEnrollment = LessonProgress::where('lesson_id', $lesson_id)->whereIn("status",['in_progress','completed'])->exists();
             if ($hasEnrollment) {
                 return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
+            };
+
+            $lessonCount = Lesson::where("course_id", $course->id)
+            ->where("is_visible", true)
+            ->where("id", "!=", $lesson_id)
+            ->count();
+
+            if ($lesson->is_visible && $lessonCount == 0) {
+                return response()->json(['message' => 'Can not delete lesson, Course must have at least 1 visible lesson']);
             }
 
             // Xóa video trên Cloudinary nếu có
             if ($lesson->video_url) {
                 $this->cloudinaryService->deleteByUrl($lesson->video_url);
             }
-
             $lesson->delete();
             return response()->json(['message' => 'Lesson deleted successfully']);
         } catch (Exception $e) {

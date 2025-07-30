@@ -849,15 +849,16 @@ public function updateForInstructor(UpdateLessonRequest $request, $course_id, $l
             if (!$lesson) {
                 return response()->json(['message' => 'Lesson not found'], 404);
             }
-            $hasEnrollentExist=Enrollment::where("course_id",$course_id)->exist();
+            // Kiểm tra có học viên nào đã enroll chưa
+            $hasEnrollentExist=Enrollment::where("course_id",$course_id)->exists();
             if($hasEnrollentExist){
                 return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
             }
-            // Kiểm tra có học viên nào đã enroll chưa
-            $hasEnrollment = LessonProgress::where('lesson_id', $lesson_id)->whereIn("status",['in_progress','completed'])->exists();
-            if ($hasEnrollment) {
-                return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
-            };
+          
+            // $hasEnrollment = LessonProgress::where('lesson_id', $lesson_id)->whereIn("status",['in_progress','completed'])->exists();
+            // if ($hasEnrollment) {
+            //     return response()->json(['message' => 'Cannot delete lesson. There are students learn this course.'], 403);
+            // };
             
             // $lessonCount = Lesson::where("course_id", $course->id)
             // ->where("is_visible", true)

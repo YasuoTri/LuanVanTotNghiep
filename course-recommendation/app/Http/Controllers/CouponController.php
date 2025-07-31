@@ -34,64 +34,99 @@ class CouponController extends Controller
         $coupon = Coupon::create($request->all());
         return response()->json($coupon, 201);
     }
-    public function update(Request $request, $id)
-    {
+    // public function update(Request $request, $id)
+    // {
+    //     $user = Auth::user();
+    //     // Update an existing coupon
+    //     $coupon = Coupon::find($id);
+    //     if (!$coupon) {
+    //         return response()->json(['message' => 'Coupon not found'], 404);
+    //     }
+    //     $payment=Payment::where('coupon_id', $id)->get();
+    //     if ($payment->count() > 0) {
+    //         return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
+    //     }
+    //     // Kiểm tra course có thuộc instructor không
+    //     $course = Course::where('id', $request->course_id)
+    //         ->where('instructor_id', $user->instructor->id)
+    //         ->where('status', '!=', 'banned')
+    //         ->first();
         
-        $user = Auth::user();
-        // Update an existing coupon
-        $coupon = Coupon::find($id);
-        if (!$coupon) {
-            return response()->json(['message' => 'Coupon not found'], 404);
-        }
-        $payment=Payment::where('coupon_id', $id)->get();
-        if ($payment->count() > 0) {
-            return response()->json(['message' => 'Cannot update coupon with existing payments'], 400);
-        }
-        if($coupon->is_active==true){
-             return response()->json(['message' => 'Cannot update coupon.It is already worked.Its status is Active'], 400);
-        }
-        // Kiểm tra course có thuộc instructor không
-        $course = Course::where('id', $request->course_id)
-            ->where('instructor_id', $user->instructor->id)
-            ->where('status', '!=', 'banned')
-            ->first();
-        
-            $request->validate([
-            'code' => [
-                'required', 'string', 'max:20',
-                Rule::unique('coupons')->where(function ($query) use ($course) {
-                    return $query->where('course_id', $course->id);
-                })->ignore($coupon->id)
-            ],
-            'discount_type' => ['required', Rule::in(['percent', 'fixed'])],
-            'discount_value' => [
-                'required',
-                'integer',
-                'min:0',
-                function ($attribute, $value, $fail) use ($request, $course) {
-                    $minDiscount = $course->price; // 50% of course price
+    //         $request->validate([
+    //         'code' => [
+    //             'required', 'string', 'max:20',
+    //             Rule::unique('coupons')->where(function ($query) use ($course) {
+    //                 return $query->where('course_id', $course->id);
+    //             })->ignore($coupon->id)
+    //         ],
+    //         'discount_type' => ['required', Rule::in(['percent', 'fixed'])],
+    //         'discount_value' => [
+    //             'required',
+    //             'integer',
+    //             'min:0',
+    //             function ($attribute, $value, $fail) use ($request, $course) {
+    //                 $minDiscount = $course->price; 
                     
-                    if ($request->discount_type === 'fixed' && $value > $minDiscount) {
-                        $fail("Fixed discount can not be more than 100% of the course price ($minDiscount).");
-                    }
+    //                 if ($request->discount_type === 'fixed' && $value > $minDiscount) {
+    //                     $fail("Fixed discount can not be more than 100% of the course price ($minDiscount).");
+    //                 }
                     
-                    if ($request->discount_type === 'percent' && $value >100) {
-                        $fail("Percentage discount can not be more than 100%.");
-                    }
-                },
-            ],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'usage_limit' => ['nullable', 'integer', 'min:1'],
-        ]);
+    //                 if ($request->discount_type === 'percent' && $value >100) {
+    //                     $fail("Percentage discount can not be more than 100%.");
+    //                 }
+    //             },
+    //         ],
+    //         'start_date' => ['required', 'date'],
+    //         'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+    //         'usage_limit' => ['nullable', 'integer', 'min:1'],
+    //     ]);
 
-        $coupon->fill($request->all());
-        if (!$coupon->isDirty()) {
-            return response()->json(['message' => 'No changes detected'], 200);
-        }
-        $coupon->update($request->all());
-        return response()->json($coupon);
+    //     $coupon->fill($request->all());
+    //     if (!$coupon->isDirty()) {
+    //         return response()->json(['message' => 'No changes detected'], 200);
+    //     }
+    //     $coupon->update($request->all());
+    //     return response()->json($coupon);
+    // }
+    public function update(Request $request, $id)
+{
+    $user = Auth::user();
+    $coupon = Coupon::find($id);
+
+    if (!$coupon) {
+        return response()->json(['message' => 'Coupon not found'], 404);
     }
+
+    // Nếu request không chứa trường is_active → từ chối
+    if (!$request->has('is_active')) {
+        return response()->json([
+            'message' => 'Only the is_active field can be updated.'
+        ], 400);
+    }
+
+    // Nếu có payment → không cho update bất cứ gì
+    $hasPayment = Payment::where('coupon_id', $id)->exists();
+    if ($hasPayment) {
+        return response()->json([
+            'message' => 'Cannot update coupon that has already been used in a payment.'
+        ], 400);
+    }
+
+    // Nếu is_active không thay đổi → báo không có gì thay đổi
+    if ($coupon->is_active == $request->is_active) {
+        return response()->json(['message' => 'No changes detected.'], 200);
+    }
+
+    // Cập nhật is_active
+    $coupon->is_active = $request->is_active;
+    $coupon->save();
+
+    return response()->json([
+        'message' => 'Coupon status updated successfully.',
+        'coupon' => $coupon
+    ]);
+}
+
     public function destroy($id)
     {
         // Delete a coupon
@@ -103,9 +138,8 @@ class CouponController extends Controller
         if ($payment) {
             return response()->json(['message' => 'Cannot delete coupon with existing payments'], 400);
         }
-        if($coupon->is_active==true){
-            return response()->json(['message' => 'Cannot update coupon.It is already worked.Its status is Active'], 400);
-        }
+        if($coupon->is_active==true)
+            return response()->json(['message' => 'Cannot delete coupon,Its status is active'], 400);
         $coupon->delete();
         return response()->json(['message' => 'Coupon deleted successfully']);
     }

@@ -1501,7 +1501,7 @@ public function InstructorUpdateStatusToPending($course_id): JsonResponse
             }
             $instructor = Instructors::where('user_id', $user->id)->first();
             $courseCount=Course::where("instructor_id",$instructor->id)->where("course_name",$course->course_name)->whereIn('status', ['approved','pending'])->count();
-            if ($courseCount>1) {
+            if ($courseCount>0) {
                 return response()->json(['message' => 'Course with this name already exists and is approved or is reviewd'], 422);
             }
             // $lessonCount=Lesson::where('course_id',$course->id)->where('is_visible',true)->count();

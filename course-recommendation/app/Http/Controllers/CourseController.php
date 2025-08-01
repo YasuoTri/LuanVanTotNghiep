@@ -294,7 +294,7 @@ public function show($id)
         try {
             $instructor = Auth::user()->instructor;
             $courses = $instructor->courses()
-                ->with('coursereview', 'categories')
+                ->with('coursereview', 'categories','certificate_rule')
                 ->withCount('lessons')
                 ->whereNot("status","banned")
                 ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")

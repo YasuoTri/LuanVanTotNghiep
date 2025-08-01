@@ -145,7 +145,7 @@ public function show($id)
  public function showSlug($slug)
     {
         try {
-            $course = Course::with(['instructors', 'reviews', 'reviews.user','lessons', 'categories','enrollments','instructors.user'])
+            $course = Course::with(['instructors', 'reviews', 'reviews.user','lessons', 'categories','enrollments','instructors.user','certificate_rule'])
                 ->where('status', 'approved')
                 ->where('course_url', $slug)
                 ->firstOrFail();

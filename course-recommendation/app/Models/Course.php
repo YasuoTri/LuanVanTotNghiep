@@ -127,4 +127,7 @@ public function coupons()
     return $this->hasMany(Coupon::class);
 }
 
+public function certificate_rule(){
+    return $this->hasOne(CertificateRule::class);
+}
 }

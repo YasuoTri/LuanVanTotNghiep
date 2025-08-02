@@ -7,6 +7,7 @@ use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Mail\CourseApprovedMail;
 use App\Mail\CourseRejectedMail;
 use App\Models\AuditLog;
+use App\Models\CertificateRule;
 use App\Models\Course;
 use App\Models\Course_Instructors;
 use App\Models\CourseCategory;
@@ -1365,17 +1366,6 @@ public function searchCourseAdmin(Request $request)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Kiểm tra số lượng khóa học draft của instructor
-        $draftCount = Course::where('instructor_id', $user->instructor->id)
-            ->where('status', 'draft')
-            ->count();
-
-        if ($draftCount >= 100) {
-            return response()->json([
-                'message' => 'Cannot clone course. You have reached the limit of 100 draft courses.'
-            ], 403);
-        }
-
         DB::beginTransaction();
 
         try {
@@ -1438,12 +1428,28 @@ public function searchCourseAdmin(Request $request)
                     }
                 }
             }
-
+        if ($originalCourse->is_certificate_enabled) {
+            $originalRule = CertificateRule::where('course_id', $originalCourse->id)->first();
+            if ($originalRule) {
+                $clonedRule = $originalRule->replicate();
+                $clonedRule->course_id = $clonedCourse->id;
+                $clonedRule->save();
+            }
+        }
+            $originalCategories = CourseCategory::where('course_id', $originalCourse->id)->get();
+            foreach ($originalCategories as $category) {
+                CourseCategory::create([
+                    'course_id' => $clonedCourse->id,
+                    'category_id' => $category->category_id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
             DB::commit();
 
             // Load lại khóa học đã clone để trả về dữ liệu đầy đủ
             $clonedCourse = Course::findOrFail($clonedCourse->id);
-
+            $clonedCourse->load('certificate_rule','categories');
             return response()->json([
                 'message' => 'Course cloned successfully',
                 'data' => $clonedCourse

@@ -163,7 +163,7 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
                 'image': str(course_row['image']),
                 'is_paid': bool(course_row['is_paid']),
                 'price': str(course_row['price']),
-                'course_rating': random.randint(1, 5),
+                'course_rating': int(course_row['course_rating']),
                 'num_subscribers': int(course_row['num_subscribers']),
                 'num_reviews': int(course_row['num_reviews']),
                 'num_lectures': int(course_row['num_lectures']),
@@ -230,7 +230,7 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
                 'course_title': row['course_title'],
                 'url': str(row['url']),
                 'image':str(row['image']),
-                'course_rating': random.randint(1, 5),  # Hoặc thay bằng rating thực nếu có
+                'course_rating': int(course_row['course_rating']),
                 'is_paid': row['is_paid'],
                 'price': row['price'],
                 'num_subscribers': row['num_subscribers'],
@@ -284,7 +284,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         # Load and preprocess data
         df = pd.read_csv(data_file)
         required_columns = [
-            'course_id', 'course_title', 'url','image', 'is_paid', 'price', 'num_subscribers',
+            'course_id', 'course_title', 'url','image','course_rating', 'is_paid', 'price', 'num_subscribers',
             'num_reviews', 'num_lectures', 'level', 'content_duration', 'published_timestamp', 'subject'
         ]
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -295,6 +295,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         df['course_title'] = df['course_title'].fillna('')
         df['level'] = df['level'].str.lower().fillna('unknown')
         df['image'] = df['image'].str.lower().fillna('unknown')
+        df['course_rating'] = pd.to_numeric(df['course_rating'], errors='coerce').fillna(0).astype(int)
         df['subject'] = df['subject'].str.lower().fillna('unknown')
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0).astype(str)
         df['num_subscribers'] = pd.to_numeric(df['num_subscribers'], errors='coerce').fillna(0).astype(int)
@@ -305,7 +306,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         df['course_id'] = df['course_id'].astype(str)
         
         courses_list = df[[
-            'course_id', 'course_title', 'url','image', 'is_paid', 'price', 'num_subscribers',
+            'course_id', 'course_title', 'url','image','course_rating', 'is_paid', 'price', 'num_subscribers',
             'num_reviews', 'num_lectures', 'level', 'content_duration', 'published_timestamp', 'subject'
         ]]
         

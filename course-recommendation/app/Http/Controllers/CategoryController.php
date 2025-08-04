@@ -136,6 +136,12 @@ public function getSubcategories()
                     'error' => '❌ Category can not become a child of a subcategory (only 2 levels allowed).'
                 ], 422);
             }
+            // ❗ Check vòng lặp ngược (nếu category hiện tại là cha của thằng parent_id)
+            if ($category->children()->where('id', $parentId)->exists()) {
+                return response()->json([
+                    'error' => '❌ Cannot assign a child as a parent (would create a loop).'
+                ], 422);
+            }
         }
 
         // Cập nhật thông tin nếu hợp lệ

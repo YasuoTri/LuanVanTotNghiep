@@ -19,7 +19,7 @@ class ExportRecommendController extends Controller
         $coursesPath = $exportDir . '/courses.csv';
         $courseFile = fopen($coursesPath, 'w');
         fputcsv($courseFile, [
-            'course_id', 'course_title', 'url', 'is_paid', 'price',
+            'course_id', 'course_title', 'url','image', 'is_paid', 'price',
             'num_subscribers', 'num_reviews', 'num_lectures',
             'level', 'content_duration', 'published_timestamp', 'subject'
         ]);
@@ -36,6 +36,7 @@ class ExportRecommendController extends Controller
             ->select([
                 'courses.id as course_id',
                 'courses.course_name as course_title',
+                'courses.image',
                 'courses.course_url as url',
                 'courses.price',
                 DB::raw("CASE WHEN courses.price > 0 THEN 'True' ELSE 'False' END as is_paid"),
@@ -55,6 +56,7 @@ class ExportRecommendController extends Controller
                 $course->course_id,
                 $course->course_title,
                 $course->url,
+                $course->image,
                 $course->is_paid,
                 $course->price,
                 $course->num_subscribers,

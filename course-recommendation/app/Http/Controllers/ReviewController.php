@@ -100,15 +100,6 @@ function search(Request $request) {
         ]);
 
         $user_id = Auth::id();
-        $payment=Payment::where('user_id', $user_id)
-            ->where('course_id', $course_id)
-            ->where('status', 'completed')
-            ->first();
-        if(!$payment) {
-            return response()->json([
-                'message' => 'You must complete the course payment before submitting a review.'
-            ], 403);
-        }
         // Kiểm tra tiến độ học
         $totalLessons = Lesson::where('course_id', $course_id)->count();
 

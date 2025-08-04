@@ -241,7 +241,6 @@ public function getAllRevenueSessions()
                 $adminShare += $amount * 0.63;
             }
         }
-
         return [
             'session_id' => $session->id,
             'month' => $session->month,

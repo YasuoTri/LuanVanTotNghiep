@@ -33,7 +33,6 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-    
         // Validation rules
         $validatedData = $request->validate([
             'username' => 'required|string|max:50',
@@ -90,6 +89,7 @@ class AuthController extends Controller
             'role' => $validatedData['role'] ?? 'student', // Default role is student
             'avatar' => $avatarUrl,
         ]);
+
         if( $user->role === 'instructor') {
             // Create instructor record if role is instructor
             Instructors::create([

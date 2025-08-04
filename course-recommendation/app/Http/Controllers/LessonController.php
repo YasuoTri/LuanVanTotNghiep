@@ -227,7 +227,7 @@ class LessonController extends Controller
             ], 400);
         }
     }
-       
+    
     public function destroy($id): JsonResponse
     {
         try {

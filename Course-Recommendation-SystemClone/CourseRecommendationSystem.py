@@ -2,12 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
-from surprise import SVD, Dataset, Reader
 import pickle
 import os
 import logging
 import sys
-from surprise.model_selection import GridSearchCV
 import random
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -162,7 +160,7 @@ def recommend_similar_courses(course_title, level=None, subject=None, data_file=
                 'course_id': str(course_row['course_id']),
                 'course_title': str(course_row['course_title']),
                 'url': str(course_row['url']),
-                'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+                'image': str(course_row['image']),
                 'is_paid': bool(course_row['is_paid']),
                 'price': str(course_row['price']),
                 'course_rating': random.randint(1, 5),
@@ -231,7 +229,7 @@ def recommend_user_user_cf(user_id, ratings_file='Data/ratings.csv', courses_fil
                 'course_id': row['course_id'],
                 'course_title': row['course_title'],
                 'url': str(row['url']),
-                'image': 'https://res.cloudinary.com/dj11e209p/image/upload/v1751878057/How-to-Create-an-Online-Course-For-Free--Complete-Guide--6_ulvjwh.jpg',
+                'image':str(row['image']),
                 'course_rating': random.randint(1, 5),  # Hoặc thay bằng rating thực nếu có
                 'is_paid': row['is_paid'],
                 'price': row['price'],
@@ -286,7 +284,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         # Load and preprocess data
         df = pd.read_csv(data_file)
         required_columns = [
-            'course_id', 'course_title', 'url', 'is_paid', 'price', 'num_subscribers',
+            'course_id', 'course_title', 'url','image', 'is_paid', 'price', 'num_subscribers',
             'num_reviews', 'num_lectures', 'level', 'content_duration', 'published_timestamp', 'subject'
         ]
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -296,6 +294,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         
         df['course_title'] = df['course_title'].fillna('')
         df['level'] = df['level'].str.lower().fillna('unknown')
+        df['image'] = df['image'].str.lower().fillna('unknown')
         df['subject'] = df['subject'].str.lower().fillna('unknown')
         df['price'] = pd.to_numeric(df['price'], errors='coerce').fillna(0).astype(str)
         df['num_subscribers'] = pd.to_numeric(df['num_subscribers'], errors='coerce').fillna(0).astype(int)
@@ -306,7 +305,7 @@ def update_model(data_file='Data/udemy_courses.csv'):
         df['course_id'] = df['course_id'].astype(str)
         
         courses_list = df[[
-            'course_id', 'course_title', 'url', 'is_paid', 'price', 'num_subscribers',
+            'course_id', 'course_title', 'url','image', 'is_paid', 'price', 'num_subscribers',
             'num_reviews', 'num_lectures', 'level', 'content_duration', 'published_timestamp', 'subject'
         ]]
         
@@ -319,49 +318,22 @@ def update_model(data_file='Data/udemy_courses.csv'):
         vectorizer = TfidfVectorizer(stop_words='english')
         tfidf_matrix = vectorizer.fit_transform(df['combined_text'])
         
-        # Load ratings data for CF
+        # # Load ratings data for CF
         ratings = pd.read_csv('Data/ratings.csv')
-        reader = Reader(rating_scale=(1, 5))
-        data = Dataset.load_from_df(ratings[['user_id', 'course_id', 'rating']], reader)
-        trainset = data.build_full_trainset()
-        
-        # Train SVD model
-        param_grid = {'n_factors': [10, 20, 50], 'n_epochs': [10, 20, 30]}
-        gs = GridSearchCV(SVD, param_grid, measures=['rmse'], cv=3)
-        gs.fit(data)
-        print(gs.best_params['rmse'])
-        svd = SVD(n_factors=gs.best_params['rmse']['n_factors'], n_epochs=gs.best_params['rmse']['n_epochs'], random_state=42)
-        svd.fit(trainset)
         
         # Create user-item matrix
         user_item_matrix = ratings.pivot(index='user_id', columns='course_id', values='rating').fillna(0)
         
-        # Save preprocessed data
-        # with open('models/courses.pkl', 'wb') as f:
-        #     pickle.dump(courses_list, f)
-        # with open('models/tfidf_vectorizer.pkl', 'wb') as f:
-        #     pickle.dump(vectorizer, f)
-        # with open('models/tfidf_matrix.pkl', 'wb') as f:
-        #     pickle.dump(tfidf_matrix, f)
-        # with open('models/svd_model.pkl', 'wb') as f:
-        #     pickle.dump(svd, f)
-        # with open('models/user_item_matrix.pkl', 'wb') as f:
-        #     pickle.dump(user_item_matrix, f)
         with open(resource_path('models/courses.pkl'), 'wb') as f:
             pickle.dump(courses_list, f)
         with open(resource_path('models/tfidf_vectorizer.pkl'), 'wb') as f:
             pickle.dump(vectorizer, f)
         with open(resource_path('models/tfidf_matrix.pkl'), 'wb') as f:
               pickle.dump(tfidf_matrix, f)
-        with open(resource_path('models/svd_model.pkl'), 'wb') as f:
-            pickle.dump(svd, f)
         with open(resource_path('models/user_item_matrix.pkl'), 'wb') as f:
            pickle.dump(user_item_matrix, f)
-
         logger.info("All files saved successfully")
-        
         return True
-    
     except Exception as e:
         logger.error(f"Error in model update: {str(e)}")
         raise Exception(f"Error in model update: {str(e)}")

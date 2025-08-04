@@ -24,11 +24,9 @@ try:
     courses_list = pickle.load(open(resource_path('models/courses.pkl'), 'rb'))
     tfidf_vectorizer = pickle.load(open(resource_path('models/tfidf_vectorizer.pkl'), 'rb'))
     tfidf_matrix = pickle.load(open(resource_path('models/tfidf_matrix.pkl'), 'rb'))
-    svd_model = pickle.load(open(resource_path('models/svd_model.pkl'), 'rb'))
     user_item_matrix = pickle.load(open(resource_path('models/user_item_matrix.pkl'), 'rb'))
 except FileNotFoundError as e:
     raise HTTPException(status_code=500, detail=f"Model file missing: {e}")
-
 
 app = FastAPI()
 app.add_middleware(
@@ -38,18 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# @app.get("/recommend-similar")
-# def get_similar_courses(
-#     course_title: str = Query(..., description="Course title for content-based recommendations"),
-#     num_recommendations: int = Query(default=20, ge=1, le=30, description="Number of recommendations to return")
-# ):
-#     """
-#     Get recommendations for courses similar to the input course title.
-#     Returns a list of courses with details: course_id, course_title, url, is_paid, price, num_subscribers,
-#     num_reviews, num_lectures, level, content_duration, published_timestamp, subject.
-#     """
-#     recommendations = recommend_similar_courses(course_title, num_recommendations=num_recommendations)
-#     return {"recommendations": recommendations}
 
 @app.get("/recommend-similar")
 def get_similar_courses(

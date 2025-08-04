@@ -398,9 +398,6 @@ class LessonController extends Controller
 
             // Kiểm tra trạng thái course
             $course = Course::findOrFail($course_id);
-            if ($course->status === 'rejected') {
-                return response()->json(['error' => 'Cannot create lesson for rejected course'], 403);
-            }
 
             $data = $request->validated();
             $data['course_id'] = $course_id;

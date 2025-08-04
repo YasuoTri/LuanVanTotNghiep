@@ -34,7 +34,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('userid_DI')->unique();
-            $table->string('email')->unique()->nullable();
+            $table->string('email',50)->unique()->nullable();
             $table->string('password')->nullable();
             $table->string('final_cc_cname_DI', 100)->default('Unknown');
             $table->string('LoE_DI', 50)->default('Unknown');

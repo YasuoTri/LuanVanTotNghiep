@@ -61,7 +61,7 @@ class AuthController extends Controller
             'category_ids.*' => 'exists:categories,id',
             'bio' => 'nullable|string|max:1000',
             'organization' => 'nullable|string|max:100',
-            'fullname' => 'nullable|string|max:100', // Updated from name to full_name
+            'fullname' => 'nullable|string|max:50', // Updated from name to full_name
             'email_paypal' => 'nullable|email', // PayPal email for instructors
         ]);
 
@@ -118,9 +118,6 @@ class AuthController extends Controller
             }
 
         }
-       
-
-     
         try {
             $token = JWTAuth::fromUser($user);
         } catch (\Exception $e) {

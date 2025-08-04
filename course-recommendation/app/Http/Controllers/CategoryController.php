@@ -142,6 +142,12 @@ public function getSubcategories()
                     'error' => '❌ Cannot assign a child as a parent (would create a loop).'
                 ], 422);
             }
+                // ❗ Check nếu category hiện tại đang có con → không được gán parent_id (không được làm con)
+            if ($category->children()->exists()) {
+                return response()->json([
+                    'error' => '❌ A parent category (that has children) cannot become a child itself.'
+                ], 422);
+            }
         }
 
         // Cập nhật thông tin nếu hợp lệ
